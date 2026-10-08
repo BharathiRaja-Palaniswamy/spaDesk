@@ -1,0 +1,45 @@
+/* A card: the box around each chart, with its title and table toggle. */
+
+/* Cards sit two to a row on wide screens and one to a row on narrow ones. */
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); }
+.card.wide { grid-column: 1 / -1; }
+@media (max-width: 900px) {
+  .cards { grid-template-columns: minmax(0, 1fr); }
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  min-width: 0;   /* lets a card shrink inside the grid instead of overflowing */
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--gap);
+  margin-bottom: 12px;
+}
+.card-header h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.card-header p { margin: 2px 0 0; color: var(--text-secondary); font-size: 13px; }
+
+.card-toggle {
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.card-toggle:hover { background: var(--accent-wash); }
+.card-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* A sentence under a chart that adds one fact to it. */
+.card-note { margin: 14px 0 0; color: var(--text-secondary); font-size: 13px; }
+
+.card-empty { margin: 0; padding: 48px 0; text-align: center; color: var(--text-muted); }

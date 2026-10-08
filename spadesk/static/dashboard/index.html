@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manage</title>
+  <!-- One stylesheet per area. tokens.css must come first: the others use its variables. -->
+  <link rel="stylesheet" href="/static/dashboard/css/tokens.css">
+  <link rel="stylesheet" href="/static/dashboard/css/layout.css">
+  <link rel="stylesheet" href="/static/dashboard/css/tabs.css">
+  <link rel="stylesheet" href="/static/dashboard/css/filters.css">
+  <link rel="stylesheet" href="/static/dashboard/css/tiles.css">
+  <link rel="stylesheet" href="/static/dashboard/css/tooltip.css">
+  <link rel="stylesheet" href="/static/dashboard/css/cards.css">
+  <link rel="stylesheet" href="/static/dashboard/css/charts.css">
+  <link rel="stylesheet" href="/static/dashboard/css/bar-list.css">
+  <link rel="stylesheet" href="/static/dashboard/css/table.css">
+  <link rel="stylesheet" href="/static/dashboard/css/feedback.css">
+  <link rel="stylesheet" href="/static/dashboard/css/profile.css">
+  <link rel="stylesheet" href="/static/dashboard/css/chat.css">
+</head>
+<body>
+  <!--
+    The manage page, for the business owner. It is a shell with two tabs:
+    "Business profile" and "Reports" (switched by js/tabs.js). Every name,
+    number and dropdown value is filled in by the scripts in js/.
+  -->
+  <header class="top">
+    <div>
+      <p class="eyebrow">Manage</p>
+      <h1 id="business-name">&nbsp;</h1>
+    </div>
+    <a class="back" href="/">Customer site</a>
+  </header>
+
+  <main>
+    <!-- The tab bar. Each button names its panel in data-tab: "profile" -> #panel-profile. -->
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" type="button" role="tab" id="tab-profile" data-tab="profile" aria-controls="panel-profile">Business profile</button>
+      <button class="tab" type="button" role="tab" id="tab-reports" data-tab="reports" aria-controls="panel-reports">Reports</button>
+    </nav>
+
+    <!-- Tab 1: the business profile (read-only). -->
+    <section id="panel-profile" role="tabpanel" aria-labelledby="tab-profile" hidden>
+      <p class="profile-note">Read from the business document. This view is read-only.</p>
+      <!-- Filled by js/profile.js: one card per section of the document. -->
+      <div class="cards" id="profile"></div>
+    </section>
+
+    <!-- Tab 2: reports. -->
+    <section id="panel-reports" role="tabpanel" aria-labelledby="tab-reports">
+    <!-- One filter row above everything it controls. Built by js/filters.js. -->
+    <section class="filters" aria-label="Filters">
+      <div class="presets" id="presets" role="group" aria-label="Date range"></div>
+      <label>From <input type="date" id="start"></label>
+      <label>To <input type="date" id="end"></label>
+      <label>Category <select id="category"></select></label>
+      <label>Channel <select id="channel"></select></label>
+    </section>
+
+    <p class="period" id="period"></p>
+    <p class="error" id="error" role="alert" hidden></p>
+
+    <!-- Everything inside #report is redrawn when a filter changes. -->
+    <div class="report" id="report">
+      <section class="tiles" id="tiles" aria-label="Headline numbers"></section>
+      <!-- Each card below is filled by one file in js/sections/. Cards sit two
+           to a row on wide screens; "wide" cards take the whole row. -->
+      <div class="cards">
+        <section class="card" id="revenue-trend" aria-label="Revenue trend"></section>
+        <section class="card" id="traffic-trend" aria-label="Traffic trend"></section>
+        <section class="card" id="category-revenue" aria-label="Revenue by category"></section>
+        <section class="card" id="top-services" aria-label="Top services"></section>
+        <section class="card" id="channel-revenue" aria-label="Revenue by channel"></section>
+        <section class="card" id="customer-mix" aria-label="New and returning customers"></section>
+        <section class="card wide" id="feedback" aria-label="How customers feel"></section>
+      </div>
+    </div>
+    </section>
+  </main>
+
+  <footer class="note" id="note"></footer>
+
+  <!-- The chat: a button that opens a small panel. The window is js/chat/widget.js;
+       the replies come from js/chat/assistant.js. -->
+  <button class="chat-launcher" id="chat-launcher" type="button" aria-expanded="false" aria-controls="chat-panel">Ask assistant</button>
+  <section class="chat-panel" id="chat-panel" aria-label="Assistant" hidden>
+    <header class="chat-header">
+      <h2>Assistant</h2>
+      <button class="chat-close" id="chat-close" type="button" aria-label="Close">×</button>
+    </header>
+    <div class="chat-messages" id="chat-messages" aria-live="polite"></div>
+    <form class="chat-form" id="chat-form">
+      <label class="visually-hidden" for="chat-input">Your question</label>
+      <input id="chat-input" autocomplete="off" maxlength="2000" placeholder="Ask me anything">
+      <button type="submit">Send</button>
+    </form>
+  </section>
+
+  <!-- type="module" lets main.js import the other files in js/. -->
+  <script type="module" src="/static/dashboard/js/main.js"></script>
+</body>
+</html>

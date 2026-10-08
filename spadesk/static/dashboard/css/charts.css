@@ -1,0 +1,57 @@
+/* How chart marks look. charts/*.js only decides where things go; every
+   colour, thickness and font is here. */
+
+.chart { display: block; outline: none; }
+.chart:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+
+/* Grid and axis: thin, solid and quiet, so the data stands out. */
+.grid-line { stroke: var(--hairline); stroke-width: 1; }
+.baseline { stroke: var(--axis); stroke-width: 1; }
+.axis-label { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+/* A series class sets --series; the marks below use it. That is how one
+   class name colours a line, its dot and its tooltip key together. */
+.series-1 { --series: var(--series-1); }
+.series-2 { --series: var(--series-2); }
+.series-3 { --series: var(--series-3); }
+.series-4 { --series: var(--series-4); }
+.series-5 { --series: var(--series-5); }
+
+/* Sentiment colours mean good / neutral / bad, so they are separate from the
+   series colours above and are always shown with the sentiment's name. */
+.sentiment-happy { --series: var(--sentiment-happy); }
+.sentiment-neutral { --series: var(--sentiment-neutral); }
+.sentiment-unhappy { --series: var(--sentiment-unhappy); }
+
+.line { fill: none; stroke: var(--series); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.area { fill: var(--series); opacity: 0.1; }
+.dot { fill: var(--series); stroke: var(--surface); stroke-width: 2; }   /* the ring keeps it clear of the line */
+.crosshair { stroke: var(--axis); stroke-width: 1; }
+.hover-layer { pointer-events: none; }
+
+/* The tooltip is positioned inside the plot box. */
+.plot { position: relative; }
+
+/* Tooltip: the value is bold, the series name is secondary. */
+.chart-tooltip {
+  position: absolute;
+  top: 8px;
+  transform: translateX(12px);
+  z-index: 5;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.chart-tooltip.left-of-pointer { transform: translateX(calc(-100% - 12px)); }
+.chart-tooltip-title { color: var(--text-secondary); margin-bottom: 4px; }
+.chart-tooltip-row { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+.chart-tooltip-row strong { color: var(--text-primary); }
+.key { width: 12px; height: 2px; border-radius: 1px; background: var(--series); }
+
+/* A small square of a series colour, for lists beside a chart. */
+.swatch { width: 10px; height: 10px; border-radius: 2px; background: var(--series); }

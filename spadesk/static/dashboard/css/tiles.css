@@ -1,0 +1,26 @@
+/* Headline tiles: a label, one big number, and how it moved. */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--gap);
+}
+
+.tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+}
+.tile-label { color: var(--text-secondary); font-size: 13px; }
+.tile-value { font-size: 28px; font-weight: 600; line-height: 1.2; }
+
+/* The change line: "▲ 2.1%". Direction is shown by the arrow as well as by
+   colour, so it never depends on colour alone. What it is compared against
+   is in its tooltip (see tooltip.css). */
+.tile-delta { font-size: 13px; color: var(--text-muted); justify-self: start; }
+.tile-delta .good { color: var(--good-text); font-weight: 600; }
+.tile-delta .bad { color: var(--bad-text); font-weight: 600; }

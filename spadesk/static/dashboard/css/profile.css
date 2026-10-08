@@ -1,0 +1,27 @@
+/* The "Business profile" tab: the business document as read-only cards. */
+
+.profile-note { margin: 16px 0; color: var(--text-secondary); }
+
+.profile-title { margin: 0 0 12px; font-size: 16px; font-weight: 600; }
+
+/* A group is one sub-heading of the document with its text and entries. */
+.profile-group + .profile-group { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--hairline); }
+.profile-group h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+
+.profile-text p { margin: 0 0 8px; }
+.profile-text p:last-child { margin-bottom: 0; }
+.profile-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+
+/* An entry without a price: an FAQ, an offer, the opening hours. */
+.profile-entry { margin-top: 12px; }
+.profile-entry h4 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+.profile-entry .profile-text,
+.profile-entry .profile-list { color: var(--text-secondary); }
+
+/* In a price table the description is prose, so it reads left-aligned and
+   wraps, unlike the numeric columns of the report tables. */
+.profile-table .data-table th:nth-child(2) { text-align: left; }
+.profile-table .data-table td:nth-child(2) { text-align: left; color: var(--text-secondary); }
+.profile-table .data-table th:first-child { white-space: nowrap; font-weight: 600; vertical-align: top; }
+.profile-table .data-table td { vertical-align: top; white-space: nowrap; }
+.profile-table .data-table td:nth-child(2) { white-space: normal; }

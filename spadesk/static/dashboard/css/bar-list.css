@@ -1,0 +1,41 @@
+/* The horizontal bar list: name | bar | value, one row per item. */
+
+/* Three columns shared by every row: the name column is as wide as the
+   longest name, the bar takes the rest, and the value sits at the end. */
+.bar-list {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  gap: 10px 12px;
+}
+
+/* "subgrid" makes each row line up on the list's columns instead of sizing
+   its own, so every bar starts at the same place. */
+.bar-list-row {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  align-items: center;
+  border-radius: 4px;
+}
+.bar-list-label {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* The track is the full width a bar could reach; the bar fills part of it. */
+.bar-list-track { height: 16px; }
+.bar-list-bar {
+  display: block;
+  height: 100%;
+  min-width: 2px;                       /* a tiny value still shows as a sliver */
+  border-radius: 0 4px 4px 0;           /* square at the start, rounded at the data end */
+  background: var(--series);
+}
+.bar-list-row:hover .bar-list-bar,
+.bar-list-row:focus-visible .bar-list-bar { opacity: 0.85; }
+
+.bar-list-value { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
