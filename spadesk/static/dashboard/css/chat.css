@@ -48,6 +48,14 @@
 .chat-message.assistant { align-self: flex-start; background: var(--accent-wash); }
 .chat-message.user { align-self: flex-end; background: var(--accent); color: #ffffff; }
 .chat-message.pending { color: var(--text-muted); }
+/* Inside a bubble: the answer paragraph, and the bullet list under it. */
+.chat-message p { margin: 0; }
+.chat-list { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.chat-list li { padding-left: 2px; }
+/* An answer the business profile did not cover: outlined instead of filled. */
+.chat-message.not-covered { background: transparent; border: 1px dashed var(--border); color: var(--text-secondary); }
+/* The "From: Policies" line under an answer. */
+.chat-sources { align-self: flex-start; margin-top: -4px; font-size: 11px; color: var(--text-muted); }
 
 .chat-form { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--hairline); }
 .chat-form input {

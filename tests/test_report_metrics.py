@@ -11,22 +11,22 @@ from datetime import date
 import pytest
 
 from spadesk.config import get_settings
-from spadesk.reports.dataset import Dataset
+from spadesk.reports.dataset import load
 from spadesk.reports.metrics import channels, customers, feedback, period, services, summary, trend
 
 
 @pytest.fixture(scope="module")
 def dataset():
-    """The real bookings file: metrics look service names and hours up in it."""
-    return Dataset(get_settings().report_data_path)
+    """The real bookings joined to the business document: metrics look service names up in it."""
+    return load(get_settings().report_data_path)
 
 
 def booking(day, status="Completed", service="swedish-massage", price=115, discount=0, rating=5, **extra):
     """A booking row with sensible defaults; pass only what a test cares about."""
     done = status == "Completed"
     return {
-        "id": "T", "date": day, "day_of_week": date.fromisoformat(day).strftime("%A"), "time_slot": "11:00-12:00",
-        "customer_id": "CUS0001", "customer_type": "Returning", "service_id": service, "channel": "Google",
+        "id": "T", "date": day, "time_slot": "11:00-12:00",
+        "customer_id": "CUS0001", "service_id": service, "channel": "Google",
         "status": status, "list_price": price, "discount": discount if done else 0, "offer_id": None,
         "revenue": price - discount if done else 0, "payment_method": "Card" if done else None,
         "rating": rating if done else None, "sentiment": ("Happy" if rating >= 4 else "Unhappy") if done else None,
@@ -39,7 +39,7 @@ def booking(day, status="Completed", service="swedish-massage", price=115, disco
 ROWS = [
     booking("2026-09-01"),
     booking("2026-09-01", service="glow-express-facial", price=80, discount=12, rating=2,
-            customer_id="CUS0002", customer_type="New", channel="Website"),
+            customer_id="CUS0002", channel="Website"),
     booking("2026-09-05", status="Cancelled"),
     booking("2026-09-05", status="No-Show", service="glow-express-facial", price=80, customer_id="CUS0002"),
 ]

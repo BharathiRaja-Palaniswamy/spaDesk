@@ -46,6 +46,7 @@ class Settings:
     bookings_path: Path  # where mock booking requests are appended
     report_data_path: Path  # the bookings JSON the report dashboard reads
     model: str  # which Claude model the dashboard assistant uses
+    timezone: str  # the spa's time zone, used to tell the assistant the current time
 
 
 def get_settings() -> Settings:
@@ -57,4 +58,5 @@ def get_settings() -> Settings:
         bookings_path=Path(os.getenv("SPADESK_BOOKINGS", ROOT / "storage" / "booking_requests.jsonl")),
         report_data_path=Path(os.getenv("SPADESK_REPORT_DATA", ROOT / "data" / "spadesk_bookings.json")),
         model=os.getenv("SPADESK_MODEL", "claude-opus-5-5"),
+        timezone=os.getenv("SPADESK_TIMEZONE", "America/Los_Angeles"),
     )

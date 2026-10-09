@@ -87,23 +87,43 @@ class FakeAnthropic:
     """Stands in for anthropic.Anthropic: records the request, returns a fixed reply."""
 
     last_request = None
+    # What the "model" answers. A test can replace it; None means no structured reply.
+    reply = routes.ChatReply(answer="Cancel 24 hours ahead.", covered=True,
+                             items=[routes.ReplyItem(name="Late cancellations", detail="50% fee")],
+                             sections=["Cancellation Policy", "Policies", "Made-up Section"])
 
     def __init__(self):
-        self.messages = SimpleNamespace(create=self._create)
+        self.messages = SimpleNamespace(parse=self._parse)
 
-    def _create(self, **request):
+    def _parse(self, **request):
         FakeAnthropic.last_request = request
-        return SimpleNamespace(content=[SimpleNamespace(type="text", text="Cancel 24 hours ahead.")])
+        return SimpleNamespace(parsed_output=FakeAnthropic.reply and FakeAnthropic.reply.model_copy())
 
 
-def test_chat_sends_the_business_document_with_the_question(client, monkeypatch):
+def test_chat_returns_a_structured_reply(client, monkeypatch):
     monkeypatch.setattr(routes.anthropic, "Anthropic", FakeAnthropic)
     reply = client.post("/api/report/chat", json={"question": "What is our cancellation policy?"})
-    assert reply.json() == {"answer": "Cancel 24 hours ahead."}
+    # Every field reaches the browser. Of the three sources the "model" named,
+    # one survives: the made-up one is not a heading, and "Policies" is only
+    # the parent of "Cancellation Policy", which is already there.
+    assert reply.json() == {"answer": "Cancel 24 hours ahead.", "covered": True,
+                            "items": [{"name": "Late cancellations", "detail": "50% fee"}],
+                            "sections": ["Cancellation Policy"]}
+
     sent = FakeAnthropic.last_request
     assert sent["messages"] == [{"role": "user", "content": "What is our cancellation policy?"}]
-    # The model is given the document itself, so its answers can come from it.
+    assert sent["output_format"] is routes.ChatReply  # the model is told which shape to reply in
+    # The model is given the document itself, its headings and the current time.
     assert "<profile>" in sent["system"] and "Late cancellations may incur a 50% service fee." in sent["system"]
+    assert "<sections>" in sent["system"] and "Frequently Asked Questions\nPolicies\nBooking Policy" in sent["system"]
+    assert "<currentTime>" in sent["system"]
+
+
+def test_chat_reports_when_there_is_no_structured_reply(client, monkeypatch):
+    monkeypatch.setattr(routes.anthropic, "Anthropic", FakeAnthropic)
+    monkeypatch.setattr(FakeAnthropic, "reply", None)
+    reply = client.post("/api/report/chat", json={"question": "Hello"})
+    assert reply.status_code == 503 and "could not answer" in reply.json()["detail"]
 
 
 def test_chat_reports_when_the_model_is_unavailable(client, monkeypatch):

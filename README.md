@@ -46,10 +46,13 @@ duration and price per category, packages, offers, add-ons, FAQs and policies.
   a table view.
 - **Assistant**: a button that opens a chat window, available on both tabs. A
   question is sent to `POST /api/report/chat`, which gives Claude the business
-  document and returns its reply. It answers questions about the business
-  profile (services, prices, hours, policies) and says so when the document
-  does not cover something. It does not see the reports yet and does not
-  remember earlier messages.
+  document and the current time at the spa. It answers questions about the
+  business profile (services, prices, hours, policies). The reply is
+  structured output: the answer, a list of entries when the answer is a
+  list, whether the profile covered the question, and which sections it came
+  from. So the chat lays lists out as bullets, shows a "From: Policies" line,
+  and marks answers the profile could not cover. It does not see the reports
+  yet and does not remember earlier messages.
 
 ## Running it
 
@@ -74,17 +77,24 @@ settings with the key left blank.
 
 | File | What it is | Read by |
 |---|---|---|
-| `data/family_spa_business_doc.md` | The business in words: services, prices, hours, policies, FAQs, offers | Customer site and the business profile tab |
-| `data/spadesk_bookings.json` | One year of mock bookings, with services, customers, offers and channels as separate lists | Dashboard |
+| `data/family_spa_business_doc.md` | What the business is: name, services, prices, hours, policies, FAQs, offers | Customer site, business profile tab, assistant, and the reports (for service names, categories and prices) |
+| `data/spadesk_bookings.json` | What happened: one year of mock bookings, the customers who made them, and the channels they came through | Reports |
 | `storage/booking_requests.jsonl` | Booking requests sent from the site (created on first use) | Nothing yet |
 
-`scripts/generate_bookings.py` writes the bookings JSON. It copies services,
-prices, hours and offers from the business document, so the dashboard and the
-customer site agree, and invents the bookings around them. It is run by hand;
-after editing the business document, run it again.
+Each fact is stored once. The bookings file holds no business details: a
+booking names its service by id, and the service's name, category and price
+are looked up in the business document when the app runs
+(`spadesk/business/catalog.py`). So the Reports tab and the Business profile
+tab cannot disagree.
 
-No service, price or label is written in application code. The dashboard reads
-only the JSON; the customer site reads only the business document.
+`scripts/generate_bookings.py` writes the bookings JSON. It reads the business
+document for the services, opening hours and offers a realistic booking
+depends on, and invents the bookings around them. It is run by hand. Run it
+again after renaming, adding or removing a service in the document; until
+then the app refuses to start the reports and says which booking no longer
+matches.
+
+No service, price or label is written in application code.
 
 ## How it works
 
@@ -101,8 +111,9 @@ only the JSON; the customer site reads only the business document.
 1. The page asks `/api/report/options` what can be filtered and builds the
    filter row.
 2. On every filter change it requests `/api/report` with the chosen filters.
-3. The server filters the bookings, runs each calculation in
-   `spadesk/reports/metrics/`, and returns the results as one JSON document.
+3. The server filters the bookings, looks up each booking's service in the
+   business document, runs each calculation in `spadesk/reports/metrics/`,
+   and returns the results as one JSON document.
 4. Each file in `static/dashboard/js/sections/` draws one part of it.
 
 The browser never reads the data file; filtering and maths happen on the server.
@@ -113,8 +124,10 @@ The browser never reads the data file; filtering and maths happen on the server.
 2. `js/chat/assistant.js` posts it to `/api/report/chat`.
 3. The route in `reports/routes.py` reads the business document, sends it to
    Claude as context together with the question (using the API key from
-   `.env`), and returns the reply text. The document is small enough to send
-   whole, so no search step is needed.
+   `.env`), and asks for the reply in a fixed shape, the `ChatReply` class.
+   The document is small enough to send whole, so no search step is needed.
+4. The window shows the answer and uses the other fields to add the source
+   line or the "not covered" style.
 
 The model is called from the server so the API key never reaches the browser.
 
@@ -130,11 +143,12 @@ spadesk/
   business/
     knowledge.py               reads the business document
     store.py                   the one shared parsed copy (`get_knowledge`)
+    catalog.py                 the bookable services, as a catalogue with ids
     profile.py                 lays it out as the manage page's business profile
   booking/
     service.py                 mock booking requests
   reports/
-    dataset.py                 loads and filters the bookings JSON
+    dataset.py                 loads the bookings JSON, joins it to the services, filters it
     metrics/                   one file per calculation
     report.py                  assembles the full report
     routes.py                  /manage, /api/report and the assistant route

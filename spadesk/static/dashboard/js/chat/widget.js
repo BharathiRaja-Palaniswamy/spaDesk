@@ -9,10 +9,8 @@ import { askAssistant } from "./assistant.js";
 
 /**
  * Wires up the chat button, panel and form that are in index.html.
- * @param {() => ?object} getReport returns the report currently on screen; it
- *   is passed along with each question
  */
-export function initChat(getReport) {
+export function initChat() {
   const launcher = $("#chat-launcher");
   const panel = $("#chat-panel");
   const messages = $("#chat-messages");
@@ -55,13 +53,25 @@ export function initChat(getReport) {
     input.value = "";
     addMessage("user", question);
 
-    const reply = addMessage("assistant pending", "Thinking…");
+    const bubble = addMessage("assistant pending", "Thinking…");
     try {
-      reply.textContent = await askAssistant(question, getReport());
+      const reply = await askAssistant(question);
+      // The answer, then its list when it has one. Each entry is a bullet:
+      // the name in bold, the detail after it.
+      bubble.replaceChildren(
+        el("p", { textContent: reply.answer }),
+        reply.items.length ? el("ul", { className: "chat-list" }, ...reply.items.map((item) =>
+          el("li", {}, el("strong", { textContent: item.name }), ` ${item.detail}`))) : "");
+      // The other fields: mark an answer the profile did not cover, and show
+      // where a covered one came from.
+      bubble.classList.toggle("not-covered", !reply.covered);
+      if (reply.sections.length) {
+        messages.append(el("div", { className: "chat-sources", textContent: `From: ${reply.sections.join(", ")}` }));
+      }
     } catch {
-      reply.textContent = "Sorry, something went wrong. Please try again.";
+      bubble.textContent = "Sorry, something went wrong. Please try again.";
     }
-    reply.classList.remove("pending");
+    bubble.classList.remove("pending");
     messages.scrollTop = messages.scrollHeight;
   });
 }

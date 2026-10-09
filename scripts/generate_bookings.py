@@ -1,28 +1,27 @@
-"""Generates one year of mock bookings that agree with the business document.
+"""Generates one year of mock bookings for the services in the business document.
 
 Run with:  .venv/bin/python scripts/generate_bookings.py
 
-Writes  data/spadesk_bookings.json
+Writes  data/spadesk_bookings.json, which holds only what happened:
 
-The dashboard reads ONLY that JSON file. It never reads the business document
-and has no service, price or label written in its code. So the file carries
-everything the dashboard needs, as separate objects:
+  meta        period covered, currency, how the file was made
+  channels    the source channels a booking can come through
+  customers   id, name, date of first booking
+  bookings    one row per booking
 
-  meta             period covered, currency, when and how the file was made
-  business         spa name and opening hours
-  services         every bookable service: id, name, category, duration, price
-  offers           the discounts that exist
-  channels, payment_methods, statuses, feedback_tags   the allowed values
-  customers        id, name, date of first booking
-  bookings         one row per booking, pointing at the lists above by id
+It holds no business facts. A booking points at its service with a
+`service_id`, and the service's name, category and price are read from
+data/family_spa_business_doc.md when the app runs (see
+spadesk/business/catalog.py). The price a booking was actually charged at is
+stored on the booking as `list_price`, because that is a fact about the
+booking: it would stay the same if the price list changed later.
 
-This script is the one place the two worlds meet. It copies the business facts
-(services, prices, hours, offers) out of data/family_spa_business_doc.md, the
-file the customer site reads, so the dashboard and the site agree. What it
-invents is the behaviour around those facts: how busy each day is, who books
-what, who cancels, and how they rate the visit. Those rates are the constants
-below; change them and run the script again to reshape the year. After editing
-the business document, run it again too.
+This script reads the business document for the things a realistic booking
+depends on (which services exist, opening hours, the offers) and invents the
+behaviour around them: how busy each day is, who books what, who cancels, and
+how they rate the visit. Those rates are the constants below; change them and
+run the script again to reshape the year. After renaming, adding or removing
+a service in the business document, run it again too.
 
 The random generator is seeded, so running this again gives the same file.
 """
@@ -38,8 +37,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from spadesk.business.catalog import service_catalog  # noqa: E402
+from spadesk.business.knowledge import KnowledgeBase, slug  # noqa: E402
 from spadesk.config import HOURS_BLOCK, get_settings  # noqa: E402
-from spadesk.business.knowledge import KnowledgeBase  # noqa: E402
 
 OUT = ROOT / "data" / "spadesk_bookings.json"
 START, END = date(2025, 10, 1), date(2026, 9, 30)
@@ -80,23 +80,12 @@ FIRST_NAMES = ("Aarav Aditi Alex Amara Ananya Anaya Arjun Ben Carlos Chloe Danie
 
 # ---- Business facts, read from the document ---------------------------------
 
-# The two offers the document defines, and who qualifies. The wording shown on
-# the dashboard is read from the document; only the rule is coded here.
-WELCOME = {"id": "new-guest-welcome", "name": "New Guest Welcome Offer", "discount_percent": 15}
-SPRING = {"id": "spring-reset", "name": "Spring Reset Facial Month", "discount_percent": 10}
+# The two offers the document defines, and the rule for who qualifies.
+# An offer's id is made from its name in the document, the same way a service's is.
+WELCOME = {"id": slug("New Guest Welcome Offer"), "discount_percent": 15}
+SPRING = {"id": slug("Spring Reset Facial Month"), "discount_percent": 10}
 WELCOME_DAYS = set(DAYS[:4])  # Monday to Thursday
 WEEKDAYS = set(DAYS[:5])
-
-
-def slug(text: str) -> str:
-    """'Kids Hand & Foot Treat' -> 'kids-hand-foot-treat'. Used as a service id."""
-    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
-
-
-def first_number(text: str) -> int | None:
-    """'60 minutes / 90 minutes' -> 60, '$115 / $160' -> 115. The first is the standard option."""
-    found = re.search(r"\d+", text)
-    return int(found[0]) if found else None
 
 
 def opening_hours(kb: KnowledgeBase) -> dict[str, tuple[int, int]]:
@@ -129,18 +118,12 @@ def main() -> None:
     kb = KnowledgeBase(get_settings().data_path)
     hours = opening_hours(kb)
 
-    # The services list: every priced entry in the document except the monthly
-    # membership, which is not a booking.
-    services = [
-        {"id": slug(i.name), "name": i.name, "category": i.category, "description": i.description,
-         "duration_minutes": first_number(i.get("duration")), "price": first_number(i.get("price"))}
-        for i in kb.items if i.priced and "/month" not in i.get("price")
-    ]
+    # The bookable services, from the business document.
+    services = service_catalog(kb)
     by_category: dict[str, list[dict]] = {}
     for service in services:
         by_category.setdefault(service["category"], []).append(service)
     categories = {c: w for c, w in CATEGORY_WEIGHT.items() if c in by_category}
-    offers = [{**offer, "description": kb.find(offer["name"]).lines[0]} for offer in (WELCOME, SPRING)]
 
     customers: list[dict] = []
     names: set[str] = set()
@@ -205,10 +188,8 @@ def main() -> None:
             bookings.append({
                 "id": f"BKG{len(bookings) + 1:05d}",
                 "date": day.isoformat(),
-                "day_of_week": weekday,
                 "time_slot": f"{start:02d}:00-{start + 1:02d}:00",
                 "customer_id": customer["id"],
-                "customer_type": "New" if is_new else "Returning",
                 "service_id": service["id"],
                 "channel": pick(rng, CHANNELS),
                 "status": status,
@@ -229,24 +210,15 @@ def main() -> None:
             "period_end": END.isoformat(),
             "currency": "$",
             "generated_by": "scripts/generate_bookings.py",
-            "business_facts_from": get_settings().data_path.name,
+            "services_from": get_settings().data_path.name,
         },
-        "business": {
-            "name": kb.name,
-            "hours": [{"day": d, "open": f"{hours[d][0]:02d}:00", "close": f"{hours[d][1]:02d}:00"} for d in DAYS],
-        },
-        "services": services,
-        "offers": offers,
         "channels": list(CHANNELS),
-        "payment_methods": list(PAYMENTS),
-        "statuses": list(STATUS),
-        "feedback_tags": TAGS,
         "customers": customers,
         "bookings": bookings,
     }
     write(dataset)
-    print(f"Wrote {len(bookings)} bookings ({START} to {END}), {len(customers)} customers, "
-          f"{len(services)} services to {OUT.relative_to(ROOT)}")
+    print(f"Wrote {len(bookings)} bookings ({START} to {END}) for {len(customers)} customers "
+          f"across {len(services)} services to {OUT.relative_to(ROOT)}")
 
 
 def write(dataset: dict) -> None:
@@ -254,7 +226,7 @@ def write(dataset: dict) -> None:
     file stays readable in an editor and in git diffs."""
     parts = []
     for key, value in dataset.items():
-        if key in ("services", "customers", "bookings"):
+        if key in ("customers", "bookings"):
             rows = ",\n".join("    " + json.dumps(row, ensure_ascii=False) for row in value)
             parts.append(f'  "{key}": [\n{rows}\n  ]')
         else:

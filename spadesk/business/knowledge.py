@@ -65,7 +65,7 @@ def _plain(line: str) -> str:
     return re.sub(r"^[-*]\s+", "", line.replace("**", "")).strip()
 
 
-def _slug(text: str) -> str:
+def slug(text: str) -> str:
     """'Kids Hand & Foot Treat' becomes 'kids-hand-foot-treat'."""
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
@@ -199,7 +199,7 @@ class KnowledgeBase:
 
     def _add_chunk(self, title: str, text: str, lines: list[str]) -> None:
         """Add one chunk. Its id is made from the title."""
-        id = _slug(title)
+        id = slug(title)
         taken = {c.id for c in self.chunks}
         if id in taken:  # two entries with the same title: keep ids unique
             id = f"{id}-{len(taken)}"

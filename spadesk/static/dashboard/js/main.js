@@ -58,7 +58,7 @@ const reportArea = $("#report");
 const errorLine = $("#error");
 /** Counts report requests, so a slow old answer can be told from the newest one. */
 let latestRequest = 0;
-/** The report currently on screen, kept for redrawing on resize and for the chat. @type {?Report} */
+/** The report currently on screen, kept so it can be redrawn on resize or tab change. @type {?Report} */
 let latestReport = null;
 
 /**
@@ -139,7 +139,6 @@ initTabs((name) => {
   if (name === "reports" && latestReport) draw(latestReport);
 });
 
-// The chat is given a way to read the report that is on screen right now.
-initChat(() => latestReport);
+initChat();
 
 start();
