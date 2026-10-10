@@ -35,14 +35,18 @@ export function axisTicks(max, roughCount = 4) {
 }
 
 /**
- * Up to `count` positions spread evenly across a list, always including the
- * first. Used to thin out crowded x-axis labels.
+ * Up to `count` positions from a list, evenly spaced and starting with the
+ * first. Used to thin out x-axis labels when there is not room for all.
+ *
+ * The gap between chosen positions is always the same whole number, so two
+ * labels can never land next to each other and overlap.
  * @param {number} length how many items the list has
  * @param {number} count the most positions to return
- * @returns {number[]} indexes into the list, e.g. (30, 6) -> [0, 6, 12, 17, 23, 29]
+ * @returns {number[]} indexes into the list, e.g. (12, 7) -> [0, 2, 4, 6, 8, 10]
  */
 export function spreadIndexes(length, count) {
-  if (length <= count) return [...Array(length).keys()];
-  const step = (length - 1) / (count - 1);
-  return [...new Set(Array.from({ length: count }, (_, i) => Math.round(i * step)))];
+  const step = Math.ceil(length / count); // 1 when everything fits
+  const indexes = [];
+  for (let index = 0; index < length; index += step) indexes.push(index);
+  return indexes;
 }

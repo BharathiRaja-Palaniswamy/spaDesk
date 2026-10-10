@@ -21,7 +21,7 @@ def client():
 
 def test_options(client):
     options = client.get("/api/report/options").json()
-    assert options["business"] == "Family Spa"
+    assert options["business"] == "Pebble Spa"
     assert (options["min_date"], options["max_date"]) == ("2025-10-01", "2026-09-30")
     assert "Massage Therapy" in options["categories"] and "Referral" in options["channels"]
 
@@ -90,7 +90,8 @@ class FakeAnthropic:
     # What the "model" answers. A test can replace it; None means no structured reply.
     reply = routes.ChatReply(answer="Cancel 24 hours ahead.", covered=True,
                              items=[routes.ReplyItem(name="Late cancellations", detail="50% fee")],
-                             sections=["Cancellation Policy", "Policies", "Made-up Section"])
+                             sections=["Cancellation Policy", "Policies", "Made-up Section"],
+                             suggestions=["One?", "Two?", "Three?", "Four?"])
 
     def __init__(self):
         self.messages = SimpleNamespace(parse=self._parse)
@@ -108,7 +109,8 @@ def test_chat_returns_a_structured_reply(client, monkeypatch):
     # the parent of "Cancellation Policy", which is already there.
     assert reply.json() == {"answer": "Cancel 24 hours ahead.", "covered": True,
                             "items": [{"name": "Late cancellations", "detail": "50% fee"}],
-                            "sections": ["Cancellation Policy"]}
+                            "sections": ["Cancellation Policy"],
+                            "suggestions": ["One?", "Two?", "Three?"]}  # at most three are passed on
 
     sent = FakeAnthropic.last_request
     assert sent["messages"] == [{"role": "user", "content": "What is our cancellation policy?"}]

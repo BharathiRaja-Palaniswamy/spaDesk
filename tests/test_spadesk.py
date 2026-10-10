@@ -19,12 +19,12 @@ from spadesk.business.profile import build_profile
 @pytest.fixture(scope="module")
 def kb():
     """The real business document, parsed."""
-    return KnowledgeBase(ROOT / "data" / "family_spa_business_doc.md")
+    return KnowledgeBase(ROOT / "data" / "business_doc.md")
 
 
 # ---- Business document ----
 def test_document_is_read_into_services_and_facts(kb):
-    assert kb.name == "Family Spa"
+    assert kb.name == "Pebble Spa"
     assert kb.facts["Phone"] == "(408) 555-0188"
     swedish = next(i for i in kb.items if i.name == "Swedish Massage")
     assert (swedish.category, swedish.get("price"), swedish.get("duration")) == (
@@ -40,7 +40,7 @@ def test_pieces_can_be_found_by_title(kb):
 
 def test_public_data_for_the_landing_page(kb):
     spa = kb.public(FEATURED, HIGHLIGHTS, HOURS_BLOCK, ABOUT_SECTION)
-    assert spa["name"] == "Family Spa" and spa["about"].startswith("Family Spa is a neighborhood wellness spa")
+    assert spa["name"] == "Pebble Spa" and spa["about"].startswith("Pebble Spa is a neighborhood wellness spa")
     assert spa["hours"][0] == {"days": "Monday to Thursday", "times": "10:00 AM – 8:00 PM"}
     assert spa["featured"] == list(FEATURED)
     assert [h["title"] for h in spa["highlights"]] == list(HIGHLIGHTS)
@@ -50,7 +50,7 @@ def test_public_data_for_the_landing_page(kb):
 def test_profile_follows_the_document(kb):
     profile = build_profile(kb)
     titles = [s["title"] for s in profile["sections"]]
-    assert titles[:3] == ["About Family Spa", "Mission", "Location and Hours"]
+    assert titles[:3] == ["About", "Mission", "Location and Hours"]
     assert titles[-1] == "Seasonal Promotions"
     section = {s["title"]: s for s in profile["sections"]}
 
@@ -107,12 +107,12 @@ def test_api(tmp_path, kb, monkeypatch):
 
     assert client.get("/").status_code == 200
     spa = client.get("/api/spa").json()
-    assert spa["name"] == "Family Spa"
+    assert spa["name"] == "Pebble Spa"
     assert spa["contact"]["Phone"] == "(408) 555-0188"
     assert len(spa["hours"]) == 4 and len(spa["featured"]) == 4 and len(spa["highlights"]) == 4
     assert {"name": "Lip Wax", "category": "Hair Removal", "description": "", "duration": "", "price": "$18"} in spa["services"]
 
-    assert client.get("/api/manage/profile").json()["name"] == "Family Spa"
+    assert client.get("/api/manage/profile").json()["name"] == "Pebble Spa"
 
     ok = client.post("/api/booking-requests", json=booking().model_dump(mode="json"))
     assert ok.json()["status"] == "requested"

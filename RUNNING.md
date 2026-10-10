@@ -63,8 +63,8 @@ The tests do not need an API key and do not call Claude.
 
 | To change | Edit | Then |
 |---|---|---|
-| Prices, hours, policies, descriptions | `data/family_spa_business_doc.md` | restart the server |
-| Add, rename or remove a service | `data/family_spa_business_doc.md` | regenerate the bookings (below), then restart |
+| Prices, hours, policies, descriptions | `data/business_doc.md` | restart the server |
+| Add, rename or remove a service | `data/business_doc.md` | regenerate the bookings (below), then restart |
 | The mock bookings (volume, mix, period) | the constants at the top of `scripts/generate_bookings.py` | run `.venv/bin/python scripts/generate_bookings.py`, then restart |
 | What the dashboard assistant sends to the model | the `chat` route in `spadesk/reports/routes.py` | saved automatically with `--reload` |
 | Featured services, highlighted policies | `spadesk/config.py` | restart |
@@ -79,7 +79,7 @@ The tests do not need an API key and do not call Claude.
 | `ANTHROPIC_API_KEY` | none | Your API key. Required for the dashboard assistant. |
 | `SPADESK_MODEL` | `claude-opus-5-5` | Which Claude model the assistant uses. |
 | `SPADESK_TIMEZONE` | `America/Los_Angeles` | The spa's time zone, so the assistant knows the current time there. |
-| `SPADESK_DATA` | `data/family_spa_business_doc.md` | The business document. |
+| `SPADESK_DATA` | `data/business_doc.md` | The business document. |
 | `SPADESK_REPORT_DATA` | `data/spadesk_bookings.json` | The bookings file the dashboard reads. |
 
 ## If something goes wrong

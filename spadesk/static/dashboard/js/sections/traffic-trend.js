@@ -1,12 +1,14 @@
 /**
- * @file The "Traffic trend" card: how many bookings were made over time.
+ * @file The "Traffic trend" card: how many bookings were made over time, one
+ * bar per period.
  * "Traffic" here means bookings. The data has no website visits or enquiries.
  *
  * Data: report.trend, the same points the revenue trend uses.
  */
 
 import { chartCard } from "../card.js";
-import { drawLineChart } from "../charts/line-chart.js";
+import { drawColumnChart } from "../charts/column-chart.js";
+import { timeAxis } from "../charts/time-axis.js";
 import { bucketLabel, number, percent } from "../format.js";
 
 /**
@@ -22,12 +24,14 @@ export function renderTrafficTrend(container, report) {
     title: "Traffic trend",
     subtitle: `Bookings made, per ${bucket}`,
     empty: report.summary.bookings === 0,
-    draw: (body) => drawLineChart(body, {
+    draw: (body) => drawColumnChart(body, {
       labels,
-      series: [{ name: "Bookings", className: "series-1", values: points.map((point) => point.bookings) }],
+      axis: timeAxis(points.map((point) => point.start), bucket),
+      values: points.map((point) => point.bookings),
+      name: "Bookings",
+      className: "series-1",
       formatValue: number,
       formatTick: number,
-      area: true,
     }),
     table: {
       columns: [bucket === "day" ? "Day" : `${bucket[0].toUpperCase()}${bucket.slice(1)} starting`,

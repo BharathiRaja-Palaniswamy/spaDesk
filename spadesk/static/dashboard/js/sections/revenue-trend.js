@@ -1,12 +1,14 @@
 /**
- * @file The "Revenue trend" card: revenue over time for the selected filters.
+ * @file The "Revenue trend" card: revenue over time for the selected filters,
+ * one bar per period.
  *
  * Data: report.trend = { bucket, points: [{ start, revenue, bookings, completed, ... }] },
  * one point per day, week or month (the server chooses, see metrics/period.py).
  */
 
 import { chartCard } from "../card.js";
-import { drawLineChart } from "../charts/line-chart.js";
+import { drawColumnChart } from "../charts/column-chart.js";
+import { timeAxis } from "../charts/time-axis.js";
 import { bucketLabel, compactMoney, money, number } from "../format.js";
 
 /**
@@ -22,12 +24,14 @@ export function renderRevenueTrend(container, report) {
     title: "Revenue trend",
     subtitle: `Revenue from completed bookings, per ${bucket}`,
     empty: report.summary.bookings === 0,
-    draw: (body) => drawLineChart(body, {
+    draw: (body) => drawColumnChart(body, {
       labels,
-      series: [{ name: "Revenue", className: "series-1", values: points.map((point) => point.revenue) }],
+      axis: timeAxis(points.map((point) => point.start), bucket),
+      values: points.map((point) => point.revenue),
+      name: "Revenue",
+      className: "series-1",
       formatValue: (value) => money(value, report.currency),
       formatTick: (value) => compactMoney(value, report.currency),
-      area: true,
     }),
     table: {
       columns: [bucket === "day" ? "Day" : `${bucket[0].toUpperCase()}${bucket.slice(1)} starting`, "Revenue", "Bookings", "Completed"],

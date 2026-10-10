@@ -15,11 +15,11 @@
  *
  * @param {string} question what the visitor typed
  * @returns {Promise<{answer: string, items: {name: string, detail: string}[],
- *   covered: boolean, sections: string[]}>}
+ *   covered: boolean, sections: string[], suggestions: string[]}>}
  *   `answer` is the text to show; `items` holds the entries when the answer
  *   is a list (empty otherwise); `covered` is false when the business profile
  *   does not contain the answer; `sections` names the parts of the profile
- *   the answer came from
+ *   the answer came from; `suggestions` holds follow-up questions to offer
  */
 export async function askAssistant(question) {
   const response = await fetch("/api/report/chat", {

@@ -1,7 +1,7 @@
 # spaDesk
 
 spaDesk is a small web app for a spa, built around a fictional business called
-Family Spa. It has two sides:
+Pebble Spa. It has two sides:
 
 - **A customer site** where visitors browse services, prices, opening hours
   and policies, and send a booking request.
@@ -39,8 +39,8 @@ duration and price per category, packages, offers, add-ons, FAQs and policies.
 - **Headline tiles**: revenue, bookings, completion rate, average ticket,
   average rating, and revenue lost to cancellations and no-shows, each with its
   change against the previous period.
-- **Charts**: revenue trend and traffic (bookings) trend as lines; revenue
-  by category, top services, revenue by channel and new against returning
+- **Charts**: revenue trend and traffic (bookings) trend as vertical bars;
+  revenue by category, top services, revenue by channel and new against returning
   customers as horizontal bars; and "How customers feel", a face for each
   star rating with the feedback tags behind each sentiment. Every chart has
   a table view.
@@ -50,8 +50,10 @@ duration and price per category, packages, offers, add-ons, FAQs and policies.
   business profile (services, prices, hours, policies). The reply is
   structured output: the answer, a list of entries when the answer is a
   list, whether the profile covered the question, and which sections it came
-  from. So the chat lays lists out as bullets, shows a "From: Policies" line,
-  and marks answers the profile could not cover. It does not see the reports
+  from, and a few follow-up questions. So the chat lays lists out as bullets,
+  shows a "From: Policies" line, marks answers the profile could not cover,
+  and offers the follow-ups as buttons. When first opened, the assistant
+  introduces itself and suggests some questions to start from. It does not see the reports
   yet and does not remember earlier messages.
 
 ## Running it
@@ -77,7 +79,7 @@ settings with the key left blank.
 
 | File | What it is | Read by |
 |---|---|---|
-| `data/family_spa_business_doc.md` | What the business is: name, services, prices, hours, policies, FAQs, offers | Customer site, business profile tab, assistant, and the reports (for service names, categories and prices) |
+| `data/business_doc.md` | What the business is: name, services, prices, hours, policies, FAQs, offers | Customer site, business profile tab, assistant, and the reports (for service names, categories and prices) |
 | `data/spadesk_bookings.json` | What happened: one year of mock bookings, the customers who made them, and the channels they came through | Reports |
 | `storage/booking_requests.jsonl` | Booking requests sent from the site (created on first use) | Nothing yet |
 
@@ -162,7 +164,7 @@ spadesk/
         tabs.js                switches between the two tabs
         profile.js             draws the business profile tab
         api.js, filters.js, presets.js, tiles.js, card.js, table.js, format.js, dom.js
-        charts/                line and bar list charts, and their helpers
+        charts/                column and bar list charts, and their helpers
         sections/              one file per dashboard card
         chat/                  the assistant window and the call to the server
 tests/                         one test file per area

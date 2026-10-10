@@ -4,7 +4,7 @@ The profile is the business document laid out the way it is written: its
 top-level headings become sections, in document order, and each section holds
 one group per sub-heading (or a single untitled group when it has none).
 
-    {"name": "Family Spa", "sections": [
+    {"name": "Pebble Spa", "sections": [
         {"title": "Core Services", "groups": [
             {"title": "Facials", "lines": [], "bulleted": False, "items": [
                 {"name": "Glow Express Facial", "description": "...",

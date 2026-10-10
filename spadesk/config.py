@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # The bold block that lists opening hours, shown in the hero of the landing page.
 HOURS_BLOCK = "Business Hours"
 # The section whose first paragraph is shown in the page footer.
-ABOUT_SECTION = "About Family Spa"
+ABOUT_SECTION = "About"
 # Shown on the landing page. Entries missing from the document are skipped.
 FEATURED = ("Signature Radiance Facial", "Swedish Massage", "Kids Mini Facial", "Mom & Me Relax Package")
 HIGHLIGHTS = ("New Guest Welcome Offer", "Cancellation Policy", "Late Arrival Policy", "Age Policy")
@@ -54,7 +54,7 @@ def get_settings() -> Settings:
     # os.getenv(name, default) returns the environment variable if it is set,
     # otherwise the default written here.
     return Settings(
-        data_path=Path(os.getenv("SPADESK_DATA", ROOT / "data" / "family_spa_business_doc.md")),
+        data_path=Path(os.getenv("SPADESK_DATA", ROOT / "data" / "business_doc.md")),
         bookings_path=Path(os.getenv("SPADESK_BOOKINGS", ROOT / "storage" / "booking_requests.jsonl")),
         report_data_path=Path(os.getenv("SPADESK_REPORT_DATA", ROOT / "data" / "spadesk_bookings.json")),
         model=os.getenv("SPADESK_MODEL", "claude-opus-5-5"),

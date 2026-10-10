@@ -117,7 +117,14 @@ class ChatReply(BaseModel):
     sections: list[str] = Field(description="The profile sections the answer was taken from, by their exact "
                                             "heading, most specific first. Empty when covered is false or no "
                                             "section was needed.")
+    suggestions: list[str] = Field(description="Up to three short questions the owner might naturally ask next. "
+                                               "Each must be answerable from the business profile, be written "
+                                               "as the owner would ask it, and not repeat the question just "
+                                               "asked.")
 
+
+# How many follow-up questions the chat shows under an answer.
+MAX_SUGGESTIONS = 3
 
 # The standing instructions. The current time and the business document are
 # added below them on every request, between tags, so the model can tell
@@ -184,4 +191,6 @@ def chat(body: ChatQuestion) -> ChatReply:
     # Policy" already says where the answer is, so "Policies" is dropped.
     parents = {heading for heading, subheading in outline if subheading in cited}
     reply.sections = [name for name in cited if name not in parents]
+    # The schema cannot limit how many suggestions come back, so the limit is applied here.
+    reply.suggestions = reply.suggestions[:MAX_SUGGESTIONS]
     return reply

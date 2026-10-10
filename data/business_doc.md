@@ -1,10 +1,10 @@
-# Family Spa — Business Overview
+# Pebble Spa — Business Overview
 
-## About Family Spa
+## About
 
-Family Spa is a neighborhood wellness spa founded in 2016 in Sunnyvale, California. The spa was created to make self-care approachable for individuals, couples, and families looking for a calm and welcoming place to recharge. Over time, the business grew from a small facial studio into a full-service wellness destination offering facials, massage therapy, body treatments, waxing, curated seasonal packages, and selected kid-friendly services.
+Pebble Spa is a neighborhood wellness spa founded in 2016 in Sunnyvale, California. The spa was created to make self-care approachable for individuals, couples, and families looking for a calm and welcoming place to recharge. Over time, the business grew from a small facial studio into a full-service wellness destination offering facials, massage therapy, body treatments, waxing, curated seasonal packages, and selected kid-friendly services.
 
-The spa’s brand promise is simple: thoughtful care, transparent pricing, clean service standards, and a warm environment for both first-time and returning guests. Family Spa aims to balance a premium feel with accessible service options and a family-friendly atmosphere.
+The spa’s brand promise is simple: thoughtful care, transparent pricing, clean service standards, and a warm environment for both first-time and returning guests. Pebble Spa aims to balance a premium feel with accessible service options and a family-friendly atmosphere.
 
 ## Mission
 
@@ -14,7 +14,7 @@ To help customers feel refreshed, confident, and cared for through personalized 
 
 **Address:** 245 Cedar Lane, Sunnyvale, CA 94086  
 **Phone:** (408) 555-0188  
-**Email:** hello@familyspa.com
+**Email:** hello@pebblespa.com
 
 **Business Hours**
 - Monday to Thursday: 10:00 AM – 8:00 PM
@@ -144,7 +144,7 @@ First-time customers receive 15% off one full-priced service from Monday to Thur
 ## Frequently Asked Questions
 
 **Do you offer services for children?**  
-Yes. Family Spa offers selected kid-friendly services designed to be gentle, short, and age-appropriate.
+Yes. Pebble Spa offers selected kid-friendly services designed to be gentle, short, and age-appropriate.
 
 **Do I need an appointment?**  
 Walk-ins are welcome when availability permits, but appointments are strongly recommended, especially for evenings and weekends.

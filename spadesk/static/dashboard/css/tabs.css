@@ -11,7 +11,7 @@
   border: 0;
   border-bottom: 3px solid transparent;   /* becomes the accent line on the selected tab */
   margin-bottom: -1px;                     /* sits on top of the bar's own line */
-  border-radius: 8px 8px 0 0;
+  border-radius: var(--radius-small) var(--radius-small) 0 0;
   background: transparent;
   color: var(--text-secondary);
   font: inherit;

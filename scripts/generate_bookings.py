@@ -11,7 +11,7 @@ Writes  data/spadesk_bookings.json, which holds only what happened:
 
 It holds no business facts. A booking points at its service with a
 `service_id`, and the service's name, category and price are read from
-data/family_spa_business_doc.md when the app runs (see
+data/business_doc.md when the app runs (see
 spadesk/business/catalog.py). The price a booking was actually charged at is
 stored on the booking as `list_price`, because that is a fact about the
 booking: it would stay the same if the price list changed later.

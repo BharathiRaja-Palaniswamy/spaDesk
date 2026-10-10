@@ -5,7 +5,7 @@
     "period_end": "2026-09-30",
     "currency": "$",
     "generated_by": "scripts/generate_bookings.py",
-    "services_from": "family_spa_business_doc.md"
+    "services_from": "business_doc.md"
   },
   "channels": [
     "Google",

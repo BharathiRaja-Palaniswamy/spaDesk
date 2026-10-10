@@ -1,59 +1,45 @@
-/* Design tokens: every colour, font and size the dashboard uses, as variables.
-   The other stylesheets only refer to these names, so the light and dark
-   themes are swapped here and nowhere else. */
+/* Design tokens: every colour, font and size the manage page uses, as
+   variables. The other stylesheets only refer to these names, so the whole
+   look is set here.
+
+   The values match the customer site (static/styles.css): warm ivory
+   background, sage and deep green, serif headings. Keep the two in step. */
 
 :root {
   color-scheme: light;
-  --page: #f9f9f7;            /* behind the cards */
-  --surface: #fcfcfb;         /* cards, inputs */
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #898781;
-  --hairline: #e1e0d9;        /* gridlines, dividers */
-  --axis: #c3c2b7;            /* chart baseline, hover line */
-  --border: rgba(11, 11, 11, 0.10);
-  --accent: #2a78d6;          /* selected controls, single-series charts */
-  --accent-wash: rgba(42, 120, 214, 0.10);
+  --page: #f6f3ec;            /* warm ivory, behind the cards */
+  --surface: #fffdf9;         /* cards, inputs */
+  --tint: #ebefe6;            /* pale sage: selected and hovered controls */
+  --text-primary: #26332d;    /* deep green-black ink */
+  --text-secondary: #5b6861;
+  --text-muted: #7d8882;
+  --hairline: #e2dccf;        /* gridlines, dividers */
+  --axis: #cfc8b8;            /* chart baseline, hover line */
+  --border: #e2dccf;
+  --accent: #2f4a3c;          /* deep green: buttons, selected controls */
+  --accent-soft: #5f7a68;     /* sage: small labels */
+  --accent-wash: var(--tint);
+  --on-accent: #ffffff;       /* text on a deep green button */
+
   /* Chart colours, used in this fixed order. The order is what keeps
      neighbouring colours tellable apart for colour-blind readers, so add to
      the end and do not reorder. */
-  --series-1: #2a78d6;        /* blue: also the colour of single-series charts */
-  --series-2: #eb6834;        /* orange */
-  --series-3: #1baf7a;        /* aqua */
-  --series-4: #eda100;        /* yellow */
-  --series-5: #e87ba4;        /* magenta */
+  --series-1: #23835f;        /* green: also the colour of single-series charts */
+  --series-2: #4a78bd;        /* blue */
+  --series-3: #b5850f;        /* ochre */
+  --series-4: #8d5fb0;        /* violet */
+  --series-5: #cf6c38;        /* clay */
   /* Customer sentiment: green = happy, grey = neutral, red = unhappy. */
-  --sentiment-happy: #0ca30c;
-  --sentiment-neutral: #898781;
-  --sentiment-unhappy: #d03b3b;
-  --good-text: #006300;       /* a change in the right direction */
-  --bad-text: #d03b3b;        /* a change in the wrong direction */
+  --sentiment-happy: #23835f;
+  --sentiment-neutral: #9a9f97;
+  --sentiment-unhappy: #c4503f;
+  --good-text: #1f6b4b;       /* a change in the right direction */
+  --bad-text: #b23b2e;        /* a change in the wrong direction */
 
-  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --radius: 10px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-heading: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --radius: 18px;             /* cards and panels */
+  --radius-small: 12px;       /* inputs and small boxes */
+  --shadow: 0 18px 50px -28px rgba(38, 51, 45, 0.45);
   --gap: 16px;
-}
-
-/* Dark theme, used when the visitor's system is set to dark. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --page: #0d0d0d;
-    --surface: #1a1a19;
-    --text-primary: #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted: #898781;
-    --hairline: #2c2c2a;
-    --axis: #383835;
-    --border: rgba(255, 255, 255, 0.10);
-    --accent: #3987e5;
-    --accent-wash: rgba(57, 135, 229, 0.16);
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --series-3: #199e70;
-    --series-4: #c98500;
-    --series-5: #d55181;
-    --good-text: #0ca30c;
-    --bad-text: #e66767;
-  }
 }

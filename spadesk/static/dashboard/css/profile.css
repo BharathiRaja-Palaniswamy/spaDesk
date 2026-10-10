@@ -2,11 +2,12 @@
 
 .profile-note { margin: 16px 0; color: var(--text-secondary); }
 
-.profile-title { margin: 0 0 12px; font-size: 16px; font-weight: 600; }
+.profile-title { margin: 0 0 12px; font-size: 19px; }
 
 /* A group is one sub-heading of the document with its text and entries. */
 .profile-group + .profile-group { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--hairline); }
-.profile-group h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+/* Sub-headings and entry names stay in the body font: small serif text is harder to read. */
+.profile-group h3 { margin: 0 0 8px; font-family: var(--font); font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-soft); }
 
 .profile-text p { margin: 0 0 8px; }
 .profile-text p:last-child { margin-bottom: 0; }

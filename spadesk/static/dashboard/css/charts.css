@@ -8,9 +8,12 @@
 .grid-line { stroke: var(--hairline); stroke-width: 1; }
 .baseline { stroke: var(--axis); stroke-width: 1; }
 .axis-label { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+/* The second row under a time axis: the month or year the bars belong to. */
+.axis-group { fill: var(--text-secondary); font-size: 11px; font-weight: 600; }
+.axis-divider { stroke: var(--hairline); stroke-width: 1; }
 
 /* A series class sets --series; the marks below use it. That is how one
-   class name colours a line, its dot and its tooltip key together. */
+   class name colours a bar and its tooltip key together. */
 .series-1 { --series: var(--series-1); }
 .series-2 { --series: var(--series-2); }
 .series-3 { --series: var(--series-3); }
@@ -23,11 +26,10 @@
 .sentiment-neutral { --series: var(--sentiment-neutral); }
 .sentiment-unhappy { --series: var(--sentiment-unhappy); }
 
-.line { fill: none; stroke: var(--series); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-.area { fill: var(--series); opacity: 0.1; }
-.dot { fill: var(--series); stroke: var(--surface); stroke-width: 2; }   /* the ring keeps it clear of the line */
-.crosshair { stroke: var(--axis); stroke-width: 1; }
-.hover-layer { pointer-events: none; }
+/* Columns: one bar per period. */
+.bar { fill: var(--series); }
+/* The soft band behind the hovered bar. */
+.column-highlight { fill: var(--accent-wash); pointer-events: none; }
 
 /* The tooltip is positioned inside the plot box. */
 .plot { position: relative; }
@@ -42,7 +44,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--shadow);
   font-size: 12px;
   white-space: nowrap;
   pointer-events: none;

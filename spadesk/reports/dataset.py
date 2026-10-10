@@ -3,7 +3,7 @@
 Two sources, each with its own job, and nothing stored twice:
 
   data/spadesk_bookings.json        what happened: bookings and customers
-  data/family_spa_business_doc.md   what the business is: services, prices
+  data/business_doc.md              what the business is: services, prices
 
 A booking stores only a `service_id`. The service's name, category and price
 come from the business document, through `service_catalog` in

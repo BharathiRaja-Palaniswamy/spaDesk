@@ -11,7 +11,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 20px;
   min-width: 0;   /* lets a card shrink inside the grid instead of overflowing */
 }
 
@@ -22,18 +22,19 @@
   gap: var(--gap);
   margin-bottom: 12px;
 }
-.card-header h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.card-header h2 { margin: 0; font-size: 19px; }
 .card-header p { margin: 2px 0 0; color: var(--text-secondary); font-size: 13px; }
 
 .card-toggle {
   flex: none;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 999px;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--accent);
   font: inherit;
   font-size: 12px;
-  padding: 5px 10px;
+  font-weight: 600;
+  padding: 5px 12px;
   cursor: pointer;
 }
 .card-toggle:hover { background: var(--accent-wash); }

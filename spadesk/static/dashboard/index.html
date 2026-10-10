@@ -28,7 +28,8 @@
   <header class="top">
     <div>
       <p class="eyebrow">Manage</p>
-      <h1 id="business-name">&nbsp;</h1>
+      <!-- js/main.js writes the business name into #business-name. -->
+      <h1><span class="brand-mark" aria-hidden="true"></span><span id="business-name">&nbsp;</span></h1>
     </div>
     <a class="back" href="/">Customer site</a>
   </header>
@@ -67,8 +68,8 @@
       <!-- Each card below is filled by one file in js/sections/. Cards sit two
            to a row on wide screens; "wide" cards take the whole row. -->
       <div class="cards">
-        <section class="card" id="revenue-trend" aria-label="Revenue trend"></section>
-        <section class="card" id="traffic-trend" aria-label="Traffic trend"></section>
+        <section class="card wide" id="revenue-trend" aria-label="Revenue trend"></section>
+        <section class="card wide" id="traffic-trend" aria-label="Traffic trend"></section>
         <section class="card" id="category-revenue" aria-label="Revenue by category"></section>
         <section class="card" id="top-services" aria-label="Top services"></section>
         <section class="card" id="channel-revenue" aria-label="Revenue by channel"></section>
@@ -86,13 +87,16 @@
   <button class="chat-launcher" id="chat-launcher" type="button" aria-expanded="false" aria-controls="chat-panel">Ask assistant</button>
   <section class="chat-panel" id="chat-panel" aria-label="Assistant" hidden>
     <header class="chat-header">
-      <h2>Assistant</h2>
+      <div>
+        <h2>Assistant</h2>
+        <p>Answers from your business profile</p>
+      </div>
       <button class="chat-close" id="chat-close" type="button" aria-label="Close">×</button>
     </header>
     <div class="chat-messages" id="chat-messages" aria-live="polite"></div>
     <form class="chat-form" id="chat-form">
       <label class="visually-hidden" for="chat-input">Your question</label>
-      <input id="chat-input" autocomplete="off" maxlength="2000" placeholder="Ask me anything">
+      <input id="chat-input" autocomplete="off" maxlength="2000" placeholder="Ask about your business…">
       <button type="submit">Send</button>
     </form>
   </section>

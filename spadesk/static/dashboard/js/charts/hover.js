@@ -1,9 +1,9 @@
 /**
  * @file The hover behaviour of a chart that has one position per period (the
- * line chart): find the period nearest the pointer, show a tooltip for it,
+ * column chart): find the period nearest the pointer, show a tooltip for it,
  * and let the chart mark it in its own way.
  *
- * The reader aims at a period, not at a thin mark: the pointer only has to be
+ * The reader aims at a period, not at a thin bar: the pointer only has to be
  * nearest to it, anywhere over the chart. Left/right arrow keys do the same
  * for keyboard users.
  */

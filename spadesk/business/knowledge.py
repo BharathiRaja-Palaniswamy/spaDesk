@@ -145,7 +145,7 @@ class KnowledgeBase:
                 if heading:
                     level, title = len(heading[1]), heading[2].strip()
                     if level == 1:
-                        # "# Family Spa — Business Overview" -> "Family Spa"
+                        # "# Pebble Spa — Business Overview" -> "Pebble Spa"
                         self.name = re.split(r"\s+[—–-]\s+", title)[0]
                     elif level == 2:
                         h2, h3 = title, ""

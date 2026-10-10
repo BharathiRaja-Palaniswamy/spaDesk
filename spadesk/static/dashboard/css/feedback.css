@@ -13,7 +13,7 @@
   gap: 2px;
   padding: 14px 8px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-small);
   background: var(--page);
 }
 .face-icon { font-size: 32px; line-height: 1.2; }
@@ -33,6 +33,7 @@
   align-items: center;
   gap: 8px;
   margin: 0 0 6px;
+  font-family: var(--font);   /* a small label, so it stays in the body font */
   font-size: 14px;
   font-weight: 600;
 }
