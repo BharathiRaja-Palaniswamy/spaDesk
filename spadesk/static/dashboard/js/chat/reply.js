@@ -22,10 +22,13 @@ export function showReply(bubble, reply) {
 }
 
 /**
- * The "From: Cancellation Policy" line that goes under an answer.
- * @param {string[]} sections the profile headings the answer came from
- * @returns {HTMLElement|string} "" when there is nothing to cite
+ * The small line that goes under an answer: how it was produced, then where
+ * it came from. E.g. "RAG · 3 chunks · From: Cancellation Policy".
+ * @param {string} mode how the answer was produced, from modeLabel() in rag-switch.js
+ * @param {string[]} sections the profile headings the answer came from; may be empty
+ * @returns {HTMLElement}
  */
-export function sourceLine(sections) {
-  return sections.length ? el("div", { className: "chat-sources", textContent: `From: ${sections.join(", ")}` }) : "";
+export function sourceLine(mode, sections) {
+  const from = sections.length ? ` · From: ${sections.join(", ")}` : "";
+  return el("div", { className: "chat-sources" }, el("span", { className: "chat-mode", textContent: mode }), from);
 }

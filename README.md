@@ -55,6 +55,12 @@ duration and price per category, packages, offers, add-ons, FAQs and policies.
   and offers the follow-ups as buttons. When first opened, the assistant
   introduces itself and suggests some questions to start from. It does not see the reports
   yet and does not remember earlier messages.
+- **RAG switch**: a switch in the chat header chooses how the assistant is
+  given the business document. Off, the whole document is sent. On, only the
+  few chunks that best match the question are sent (retrieval-augmented
+  generation). The line under each answer says which was used, so the same
+  question can be asked both ways and compared. See
+  [docs/rag-notes.md](docs/rag-notes.md).
 
 ## Running it
 
@@ -127,7 +133,9 @@ The browser never reads the data file; filtering and maths happen on the server.
 3. The route in `reports/routes.py` reads the business document, sends it to
    Claude as context together with the question (using the API key from
    `.env`), and asks for the reply in a fixed shape, the `ChatReply` class.
-   The document is small enough to send whole, so no search step is needed.
+   With the RAG switch on, step 3 sends only the retrieved chunks instead:
+   `rag/retriever.py` embeds the question and finds the closest chunks in the
+   vector store, and `rag/context.py` lays them out for the prompt.
 4. The window shows the answer and uses the other fields to add the source
    line or the "not covered" style.
 
@@ -149,6 +157,13 @@ spadesk/
     profile.py                 lays it out as the manage page's business profile
   booking/
     service.py                 mock booking requests
+  rag/
+    chunking.py                cuts the document into fixed-size chunks with overlap
+    embeddings/                turns text into vectors; the provider is a setting
+    stores/                    keeps chunks and vectors (Chroma); the store is a setting
+    index.py                   builds the index, and rebuilds it when something changed
+    retriever.py               finds the chunks that match a question
+    context.py                 lays the retrieved chunks out for the model
   reports/
     dataset.py                 loads the bookings JSON, joins it to the services, filters it
     metrics/                   one file per calculation
@@ -198,6 +213,8 @@ route in `spadesk/app.py`, then `spadesk/business/knowledge.py`.
   with real data.
 - The assistant knows the business profile only. It cannot answer questions
   about the reports, and each question stands alone (no memory).
+- With RAG on, questions that need the whole document ("which service is
+  cheapest?") can be answered wrongly, because only a few chunks are sent.
 
 ## Where later work plugs in
 
@@ -205,5 +222,6 @@ route in `spadesk/app.py`, then `spadesk/business/knowledge.py`.
 |---|---|
 | Let the assistant answer report questions (tool use) | the `chat` route in `reports/routes.py`, offering `build_report` to the model as a tool |
 | Follow-up questions (memory) | the same route, keeping earlier messages per session |
+| Another embedding provider or vector store | a file in `rag/embeddings/` or `rag/stores/`, and one line in its `__init__.py` |
 | A new dashboard chart | a metric in `reports/metrics/`, a line in `report.py`, a file in `js/sections/` |
 | Real calendar booking | `BookingDesk.submit` in `booking/service.py` |

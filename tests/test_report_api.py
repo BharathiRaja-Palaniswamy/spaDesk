@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from spadesk.app import app
+from spadesk.rag.stores import get_store
 from spadesk.reports import routes
 
 
@@ -110,7 +111,8 @@ def test_chat_returns_a_structured_reply(client, monkeypatch):
     assert reply.json() == {"answer": "Cancel 24 hours ahead.", "covered": True,
                             "items": [{"name": "Late cancellations", "detail": "50% fee"}],
                             "sections": ["Cancellation Policy"],
-                            "suggestions": ["One?", "Two?", "Three?"]}  # at most three are passed on
+                            "suggestions": ["One?", "Two?", "Three?"],  # at most three are passed on
+                            "rag": False, "chunks": 0}  # answered from the whole document
 
     sent = FakeAnthropic.last_request
     assert sent["messages"] == [{"role": "user", "content": "What is our cancellation policy?"}]
@@ -119,6 +121,27 @@ def test_chat_returns_a_structured_reply(client, monkeypatch):
     assert "<profile>" in sent["system"] and "Late cancellations may incur a 50% service fee." in sent["system"]
     assert "<sections>" in sent["system"] and "Frequently Asked Questions\nPolicies\nBooking Policy" in sent["system"]
     assert "<currentTime>" in sent["system"]
+
+
+def test_chat_with_rag_sends_only_the_retrieved_chunks(client, monkeypatch, tmp_path):
+    monkeypatch.setattr(routes.anthropic, "Anthropic", FakeAnthropic)
+    monkeypatch.setenv("SPADESK_VECTOR_STORE_PATH", str(tmp_path / "chroma"))  # an empty store for this test
+    monkeypatch.setenv("SPADESK_RETRIEVAL_TOP_K", "3")  # a known number, whatever `.env` says
+    get_store.cache_clear()
+    reply = client.post("/api/report/chat", json={"question": "What is our cancellation policy?", "rag": True})
+    get_store.cache_clear()
+    assert (reply.json()["rag"], reply.json()["chunks"]) == (True, 3)
+    assert reply.json()["sections"] == ["Cancellation Policy"]
+
+    system = FakeAnthropic.last_request["system"]
+    # The model is told it is seeing excerpts, and gets the three that match
+    # the question, not the whole document: the opening hours are not there.
+    assert "each between <excerpt> tags" in system and system.count("<excerpt>\n") == 3
+    assert "Late cancellations may incur a 50% service fee." in system
+    assert "Sunday: 10:00 AM" not in system
+    # Only headings the excerpts include are offered as sources.
+    offered = system.split("<sections>\n")[1].split("\n</sections>")[0].splitlines()
+    assert "Cancellation Policy" in offered and "Facials" not in offered
 
 
 def test_chat_reports_when_there_is_no_structured_reply(client, monkeypatch):

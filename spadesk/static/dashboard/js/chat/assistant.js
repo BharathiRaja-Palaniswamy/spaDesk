@@ -14,18 +14,20 @@
  * this throws, the window shows an error message instead.
  *
  * @param {string} question what the visitor typed
+ * @param {boolean} rag true to answer from retrieved chunks, false from the whole profile
  * @returns {Promise<{answer: string, items: {name: string, detail: string}[],
- *   covered: boolean, sections: string[], suggestions: string[]}>}
+ *   covered: boolean, sections: string[], suggestions: string[], rag: boolean, chunks: number}>}
  *   `answer` is the text to show; `items` holds the entries when the answer
  *   is a list (empty otherwise); `covered` is false when the business profile
  *   does not contain the answer; `sections` names the parts of the profile
- *   the answer came from; `suggestions` holds follow-up questions to offer
+ *   the answer came from; `suggestions` holds follow-up questions to offer;
+ *   `rag` and `chunks` say how the answer was produced
  */
-export async function askAssistant(question) {
+export async function askAssistant(question, rag) {
   const response = await fetch("/api/report/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ question, rag }),
   });
   const body = await response.json();
   // On an error the server sends { detail } and no reply; throwing makes the

@@ -3,7 +3,8 @@
   GET /manage               the manage page (static/dashboard/index.html)
   GET /api/report/options   what the filter row can offer (date range, dropdown values)
   GET /api/report           the full report for the chosen filters
-  POST /api/report/chat     one assistant question about the business -> a structured reply
+  POST /api/report/chat     one assistant question about the business -> a structured reply.
+                            The body says whether to answer with RAG or the whole document.
 
 Example:  /api/report?start=2026-09-01&end=2026-09-30&category=Facials
 
@@ -24,6 +25,7 @@ from pydantic import BaseModel, Field
 
 from ..business.store import get_knowledge
 from ..config import get_settings
+from ..rag.context import retrieved_context
 from .dataset import Dataset, load
 from .report import build_report
 
@@ -88,6 +90,9 @@ class ChatQuestion(BaseModel):
     """The JSON body of POST /api/report/chat."""
 
     question: str
+    # How the model is given the business document. False: all of it. True:
+    # only the chunks retrieved for this question (RAG). Set by the chat's toggle.
+    rag: bool = False
 
 
 # Structured output. The model is not asked for free text: it is given this
@@ -123,6 +128,16 @@ class ChatReply(BaseModel):
                                                "asked.")
 
 
+class ChatAnswer(ChatReply):
+    """What the chat route sends to the browser: the model's reply, plus how
+    it was produced. Kept apart from ChatReply so the model is not asked to
+    fill these in; the server knows them.
+    """
+
+    rag: bool  # True when the answer was made from retrieved chunks
+    chunks: int  # how many chunks were retrieved; 0 without RAG
+
+
 # How many follow-up questions the chat shows under an answer.
 MAX_SUGGESTIONS = 3
 
@@ -146,18 +161,34 @@ When you name the sections an answer came from, use those names exactly, and \
 prefer the most specific one: the sub-heading the answer sits under, where \
 there is one."""
 
+# Added to the instructions when RAG is on, so the model knows it is looking
+# at part of the profile and does not mistake a cut for a mistake.
+RAG_NOTE = """Only the parts of the profile that best match the question are \
+given, each between <excerpt> tags. They were cut by length, so an excerpt \
+may begin or end mid-sentence. The rest of the profile is not shown: if the \
+excerpts do not contain the answer, say you could not find it in the profile."""
+
 
 @router.post("/chat")
-def chat(body: ChatQuestion) -> ChatReply:
+def chat(body: ChatQuestion) -> ChatAnswer:
     """Answer one question about the business, using the business document."""
     settings = get_settings()
-    # The whole business document, as text. It is small, so it is sent in full.
-    profile = settings.data_path.read_text(encoding="utf-8")
-    # Its headings and sub-headings, e.g. "Policies" and "Cancellation Policy".
-    # The reply names its sources from this list. (dict.fromkeys removes
-    # repeats while keeping the document's order.)
+    # The document's headings and sub-headings, e.g. "Policies" and
+    # "Cancellation Policy". The reply names its sources from this list.
+    # (dict.fromkeys removes repeats while keeping the document's order.)
     outline = get_knowledge().outline
     headings = list(dict.fromkeys(name for pair in outline for name in pair if name))
+    instructions, chunks = SYSTEM, 0
+    if body.rag:
+        # RAG: only the chunks that match the question, and only their headings
+        # to cite from, so a source the model was never shown cannot be named.
+        context = retrieved_context(body.question)
+        profile, chunks = context.text, context.chunks
+        headings = [name for name in headings if name in context.sections]
+        instructions = f"{SYSTEM}\n\n{RAG_NOTE}"
+    else:
+        # The whole business document, as text. It is small, so it fits.
+        profile = settings.data_path.read_text(encoding="utf-8")
     # The model has no clock, so it is told the current date and time in the
     # spa's own time zone, e.g. "Friday, 09 October 2026, 3:42 PM (PDT)".
     current_time = datetime.now(ZoneInfo(settings.timezone)).strftime("%A, %d %B %Y, %-I:%M %p (%Z)")
@@ -169,7 +200,7 @@ def chat(body: ChatQuestion) -> ChatReply:
         response = anthropic.Anthropic().messages.parse(
             model=settings.model,
             max_tokens=16000,
-            system=(f"{SYSTEM}\n\n<currentTime>{current_time}</currentTime>\n\n"
+            system=(f"{instructions}\n\n<currentTime>{current_time}</currentTime>\n\n"
                     f"<sections>\n{chr(10).join(headings)}\n</sections>\n\n<profile>\n{profile}\n</profile>"),
             messages=[{"role": "user", "content": body.question}],
             output_format=ChatReply,
@@ -193,4 +224,4 @@ def chat(body: ChatQuestion) -> ChatReply:
     reply.sections = [name for name in cited if name not in parents]
     # The schema cannot limit how many suggestions come back, so the limit is applied here.
     reply.suggestions = reply.suggestions[:MAX_SUGGESTIONS]
-    return reply
+    return ChatAnswer(**reply.model_dump(), rag=body.rag, chunks=chunks)
