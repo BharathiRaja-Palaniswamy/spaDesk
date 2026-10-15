@@ -7,28 +7,39 @@
 import { el } from "../dom.js";
 
 /**
- * Fills a message bubble from a reply: the answer, then its list when it has
- * one, with each entry as a bullet (name in bold, detail after it). An answer
- * the business profile did not cover gets a different style.
+ * Fills a message bubble from a reply, top to bottom:
+ *   1. the answer;
+ *   2. its list when it has one, each entry as a bullet (name in bold, detail
+ *      after it): services with prices, or the figures of a report;
+ *   3. for a report answer, an "Insights" block: what the figures mean.
+ * An answer the assistant could not cover gets a different style.
  * @param {HTMLElement} bubble the assistant's bubble, currently showing "Thinking…"
- * @param {{answer: string, items: {name: string, detail: string}[], covered: boolean}} reply
+ * @param {{answer: string, items: {name: string, detail: string}[], insights: string[],
+ *   covered: boolean}} reply
  */
 export function showReply(bubble, reply) {
   bubble.replaceChildren(
     el("p", { textContent: reply.answer }),
     reply.items.length ? el("ul", { className: "chat-list" }, ...reply.items.map((item) =>
-      el("li", {}, el("strong", { textContent: item.name }), ` ${item.detail}`))) : "");
+      el("li", {}, el("strong", { textContent: item.name }), ` ${item.detail}`))) : "",
+    reply.insights.length ? el("div", { className: "chat-insights" },
+      el("p", { className: "chat-insights-title", textContent: "Insights" }),
+      el("ul", {}, ...reply.insights.map((insight) => el("li", { textContent: insight })))) : "");
   bubble.classList.toggle("not-covered", !reply.covered);
 }
 
 /**
  * The small line that goes under an answer: how it was produced, then where
- * it came from. E.g. "RAG · 3 chunks · From: Cancellation Policy".
+ * it came from. E.g. "RAG · 3 chunks · From: Cancellation Policy", or
+ * "Full profile · Report: 2026-09-01 to 2026-09-30" for an answer made from
+ * report figures.
  * @param {string} mode how the answer was produced, from modeLabel() in rag-switch.js
  * @param {string[]} sections the profile headings the answer came from; may be empty
+ * @param {string[]} reports the reports the assistant asked for; may be empty
  * @returns {HTMLElement}
  */
-export function sourceLine(mode, sections) {
+export function sourceLine(mode, sections, reports) {
   const from = sections.length ? ` · From: ${sections.join(", ")}` : "";
-  return el("div", { className: "chat-sources" }, el("span", { className: "chat-mode", textContent: mode }), from);
+  const figures = reports.length ? ` · Report: ${reports.join("; ")}` : "";
+  return el("div", { className: "chat-sources" }, el("span", { className: "chat-mode", textContent: mode }), from, figures);
 }

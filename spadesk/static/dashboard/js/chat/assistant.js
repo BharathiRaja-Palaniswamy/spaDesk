@@ -15,13 +15,16 @@
  *
  * @param {string} question what the visitor typed
  * @param {boolean} rag true to answer from retrieved chunks, false from the whole profile
- * @returns {Promise<{answer: string, items: {name: string, detail: string}[],
- *   covered: boolean, sections: string[], suggestions: string[], rag: boolean, chunks: number}>}
+ * @returns {Promise<{answer: string, items: {name: string, detail: string}[], insights: string[],
+ *   covered: boolean, sections: string[], suggestions: string[], rag: boolean, chunks: number,
+ *   reports: string[]}>}
  *   `answer` is the text to show; `items` holds the entries when the answer
- *   is a list (empty otherwise); `covered` is false when the business profile
+ *   is a list or report figures (empty otherwise); `insights` holds what the
+ *   figures mean, for a report answer; `covered` is false when the business profile
  *   does not contain the answer; `sections` names the parts of the profile
  *   the answer came from; `suggestions` holds follow-up questions to offer;
- *   `rag` and `chunks` say how the answer was produced
+ *   `rag` and `chunks` say how the answer was produced; `reports` lists the
+ *   report periods the assistant looked up, when the answer uses figures
  */
 export async function askAssistant(question, rag) {
   const response = await fetch("/api/report/chat", {

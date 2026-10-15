@@ -81,6 +81,9 @@ files, so after changing `.env`, stop the server and start it again.
 |---|---|---|
 | `ANTHROPIC_API_KEY` | none | Your API key. Required for the dashboard assistant. |
 | `SPADESK_MODEL` | `claude-opus-5-5` | Which Claude model the assistant uses. |
+| `LANGSMITH_TRACING` | off | Set to `true` to record each assistant question in LangSmith. |
+| `LANGSMITH_API_KEY` | none | Your LangSmith key. Needed only when tracing is on. |
+| `LANGSMITH_PROJECT` | `default` | The LangSmith project the traces are filed under, e.g. `spadesk`. |
 | `SPADESK_TIMEZONE` | `America/Los_Angeles` | The spa's time zone, so the assistant knows the current time there. |
 | `SPADESK_DATA` | `data/business_doc.md` | The business document. |
 | `SPADESK_REPORT_DATA` | `data/spadesk_bookings.json` | The bookings file the dashboard reads. |

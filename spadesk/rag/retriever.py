@@ -7,13 +7,18 @@ be compared. Nothing here calls the chat model: retrieval is a search, and
 it can be tried and tested on its own.
 """
 
+from langsmith import traceable
+
 from ..config import get_settings
+from ..tracing import retrieved_documents
 from .embeddings import get_embedder
 from .index import ensure_index
 from .stores import get_store
 from .stores.base import Match
 
 
+# Recorded as a step of the trace when tracing is on (see spadesk/tracing.py).
+@traceable(run_type="retriever", process_outputs=retrieved_documents)
 def retrieve(question: str) -> list[Match]:
     """The chunks of the business document closest in meaning to `question`,
     best first. How many come back is the SPADESK_RETRIEVAL_TOP_K setting.

@@ -78,6 +78,19 @@ class Dataset:
             "channels": self.channels,
         }
 
+    def filter_problem(self, start: date, end: date, category: str | None, channel: str | None) -> str | None:
+        """What is wrong with these filters, in words, or None when they are
+        fine. Used by the report route and by the assistant's report tool, so
+        both reject the same things with the same message.
+        """
+        if start > end:
+            return "The start date must be on or before the end date."
+        if category is not None and category not in self.categories:
+            return f"Unknown category: {category}"
+        if channel is not None and channel not in self.channels:
+            return f"Unknown channel: {channel}"
+        return None
+
     def select(
         self,
         start: date | None = None,

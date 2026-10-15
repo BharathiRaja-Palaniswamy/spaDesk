@@ -76,6 +76,10 @@
 .chat-message p { margin: 0; }
 .chat-list { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; }
 .chat-list li { padding-left: 2px; }
+/* The insights under a report answer: set apart by a rule, with a small title. */
+.chat-insights { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+.chat-insights-title { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-soft); }
+.chat-insights ul { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 4px; }
 /* An answer the business profile did not cover: outlined instead of filled. */
 .chat-message.not-covered { background: transparent; border: 1px dashed var(--border); color: var(--text-secondary); }
 /* Suggested questions: small outlined buttons under a message. */

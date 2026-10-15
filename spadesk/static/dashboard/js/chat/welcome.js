@@ -12,14 +12,14 @@
  * @returns {string}
  */
 export const introduction = (business) =>
-  `Hi, I'm the ${business} assistant. I can answer questions about your business profile: `
-  + "services and prices, opening hours, offers and policies. "
-  + "Pick a question below or type your own.";
+  `Hi, I'm the ${business} assistant. I can answer questions about your business profile `
+  + "(services and prices, opening hours, offers and policies) and about your reports "
+  + "(revenue, bookings, channels and feedback). Pick a question below or type your own.";
 
-/** Questions offered under the introduction. Each can be answered from the business profile. */
+/** Questions offered under the introduction: some answered from the business profile, some from the reports. */
 export const STARTER_QUESTIONS = [
   "What are our opening hours?",
-  "What facials do we offer?",
   "What is our cancellation policy?",
-  "How long until we close today?",
+  "How did we do last month?",
+  "Which channel brings the most bookings?",
 ];

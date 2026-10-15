@@ -53,14 +53,24 @@ duration and price per category, packages, offers, add-ons, FAQs and policies.
   from, and a few follow-up questions. So the chat lays lists out as bullets,
   shows a "From: Policies" line, marks answers the profile could not cover,
   and offers the follow-ups as buttons. When first opened, the assistant
-  introduces itself and suggests some questions to start from. It does not see the reports
-  yet and does not remember earlier messages.
+  introduces itself and suggests some questions to start from. It does not
+  remember earlier messages.
+- **Report questions (tool use)**: the assistant can also answer about the
+  reports ("How did we do last month?"). The model is offered one tool,
+  `get_report`. When a question needs figures it asks the server to run it
+  for the dates it has worked out, the server runs the same code that fills
+  the Reports tab, and the model answers from those figures. The line under
+  the answer names the period it looked up. See `spadesk/reports/tools.py`.
 - **RAG switch**: a switch in the chat header chooses how the assistant is
   given the business document. Off, the whole document is sent. On, only the
   few chunks that best match the question are sent (retrieval-augmented
   generation). The line under each answer says which was used, so the same
   question can be asked both ways and compared. See
   [docs/rag-notes.md](docs/rag-notes.md).
+- **Tracing** (optional): with LangSmith switched on in `.env`, every
+  question is recorded as a trace: the chunks retrieved, the exact prompt
+  sent to the model, its reply, the tokens used and the time each step took.
+  See `spadesk/tracing.py`.
 
 ## Running it
 
@@ -136,6 +146,9 @@ The browser never reads the data file; filtering and maths happen on the server.
    With the RAG switch on, step 3 sends only the retrieved chunks instead:
    `rag/retriever.py` embeds the question and finds the closest chunks in the
    vector store, and `rag/context.py` lays them out for the prompt.
+   If the model replies with a request for the `get_report` tool instead of
+   an answer, the route runs it (`reports/tools.py`), sends the figures back
+   and asks again, until the model answers.
 4. The window shows the answer and uses the other fields to add the source
    line or the "not covered" style.
 
@@ -149,6 +162,7 @@ scripts/
   generate_bookings.py         writes the bookings JSON
 spadesk/
   config.py                    settings; which parts of the document the site features
+  tracing.py                   what each step of an assistant question records in LangSmith
   app.py                       the FastAPI app and the customer site's routes
   business/
     knowledge.py               reads the business document
@@ -168,6 +182,7 @@ spadesk/
     dataset.py                 loads the bookings JSON, joins it to the services, filters it
     metrics/                   one file per calculation
     report.py                  assembles the full report
+    tools.py                   the `get_report` tool the assistant can ask for
     routes.py                  /manage, /api/report and the assistant route
   static/
     index.html, styles.css, app.js    the customer site
@@ -211,8 +226,7 @@ route in `spadesk/app.py`, then `spadesk/business/knowledge.py`.
   dashboard's "last 30 days" means the last 30 days of the data.
 - Nothing has a login. Put the dashboard behind authentication before using it
   with real data.
-- The assistant knows the business profile only. It cannot answer questions
-  about the reports, and each question stands alone (no memory).
+- Each assistant question stands alone (no memory).
 - With RAG on, questions that need the whole document ("which service is
   cheapest?") can be answered wrongly, because only a few chunks are sent.
 
@@ -220,7 +234,7 @@ route in `spadesk/app.py`, then `spadesk/business/knowledge.py`.
 
 | Next step | Where |
 |---|---|
-| Let the assistant answer report questions (tool use) | the `chat` route in `reports/routes.py`, offering `build_report` to the model as a tool |
+| Another tool for the assistant | a description and a function in `reports/tools.py`, and one more case in the `chat` route's tool loop |
 | Follow-up questions (memory) | the same route, keeping earlier messages per session |
 | Another embedding provider or vector store | a file in `rag/embeddings/` or `rag/stores/`, and one line in its `__init__.py` |
 | A new dashboard chart | a metric in `reports/metrics/`, a line in `report.py`, a file in `js/sections/` |

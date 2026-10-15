@@ -90,7 +90,7 @@ export function initChat() {
       // Each field of the structured reply has its own place: the answer and
       // list in the bubble, the sources under it, then the follow-up questions.
       showReply(bubble, reply);
-      messages.append(sourceLine(modeLabel(reply), reply.sections));
+      messages.append(sourceLine(modeLabel(reply), reply.sections, reply.reports));
       addSuggestions(reply.suggestions);
     } catch {
       bubble.textContent = "Sorry, something went wrong. Please try again.";
