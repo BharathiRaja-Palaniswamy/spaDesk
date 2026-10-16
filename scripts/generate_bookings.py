@@ -17,7 +17,8 @@ stored on the booking as `list_price`, because that is a fact about the
 booking: it would stay the same if the price list changed later.
 
 This script reads the business document for the things a realistic booking
-depends on (which services exist, opening hours, the offers) and invents the
+depends on (which services exist, opening hours, the class timetable, the
+offers) and invents the
 behaviour around them: how busy each day is, who books what, who cancels, and
 how they rate the visit. Those rates are the constants below; change them and
 run the script again to reshape the year. After renaming, adding or removing
@@ -50,7 +51,7 @@ DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sun
 # ---- Invented behaviour (not business facts) --------------------------------
 
 # Average bookings per day at the start of the year, and how much busier each weekday is.
-BASE_PER_DAY = 5.5
+BASE_PER_DAY = 6.5
 WEEKDAY_WEIGHT = {"Monday": 0.8, "Tuesday": 0.95, "Wednesday": 0.95, "Thursday": 0.8,
                   "Friday": 1.0, "Saturday": 1.3, "Sunday": 1.3}
 GROWTH = 0.45  # the last day of the year is this much busier than the first
@@ -58,7 +59,10 @@ MONTH_WEIGHT = {12: 1.25, 5: 1.1, 1: 0.85, 2: 0.9}  # holiday gifts, Mother's Da
 
 # Share of bookings per document category.
 CATEGORY_WEIGHT = {"Massage Therapy": 30, "Facials": 30, "Hair Removal": 14, "Body Treatments": 10,
-                   "Kids Services": 9, "Packages and Memberships": 7}
+                   "Kids Services": 9, "Packages and Memberships": 7,
+                   "Yoga Classes": 14, "Class Passes": 3, "Private Sessions": 3}
+# The category whose bookings follow the class timetable rather than the opening hours.
+CLASSES = "Yoga Classes"
 # How popular each start hour is (hours outside a day's opening times are skipped).
 HOUR_WEIGHT = {9: 3, 10: 6, 11: 8, 12: 5, 13: 4, 14: 6, 15: 8, 16: 8, 17: 7, 18: 5, 19: 3}
 # "Website" is a booking request sent through the spaDesk customer site.
@@ -80,21 +84,28 @@ FIRST_NAMES = ("Aarav Aditi Alex Amara Ananya Anaya Arjun Ben Carlos Chloe Danie
 
 # ---- Business facts, read from the document ---------------------------------
 
-# The two offers the document defines, and the rule for who qualifies.
+# The heading of the weekly class timetable: one entry per day, one line per class.
+TIMETABLE_BLOCK = "Weekly Class Timetable"
+
+# The offers the document defines, and the rule for who qualifies.
 # An offer's id is made from its name in the document, the same way a service's is.
 WELCOME = {"id": slug("New Guest Welcome Offer"), "discount_percent": 15}
+FIRST_CLASS = {"id": slug("First Class Free"), "discount_percent": 100}
 SPRING = {"id": slug("Spring Reset Facial Month"), "discount_percent": 10}
 WELCOME_DAYS = set(DAYS[:4])  # Monday to Thursday
+# The welcome offer is for spa services; studio guests get their first class free instead.
+SPA_CATEGORIES = {"Massage Therapy", "Facials", "Hair Removal", "Body Treatments", "Kids Services"}
 WEEKDAYS = set(DAYS[:5])
+
+
+def hour(text: str) -> int:
+    """'8:00 PM' -> 20, '12:15 PM' -> 12. Minutes are dropped: a booking's time slot is a whole hour."""
+    h, suffix = re.match(r"(\d+):\d+ (AM|PM)", text.strip()).groups()
+    return int(h) % 12 + (12 if suffix == "PM" else 0)
 
 
 def opening_hours(kb: KnowledgeBase) -> dict[str, tuple[int, int]]:
     """Read 'Monday to Thursday: 10:00 AM – 8:00 PM' lines into {day: (open hour, close hour)}."""
-    def hour(text: str) -> int:
-        """'8:00 PM' -> 20."""
-        h, suffix = re.match(r"(\d+):\d+ (AM|PM)", text.strip()).groups()
-        return int(h) % 12 + (12 if suffix == "PM" else 0)
-
     hours = {}
     for line in kb.find(HOURS_BLOCK).lines:
         days, times = line.split(": ", 1)
@@ -103,6 +114,23 @@ def opening_hours(kb: KnowledgeBase) -> dict[str, tuple[int, int]]:
         for day in DAYS[DAYS.index(first): DAYS.index(last or first) + 1]:
             hours[day] = (hour(start), hour(end))
     return hours
+
+
+def timetable(kb: KnowledgeBase, classes: list[dict]) -> dict[str, list[tuple[int, dict]]]:
+    """Read the timetable into {day: [(start hour, class service), ...]}.
+
+    Each day is an entry whose lines read '7:00 AM – Sunrise Hatha Flow with Maya Chen'.
+    """
+    by_name = {service["name"]: service for service in classes}
+    table: dict[str, list[tuple[int, dict]]] = {}
+    for item in kb.items:
+        if item.category != TIMETABLE_BLOCK:
+            continue
+        for line in kb.find(item.name).lines:
+            time, rest = re.split(r"\s+[–-]\s+", line, maxsplit=1)
+            name = rest.split(" with ")[0]
+            table.setdefault(item.name, []).append((hour(time), by_name[name]))
+    return table
 
 
 def pick(rng: random.Random, weights: dict):
@@ -124,6 +152,7 @@ def main() -> None:
     for service in services:
         by_category.setdefault(service["category"], []).append(service)
     categories = {c: w for c, w in CATEGORY_WEIGHT.items() if c in by_category}
+    classes_on = timetable(kb, by_category.get(CLASSES, []))
 
     customers: list[dict] = []
     names: set[str] = set()
@@ -141,8 +170,21 @@ def main() -> None:
 
         open_hour, close_hour = hours[weekday]
         slots = {h: w for h, w in HOUR_WEIGHT.items() if open_hour <= h < close_hour}
+        # Classes can only be booked on a day that has some.
+        todays = {c: w for c, w in categories.items() if c != CLASSES or classes_on.get(weekday)}
 
-        for start in sorted(pick(rng, slots) for _ in range(count)):
+        # Each booking: a category, then a service and a start time. A class
+        # takes its time from the timetable; anything else, an opening hour.
+        visits = []
+        for _ in range(count):
+            category = pick(rng, todays)
+            if category == CLASSES:
+                visits.append(rng.choice(classes_on[weekday]))
+            else:
+                visits.append((pick(rng, slots), rng.choice(by_category[category])))
+        visits.sort(key=lambda visit: visit[0])
+
+        for start, service in visits:
             # A new customer, or one who has been before.
             p_new = NEW_CUSTOMER_START + (NEW_CUSTOMER_END - NEW_CUSTOMER_START) * progress
             is_new = not customers or rng.random() < p_new
@@ -156,7 +198,6 @@ def main() -> None:
             else:
                 customer = rng.choice(customers)
 
-            service = rng.choice(by_category[pick(rng, categories)])
             price = service["price"]
 
             # Weekends and first-time customers drop out a little more often.
@@ -171,7 +212,9 @@ def main() -> None:
             # Discounts: only what the document offers. They cannot be combined.
             offer = None
             is_package = service["category"].startswith("Packages") or "Package" in service["name"]
-            if is_new and weekday in WELCOME_DAYS and not is_package:
+            if is_new and service["category"] == CLASSES:
+                offer = FIRST_CLASS
+            elif is_new and weekday in WELCOME_DAYS and not is_package and service["category"] in SPA_CATEGORIES:
                 offer = WELCOME
             elif service["name"] == "Glow Express Facial" and day.month == 4 and weekday in WEEKDAYS:
                 offer = SPRING

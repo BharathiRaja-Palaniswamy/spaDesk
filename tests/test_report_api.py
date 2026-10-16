@@ -32,7 +32,7 @@ def test_options(client):
 def test_report_defaults_to_the_whole_period(client):
     report = client.get("/api/report").json()
     assert report["filters"] == {"start": "2025-10-01", "end": "2026-09-30", "category": None, "channel": None}
-    assert report["summary"]["bookings"] == 2490
+    assert report["summary"]["bookings"] == 2949
     assert report["trend"]["bucket"] == "month" and len(report["trend"]["points"]) == 12
     # Nothing exists before the data starts, so there is nothing to compare with.
     assert report["previous_period"] is None and report["change"] is None
@@ -41,7 +41,7 @@ def test_report_defaults_to_the_whole_period(client):
 
 def test_report_for_a_date_range(client):
     report = client.get("/api/report", params={"start": "2026-09-01", "end": "2026-09-30"}).json()
-    assert report["summary"]["bookings"] == 218
+    assert report["summary"]["bookings"] == 290
     assert report["trend"]["bucket"] == "day" and len(report["trend"]["points"]) == 30
     assert report["previous_period"] == {"start": "2026-08-02", "end": "2026-08-31"}
     assert report["change"]["revenue"] is not None
@@ -171,7 +171,7 @@ class ToolThenAnswer:
                                   input={"start": "2026-09-01", "end": "2026-09-30", "category": "Facials"})
             return SimpleNamespace(parsed_output=None, stop_reason="tool_use", content=[ask])
         answer = routes.ChatReply(answer="Facials in September 2026.", covered=True, sections=[], suggestions=[],
-                                  items=[routes.ReplyItem(name="Revenue", detail="$5,508")],
+                                  items=[routes.ReplyItem(name="Revenue", detail="$7,530")],
                                   insights=["Facials were the second-highest earning category."])
         return SimpleNamespace(parsed_output=answer, stop_reason="end_turn", content=[])
 
@@ -182,7 +182,7 @@ def test_chat_runs_the_report_tool_when_the_model_asks(client, monkeypatch):
     reply = client.post("/api/report/chat", json={"question": "How did facials do in September?"}).json()
     # A report answer has three parts: a sentence, the figures as points, then insights.
     assert reply["answer"] == "Facials in September 2026."
-    assert reply["items"] == [{"name": "Revenue", "detail": "$5,508"}]
+    assert reply["items"] == [{"name": "Revenue", "detail": "$7,530"}]
     assert reply["insights"] == ["Facials were the second-highest earning category."]
     assert reply["reports"] == ["2026-09-01 to 2026-09-30, Facials"]  # shown under the answer
 
@@ -195,7 +195,7 @@ def test_chat_runs_the_report_tool_when_the_model_asks(client, monkeypatch):
     block = result["content"][0]
     assert (block["type"], block["tool_use_id"]) == ("tool_result", "call-1")
     report = json.loads(block["content"])
-    assert report["filters"]["category"] == "Facials" and report["summary"]["revenue"] == 5508
+    assert report["filters"]["category"] == "Facials" and report["summary"]["revenue"] == 7530
 
 
 def test_the_report_tool_explains_what_is_wrong_with_its_inputs():

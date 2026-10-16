@@ -116,9 +116,9 @@ def test_new_and_returning_customers_in_the_real_september(dataset):
     start, end = date(2026, 9, 1), date(2026, 9, 30)
     mix = customers.customer_mix(dataset.select(start, end), dataset, start)
     new, returning = mix["by_type"]
-    assert (new["customers"], returning["customers"], mix["customers"]) == (63, 141, 204)
+    assert (new["customers"], returning["customers"], mix["customers"]) == (89, 181, 270)
     assert new["customers"] + returning["customers"] == mix["customers"]  # nobody is counted twice
-    assert mix["repeat_customers"] == 13
+    assert mix["repeat_customers"] == 20
 
 
 def test_feedback_counts_only_rated_visits():

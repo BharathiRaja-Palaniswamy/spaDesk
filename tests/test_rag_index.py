@@ -85,7 +85,7 @@ def test_the_index_is_built_once_and_then_reused(rag):
     assert ensure_index() is True  # nothing stored yet: built
     assert ensure_index() is False  # nothing changed: reused
     assert FakeEmbedder.calls == 1  # the document was embedded only once
-    assert len(get_store().search([1.0, 0.0, 0.0], k=100)) == 15  # one entry per chunk
+    assert len(get_store().search([1.0, 0.0, 0.0], k=100)) == 33  # one entry per chunk
 
 
 def test_changing_the_chunk_size_rebuilds_the_index(rag, monkeypatch):
