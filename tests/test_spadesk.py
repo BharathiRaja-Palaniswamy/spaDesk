@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from spadesk import app as app_module
 from spadesk.booking.service import BookingDesk, BookingError, BookingRequest
-from spadesk.config import ABOUT_SECTION, FEATURED, HIGHLIGHTS, HOURS_BLOCK, ROOT
+from spadesk.config import ABOUT_SECTION, HOURS_BLOCK, ROOT
 from spadesk.business.knowledge import KnowledgeBase
 from spadesk.business.profile import build_profile
 
@@ -39,11 +39,9 @@ def test_pieces_can_be_found_by_title(kb):
 
 
 def test_public_data_for_the_landing_page(kb):
-    spa = kb.public(FEATURED, HIGHLIGHTS, HOURS_BLOCK, ABOUT_SECTION)
+    spa = kb.public(HOURS_BLOCK, ABOUT_SECTION)
     assert spa["name"] == "Pebble Spa" and spa["about"].startswith("Pebble Spa is a neighborhood wellness spa")
     assert spa["hours"][0] == {"days": "Monday to Thursday", "times": "10:00 AM – 8:00 PM"}
-    assert spa["featured"] == list(FEATURED)
-    assert [h["title"] for h in spa["highlights"]] == list(HIGHLIGHTS)
 
 
 # ---- Business profile (manage page) ----
@@ -109,10 +107,10 @@ def test_api(tmp_path, kb, monkeypatch):
     spa = client.get("/api/spa").json()
     assert spa["name"] == "Pebble Spa"
     assert spa["contact"]["Phone"] == "(408) 555-0188"
-    assert len(spa["hours"]) == 4 and len(spa["featured"]) == 4 and len(spa["highlights"]) == 4
+    assert len(spa["hours"]) == 4
     assert {"name": "Lip Wax", "category": "Hair Removal", "description": "", "duration": "", "price": "$18"} in spa["services"]
 
-    assert client.get("/api/manage/profile").json()["name"] == "Pebble Spa"
+    assert client.get("/api/profile").json()["name"] == "Pebble Spa"
 
     ok = client.post("/api/booking-requests", json=booking().model_dump(mode="json"))
     assert ok.json()["status"] == "requested"

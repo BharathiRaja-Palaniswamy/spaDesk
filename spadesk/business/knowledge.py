@@ -1,7 +1,7 @@
 """Loads the spa business document (markdown) and reads its facts.
 
 The document is the single source of business facts for the customer site:
-the landing page shows what `public()` returns. The bookings generator
+the customer site shows what `public()` returns. The bookings generator
 (scripts/generate_bookings.py) reads services, prices, hours and offers from
 here too, which is how the dashboard's data stays in line with the document.
 
@@ -104,10 +104,11 @@ class KnowledgeBase:
         """The piece of the document with exactly this title, or None."""
         return self._by_title.get(title)
 
-    def public(self, featured: tuple[str, ...], highlights: tuple[str, ...], hours: str, about: str) -> dict[str, Any]:
-        """Everything the landing page shows, taken from the document.
+    def public(self, hours: str, about: str) -> dict[str, Any]:
+        """Everything the customer site shows, taken from the document.
 
-        The arguments are titles from config.py that say which parts to show.
+        The arguments are titles from config.py that say where the opening
+        hours and the introduction are.
         """
         priced = {i.name: i for i in self.items if i.priced}
         hours_chunk, about_chunk = self.find(hours), self.find(about)
@@ -123,9 +124,6 @@ class KnowledgeBase:
                  "duration": i.get("duration"), "price": i.get("price")}
                 for i in priced.values()
             ],
-            "featured": [name for name in featured if name in priced],
-            "highlights": [{"title": c.title, "points": list(c.lines)}
-                           for c in map(self.find, highlights) if c],
         }
 
     def _parse(self, text: str) -> None:

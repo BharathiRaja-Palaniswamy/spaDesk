@@ -30,7 +30,7 @@ export const getOptions = () => getJson("/api/report/options");
  * Fetches the business profile for the "Business profile" tab.
  * @returns {Promise<{name: string, sections: object[]}>} see spadesk/business/profile.py
  */
-export const getProfile = () => getJson("/api/manage/profile");
+export const getProfile = () => getJson("/api/profile");
 
 /**
  * Fetches the report for a set of filters. Empty values are left out of the

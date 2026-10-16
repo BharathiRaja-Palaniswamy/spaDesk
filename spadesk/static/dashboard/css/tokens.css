@@ -2,44 +2,52 @@
    variables. The other stylesheets only refer to these names, so the whole
    look is set here.
 
-   The values match the customer site (static/styles.css): warm ivory
-   background, sage and deep green, serif headings. Keep the two in step. */
+   The look matches the customer site (static/home/css/tokens.css): off-white
+   page, deep navy ink, a magenta accent and the pastel wave. Keep the two in
+   step. */
 
 :root {
   color-scheme: light;
-  --page: #f6f3ec;            /* warm ivory, behind the cards */
-  --surface: #fffdf9;         /* cards, inputs */
-  --tint: #ebefe6;            /* pale sage: selected and hovered controls */
-  --text-primary: #26332d;    /* deep green-black ink */
-  --text-secondary: #5b6861;
-  --text-muted: #7d8882;
-  --hairline: #e2dccf;        /* gridlines, dividers */
-  --axis: #cfc8b8;            /* chart baseline, hover line */
-  --border: #e2dccf;
-  --accent: #2f4a3c;          /* deep green: buttons, selected controls */
-  --accent-soft: #5f7a68;     /* sage: small labels */
+  --page: #fcfafa;            /* off-white, behind the cards */
+  --surface: #ffffff;         /* cards, inputs */
+  --tint: #f6f1f8;            /* pale lilac: selected and hovered controls */
+  --text-primary: #191e49;    /* deep navy ink */
+  --text-secondary: #474f7b;  /* softer navy */
+  --text-muted: #676d91;
+  --hairline: #ece9f2;        /* gridlines, dividers */
+  --axis: #cfcbe0;            /* chart baseline, hover line */
+  --border: #e7e3ee;
+  --accent: #bc269b;          /* magenta: buttons, selected controls */
+  --accent-soft: #474f7b;     /* softer navy: small labels */
   --accent-wash: var(--tint);
-  --on-accent: #ffffff;       /* text on a deep green button */
+  --on-accent: #ffffff;       /* text on a magenta button */
+  /* The pastel wave: lavender, purple, pink, peach. */
+  --wave: linear-gradient(90deg, #a0a9fc, #c098f5, #faa4cd, #ffc9a3);
 
   /* Chart colours, used in this fixed order. The order is what keeps
-     neighbouring colours tellable apart for colour-blind readers, so add to
-     the end and do not reorder. */
-  --series-1: #23835f;        /* green: also the colour of single-series charts */
-  --series-2: #4a78bd;        /* blue */
-  --series-3: #b5850f;        /* ochre */
-  --series-4: #8d5fb0;        /* violet */
-  --series-5: #cf6c38;        /* clay */
-  /* Customer sentiment: green = happy, grey = neutral, red = unhappy. */
-  --sentiment-happy: #23835f;
-  --sentiment-neutral: #9a9f97;
-  --sentiment-unhappy: #c4503f;
-  --good-text: #1f6b4b;       /* a change in the right direction */
-  --bad-text: #b23b2e;        /* a change in the wrong direction */
+     neighbouring colours tellable apart for colour-blind readers (magenta
+     and teal look alike to some, so they are never neighbours): add to the
+     end and do not reorder. Checked: every neighbouring pair is at least 8.8
+     apart (OKLab x100) under simulated colour blindness and 15.8 apart for
+     normal vision, and every colour has at least 3:1 contrast on white. */
+  --series-1: #c0359f;        /* magenta: also the colour of single-series charts */
+  --series-2: #6b5fd3;        /* iris */
+  --series-3: #d9734e;        /* peach, deepened */
+  --series-4: #2f8fa8;        /* teal blue */
+  --series-5: #4b5799;        /* slate */
+  /* Customer sentiment: teal = happy, grey = neutral, rose = unhappy. Teal
+     rather than green, because green and red look alike to the most common
+     kind of colour blindness. */
+  --sentiment-happy: #1f8f8a;
+  --sentiment-neutral: #a3a1b8;
+  --sentiment-unhappy: #d6455f;
+  --good-text: #13706b;       /* a change in the right direction */
+  --bad-text: #b4233f;        /* a change in the wrong direction */
 
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-heading: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
-  --radius: 18px;             /* cards and panels */
+  --font: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, Menlo, monospace;  /* small uppercase labels */
+  --radius: 20px;             /* cards and panels */
   --radius-small: 12px;       /* inputs and small boxes */
-  --shadow: 0 18px 50px -28px rgba(38, 51, 45, 0.45);
+  --shadow: 0 24px 60px -32px rgba(25, 30, 73, 0.35);
   --gap: 16px;
 }

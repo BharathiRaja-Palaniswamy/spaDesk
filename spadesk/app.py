@@ -4,14 +4,15 @@ Run with:  uvicorn spadesk.app:app --reload
 
 This file is the wiring. It connects the pieces (the business document, the
 booking desk) and exposes them as HTTP routes. The actual work happens in the
-`business/`, `booking/` and `reports/` packages.
+`business/`, `booking/`, `reports/` and `assistant/` packages.
 
 Routes:
-  GET  /                      the customer site (static/index.html)
+  GET  /                      the customer site (static/home/index.html)
   GET  /static/...            CSS and JavaScript for both pages
   GET  /api/spa               spa facts for the customer site, read from the document
-  GET  /api/manage/profile    the whole business profile, for the manage page
+  GET  /api/profile           the whole business profile, for both pages
   POST /api/booking-requests  save a mock booking request
+  POST /api/chat              the customer assistant      (route in assistant/customer.py)
   GET  /manage                the owner's manage page (routes in reports/routes.py)
   GET  /api/report...         the reports' data       (routes in reports/routes.py)
 """
@@ -23,10 +24,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from .assistant.customer import router as customer_chat
 from .booking.service import BookingDesk, BookingError, BookingRequest
 from .business.profile import build_profile
 from .business.store import get_knowledge
-from .config import ABOUT_SECTION, FEATURED, HIGHLIGHTS, HOURS_BLOCK, get_settings
+from .config import ABOUT_SECTION, HOURS_BLOCK, get_settings
 from .reports.routes import page_router as manage_page, router as report_router
 
 STATIC = Path(__file__).parent / "static"
@@ -34,6 +36,8 @@ app = FastAPI(title="spaDesk")
 # The manage page brings its own routes (see reports/routes.py).
 app.include_router(report_router)
 app.include_router(manage_page)
+# So does the customer site's chat (see assistant/customer.py).
+app.include_router(customer_chat)
 
 
 # ---- Building the pieces ---------------------------------------------------
@@ -53,13 +57,14 @@ def get_booking_desk() -> BookingDesk:
 
 @app.get("/api/spa")
 def spa():
-    """Spa facts for the customer site: name, hours, services, highlights, contact."""
-    return get_knowledge().public(FEATURED, HIGHLIGHTS, HOURS_BLOCK, ABOUT_SECTION)
+    """Spa facts for the customer site: name, introduction, hours, services, contact."""
+    return get_knowledge().public(HOURS_BLOCK, ABOUT_SECTION)
 
 
-@app.get("/api/manage/profile")
+@app.get("/api/profile")
 def profile():
-    """The whole business document, section by section, for the manage page."""
+    """The whole business document, section by section: the manage page's
+    profile tab and the customer site's sections both draw from it."""
     return build_profile(get_knowledge())
 
 
@@ -78,7 +83,7 @@ def booking_request(request: BookingRequest):
 @app.get("/")
 def index():
     """The customer site."""
-    return FileResponse(STATIC / "index.html")
+    return FileResponse(STATIC / "home" / "index.html")
 
 
 class FreshStaticFiles(StaticFiles):
@@ -92,6 +97,7 @@ class FreshStaticFiles(StaticFiles):
     """
 
     async def get_response(self, path, scope):
+        """Serves the file as usual, then adds the "check before reuse" header."""
         response = await super().get_response(path, scope)
         response.headers["Cache-Control"] = "no-cache"
         return response

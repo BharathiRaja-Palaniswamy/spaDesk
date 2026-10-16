@@ -9,8 +9,8 @@ body {
   font: 14px/1.5 var(--font);
 }
 
-/* Headings use the same serif as the customer site. */
-h1, h2, h3 { font-family: var(--font-heading); font-weight: 500; letter-spacing: -0.01em; }
+/* Headings: bold and tight, as on the customer site. */
+h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; }
 
 .top {
   display: flex;
@@ -22,13 +22,12 @@ h1, h2, h3 { font-family: var(--font-heading); font-weight: 500; letter-spacing:
   padding: 28px 24px 8px;
 }
 .top h1 { margin: 0; font-size: 30px; line-height: 1.15; display: flex; align-items: center; gap: 10px; }
-/* The leaf mark beside the name, the same shape as on the customer site. */
-.brand-mark { width: 24px; height: 24px; border-radius: 50% 50% 50% 4px; background: var(--accent-soft); transform: rotate(-45deg); }
+/* The pebble mark beside the name, the same as on the customer site. */
+.brand-mark { width: 26px; height: 22px; border-radius: 55% 45% 50% 50% / 60% 55% 45% 40%; background: var(--wave); }
 .eyebrow {
   margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
+  font: 500 12px var(--font-mono);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--accent-soft);
 }

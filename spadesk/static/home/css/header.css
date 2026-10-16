@@ -1,0 +1,23 @@
+/* The top bar: the spa's name, the section menu, and the booking button. On
+   narrow screens the menu moves to its own row and scrolls sideways. */
+
+.site-header {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; gap: 1.5rem;
+  padding: 0.9rem var(--gutter);
+  background: rgba(252, 250, 250, 0.88); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-size: 1.25rem; letter-spacing: -0.02em; text-decoration: none; }
+/* A small pebble shape in the wave's colours. */
+.brand-mark { width: 26px; height: 22px; border-radius: 55% 45% 50% 50% / 60% 55% 45% 40%; background: var(--wave); }
+
+/* The section menu takes the space between the name and the button. */
+.site-nav { flex: 1; display: flex; justify-content: center; gap: 0.3rem; }
+.site-nav a { padding: 0.45rem 0.8rem; border-radius: var(--pill); text-decoration: none; font-weight: 500; font-size: 0.95rem; color: var(--ink-soft); white-space: nowrap; }
+.site-nav a:hover { background: var(--wash); color: var(--ink); }
+
+@media (max-width: 960px) {
+  .site-header { flex-wrap: wrap; gap: 0.6rem 1rem; justify-content: space-between; }
+  .site-nav { order: 3; flex-basis: 100%; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; }
+}

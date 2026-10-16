@@ -33,7 +33,6 @@
   align-items: center;
   gap: 8px;
   margin: 0 0 6px;
-  font-family: var(--font);   /* a small label, so it stays in the body font */
   font-size: 14px;
   font-weight: 600;
 }

@@ -1,0 +1,14 @@
+/* Foldouts: a question or policy that opens on click (<details>). A plus
+   sign turns into a cross when it is open. */
+
+.foldouts { display: grid; gap: 0.6rem; max-width: 52rem; }
+.foldout { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+.foldout summary {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  padding: 1rem 1.2rem; font-weight: 600; cursor: pointer; list-style: none;
+}
+.foldout summary::-webkit-details-marker { display: none; }
+.foldout summary::after { content: "+"; font-size: 1.4rem; line-height: 1; color: var(--accent); transition: transform 0.2s; }
+.foldout[open] summary::after { transform: rotate(45deg); }
+.foldout > div { padding: 0 1.2rem 1.1rem; color: var(--ink-soft); }
+.foldout ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.3rem; }

@@ -27,13 +27,10 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # ---- How the app uses the business document -------------------------------
 
-# The bold block that lists opening hours, shown in the hero of the landing page.
+# The bold block that lists opening hours, shown in the customer site's welcome panel.
 HOURS_BLOCK = "Business Hours"
-# The section whose first paragraph is shown in the page footer.
+# The section whose first paragraph introduces the spa in the welcome panel.
 ABOUT_SECTION = "About"
-# Shown on the landing page. Entries missing from the document are skipped.
-FEATURED = ("Signature Radiance Facial", "Swedish Massage", "Kids Mini Facial", "Mom & Me Relax Package")
-HIGHLIGHTS = ("New Guest Welcome Offer", "Cancellation Policy", "Late Arrival Policy", "Age Policy")
 
 
 # ---- Per-machine settings --------------------------------------------------

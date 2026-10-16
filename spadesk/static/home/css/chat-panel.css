@@ -1,0 +1,54 @@
+/* The chat window: a full-height panel on the right edge of the page. Closed,
+   it waits just off-screen; opened, it slides in (the .open class, set by
+   js/chat/window.js). Its header has the avatar, the RAG switch and a close
+   button; under the messages is the input row. A thin gradient edge along
+   the top ties it to the wave. (The messages inside have their own stylesheet.) */
+
+.chat-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 30;
+  width: min(440px, 100vw);
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--surface); border-left: 1px solid var(--line);
+  box-shadow: -30px 0 80px -40px rgba(25, 30, 73, 0.55);
+  transform: translateX(100%); visibility: hidden;
+  /* Closing: slide out first, then hide (so it cannot be tabbed into). */
+  transition: transform 0.3s ease, visibility 0s linear 0.3s;
+}
+.chat-panel.open { transform: none; visibility: visible; transition: transform 0.3s ease; }
+.chat-panel::before { content: ""; height: 5px; flex: none; background: var(--wave); }
+
+/* A light veil over the rest of the page while the chat is open. Clicking it closes the chat. */
+.chat-veil {
+  position: fixed; inset: 0; z-index: 25; background: rgba(25, 30, 73, 0.18);
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.chat-veil.open { opacity: 1; pointer-events: auto; }
+
+.chat-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.9rem 1rem; border-bottom: 1px solid var(--line); }
+.chat-header > div { flex: 1; }
+.chat-header h2 { font-size: 1.15rem; }
+.chat-header p { font-size: 0.8rem; color: var(--ink-soft); }
+.chat-close { border: 0; background: none; padding: 0 0.2rem; font-size: 1.6rem; line-height: 1; color: var(--ink-soft); cursor: pointer; }
+
+/* The RAG switch: a real checkbox, hidden, with a drawn track and knob. */
+.chat-rag { display: flex; align-items: center; gap: 0.45rem; font: 500 0.68rem var(--mono); text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); cursor: pointer; white-space: nowrap; }
+.chat-rag input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.chat-rag-track { position: relative; width: 32px; height: 18px; border-radius: var(--pill); background: var(--line); transition: background 0.15s; }
+.chat-rag-track::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--surface); transition: transform 0.15s;
+}
+.chat-rag input:checked + .chat-rag-track { background: var(--accent); }
+.chat-rag input:checked + .chat-rag-track::after { transform: translateX(14px); }
+.chat-rag input:checked ~ #chat-rag-label { color: var(--accent); }
+.chat-rag input:focus-visible + .chat-rag-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.chat-form { display: flex; gap: 0.5rem; padding: 0.8rem 1rem 0.4rem; border-top: 1px solid var(--line); }
+.chat-form input { flex: 1; min-width: 0; border-radius: var(--pill); padding: 0.6rem 1rem; background: var(--page); }
+.chat-form .btn { padding: 0.6rem 1.2rem; }
+
+.chat-footnote { padding: 0 1rem 0.9rem; font-size: 0.8rem; color: var(--ink-soft); }
+.chat-link { border: 0; background: none; padding: 0; font: 600 0.8rem var(--sans); color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Text for screen readers only, e.g. the input's label. */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

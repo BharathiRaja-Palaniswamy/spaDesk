@@ -1,0 +1,35 @@
+/* Design tokens: every colour, font and size the customer site uses, as
+   variables. The other stylesheets only refer to these names, so the whole
+   look is set here.
+
+   The look: off-white page, deep navy ink, a magenta accent for buttons, and
+   a pastel wave (lavender, purple, pink, peach) for decoration. */
+
+:root {
+  color-scheme: light;
+  --page: #fcfafa;            /* off-white, behind everything */
+  --surface: #ffffff;         /* cards, inputs, the pop-up */
+  --wash: #f6f1f8;            /* pale lilac: notices, hovered controls */
+  --ink: #191e49;             /* deep navy: headings and body text */
+  --ink-soft: #474f7b;        /* softer navy: small labels, secondary text */
+  --line: #e7e3ee;            /* borders and dividers */
+  --accent: #bc269b;          /* magenta: buttons and links */
+  --accent-dark: #9b1d80;     /* magenta, darker: hovered buttons */
+  --on-accent: #ffffff;       /* text on a magenta button */
+  --error: #b42318;
+
+  /* The wave, left to right. */
+  --wave-1: #a0a9fc;          /* lavender */
+  --wave-2: #c098f5;          /* purple */
+  --wave-3: #faa4cd;          /* pink */
+  --wave-4: #ffc9a3;          /* peach */
+  --wave: linear-gradient(90deg, var(--wave-1), var(--wave-2), var(--wave-3), var(--wave-4));
+
+  --sans: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --mono: "DM Mono", ui-monospace, Menlo, monospace;
+
+  --radius: 20px;             /* cards */
+  --pill: 999px;              /* buttons and chips */
+  --shadow: 0 24px 60px -32px rgba(25, 30, 73, 0.35);
+  --gutter: clamp(1rem, 5vw, 4rem); /* space at the page's left and right edges */
+}

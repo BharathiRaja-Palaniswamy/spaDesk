@@ -2,7 +2,7 @@
  * @file The "Business profile" tab: a read-only view of the business
  * document, section by section.
  *
- * Data: GET /api/manage/profile =
+ * Data: GET /api/profile =
  *   { name, sections: [{ title, groups: [{ title, lines, bulleted, items }] }] }
  * where an item is { name, description, duration, price, lines }.
  * (spadesk/business/profile.py builds it and describes the shape in full.)

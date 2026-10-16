@@ -1,0 +1,36 @@
+/* The bands below the hero: one full-width stripe per group of sections,
+   every other one tinted, with the category pills used inside them. */
+
+.band { padding: clamp(3rem, 7vw, 5rem) var(--gutter); scroll-margin-top: 64px; /* clears the sticky header */ }
+.band-tint { background: var(--wash); }
+.band-inner { max-width: 1180px; margin: 0 auto; display: grid; gap: 1.2rem; }
+.band h2 { font-size: clamp(1.8rem, 3.4vw, 2.6rem); margin-bottom: 0.4rem; }
+.band h3 { font-size: 1.25rem; margin-top: 1rem; }
+
+/* Text straight from the document: paragraphs, bullet lists, label and value lists. */
+.prose { display: grid; gap: 0.8rem; max-width: 52rem; color: var(--ink-soft); font-size: 1.05rem; }
+.text-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.35rem; color: var(--ink-soft); }
+.facts { display: flex; flex-wrap: wrap; gap: 1rem 3rem; margin: 0; }
+.facts dt { font: 500 0.72rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
+.facts dd { margin: 0; font-size: 1.05rem; }
+.group { display: grid; gap: 1.2rem; }
+
+/* A price list: name on the left, price on the right, a dotted line between rows. */
+.price-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.2rem; max-width: 36rem; }
+.price-list li { display: flex; align-items: baseline; gap: 0.8rem; padding: 0.5rem 0; border-bottom: 1px dashed var(--line); }
+.price-list li span { flex: 1; }
+
+/* Category pills: switch which group of a section is shown. */
+.pill-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.4rem; }
+.pill-button {
+  border: 1.5px solid var(--accent); border-radius: var(--pill); background: transparent;
+  color: var(--accent); font: 600 0.9rem var(--sans); padding: 0.5rem 1.1rem; cursor: pointer;
+}
+.pill-button:hover { background: var(--surface); }
+.pill-button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+
+/* "Request" on a card or price row: opens the booking pop-up with that service picked. */
+.request-link {
+  border: 0; background: none; padding: 0; font: 600 0.85rem var(--sans); color: var(--accent);
+  cursor: pointer; text-decoration: underline; text-underline-offset: 3px; align-self: flex-start;
+}

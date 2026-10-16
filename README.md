@@ -118,11 +118,11 @@ No service, price or label is written in application code.
 
 ### The customer site
 
-1. The browser loads `static/index.html`, an empty shell, and `static/app.js`.
-2. `app.js` requests `/api/spa`.
+1. The browser loads `static/home/index.html`, an empty shell, and `static/home/js/main.js`.
+2. `main.js` requests `/api/spa`.
 3. The server parses the business document once (`business/knowledge.py`) and
-   returns the name, hours, services, policy highlights and contact details.
-4. `app.js` fills the page and wires up the booking form.
+   returns the name, introduction, hours, services and contact details.
+4. The scripts fill the page and wire up the booking form.
 
 ### A dashboard view
 
@@ -140,9 +140,11 @@ The browser never reads the data file; filtering and maths happen on the server.
 
 1. `js/chat/widget.js` shows the question and calls `askAssistant`.
 2. `js/chat/assistant.js` posts it to `/api/report/chat`.
-3. The route in `reports/routes.py` reads the business document, sends it to
-   Claude as context together with the question (using the API key from
-   `.env`), and asks for the reply in a fixed shape, the `ChatReply` class.
+3. The route in `reports/routes.py` builds the system prompt with
+   `assistant/prompt.py` (rules, current time, the business document), sends
+   it to Claude with the question through `assistant/model.py` (using the API
+   key from `.env`), and asks for the reply in a fixed shape, the `ChatReply`
+   class.
    With the RAG switch on, step 3 sends only the retrieved chunks instead:
    `rag/retriever.py` embeds the question and finds the closest chunks in the
    vector store, and `rag/context.py` lays them out for the prompt.
@@ -183,9 +185,14 @@ spadesk/
     metrics/                   one file per calculation
     report.py                  assembles the full report
     tools.py                   the `get_report` tool the assistant can ask for
-    routes.py                  /manage, /api/report and the assistant route
+    routes.py                  /manage, /api/report and the owner's assistant route
+  assistant/
+    prompt.py                  the system prompt both assistants share (profile rules, time, profile)
+    model.py                   the traced model call
+    replies.py                 the question body and one reply list entry
+    customer.py                the customer assistant: /api/chat, profile only, no tools
   static/
-    index.html, styles.css, app.js    the customer site
+    home/                      the customer site: index.html, css/ and js/, one file per area
     dashboard/
       index.html               the dashboard shell
       css/                     one stylesheet per area
@@ -216,7 +223,7 @@ To follow one dashboard view:
 6. Any file in `spadesk/reports/metrics/`: one calculation.
 7. Any file in `spadesk/static/dashboard/js/sections/`: one card drawn from the report.
 
-To follow the customer site: `spadesk/static/app.js`, then the `/api/spa`
+To follow the customer site: `spadesk/static/home/js/main.js`, then the `/api/spa`
 route in `spadesk/app.py`, then `spadesk/business/knowledge.py`.
 
 ## Limits

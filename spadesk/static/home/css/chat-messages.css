@@ -1,0 +1,26 @@
+/* The conversation inside the chat card: bubbles, lists, the source line
+   under an answer, and the suggested-question chips. */
+
+.chat-messages { flex: 1; overflow-y: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.7rem; }
+
+.chat-message { max-width: 88%; padding: 0.7rem 1rem; border-radius: 18px; overflow-wrap: anywhere; font-size: 0.95rem; }
+.chat-message.assistant { align-self: flex-start; background: var(--wash); border-bottom-left-radius: 6px; }
+.chat-message.user { align-self: flex-end; background: var(--ink); color: var(--surface); border-bottom-right-radius: 6px; }
+.chat-message.pending { color: var(--ink-soft); }
+/* An answer the business profile does not cover: outlined instead of filled. */
+.chat-message.not-covered { background: transparent; border: 1px dashed var(--line); color: var(--ink-soft); }
+
+/* Inside a bubble: the answer, then a list when there is one. */
+.chat-list { margin: 0.5rem 0 0; padding-left: 1.1rem; display: grid; gap: 0.3rem; }
+
+/* The line under an answer: how it was produced, then "From: Facials". */
+.chat-sources { align-self: flex-start; margin-top: -0.3rem; font-size: 0.75rem; color: var(--ink-soft); }
+.chat-mode { font: 500 0.7rem var(--mono); text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent); }
+
+/* Suggested questions: outlined pills under a message. */
+.chat-suggestions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.chat-chip {
+  border: 1px solid var(--accent); border-radius: var(--pill); background: var(--surface);
+  color: var(--accent); font: 500 0.82rem var(--sans); padding: 0.35rem 0.85rem; text-align: left; cursor: pointer;
+}
+.chat-chip:hover { background: var(--wash); }

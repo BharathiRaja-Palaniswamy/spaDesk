@@ -1,0 +1,17 @@
+/* Cards: a service, a package, an offer. They sit side by side and wrap,
+   each at least 250px wide. */
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+.card {
+  display: flex; flex-direction: column; gap: 0.6rem; padding: 1.4rem;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.card h4 { margin: 0; font-size: 1.1rem; letter-spacing: -0.01em; }
+.card p, .card li { color: var(--ink-soft); font-size: 0.94rem; }
+.card ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.25rem; }
+/* Duration and price, along the bottom of the card. */
+.card-meta {
+  margin-top: auto; padding-top: 0.8rem; border-top: 1px solid var(--line);
+  display: flex; justify-content: space-between; gap: 1rem; font-size: 0.92rem; color: var(--ink-soft);
+}
+.card-meta strong { color: var(--ink); font-size: 1.05rem; }

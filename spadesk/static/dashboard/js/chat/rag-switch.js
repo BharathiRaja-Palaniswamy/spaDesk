@@ -6,7 +6,7 @@
  *   on   only the chunks retrieved for the question are sent (RAG)
  *
  * The switch only records the choice. The server acts on it: see `rag` in
- * ChatQuestion, spadesk/reports/routes.py.
+ * ChatQuestion, spadesk/assistant/replies.py.
  */
 
 import { $ } from "../dom.js";

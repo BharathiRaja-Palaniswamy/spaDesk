@@ -1,0 +1,18 @@
+/* The page below the hero: the wave and the footer. */
+
+/* The wave: a full-width band, its colours taken from the tokens. */
+.wave { display: block; width: 100%; height: clamp(48px, 7vw, 100px); margin-top: -1px; }
+.wave stop:nth-child(1) { stop-color: var(--wave-1); }
+.wave stop:nth-child(2) { stop-color: var(--wave-2); }
+.wave stop:nth-child(3) { stop-color: var(--wave-3); }
+.wave stop:nth-child(4) { stop-color: var(--wave-4); }
+
+.site-footer {
+  display: grid; gap: 1rem; padding: 1.5rem var(--gutter) 2.5rem;
+  max-width: 1280px; margin: 0 auto; color: var(--ink-soft); font-size: 0.9rem;
+}
+.contact { display: flex; flex-wrap: wrap; gap: 0.6rem 2.5rem; margin: 0; }
+.contact div { display: grid; }
+.contact dt { font: 500 0.72rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.contact dd { margin: 0; color: var(--ink); }
+.fine { font-size: 0.8rem; }

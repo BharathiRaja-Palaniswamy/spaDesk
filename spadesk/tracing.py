@@ -5,11 +5,11 @@ A trace is a tree of steps ("runs"). For one question it looks like this:
     chat                 the whole request: the question in, the answer out
       retrieve           (RAG on only) the chunks that were found, with scores
       ask_model          the exact prompt sent to the model, its reply, the tokens used
-      get_report         (when the model asks) the dates it asked for and the figures returned
+      get_report         (owner only, when the model asks) the dates it asked for and the figures returned
       ask_model          the model again, now with those figures, writing its answer
 
-Each step is an ordinary function with `@traceable` above it (see
-reports/routes.py and rag/retriever.py). The decorator records the function's
+Each step is an ordinary function with `@traceable` above it (see the chat
+routes, assistant/model.py and rag/retriever.py). The decorator records the function's
 arguments, its result, how long it took and any error, and sends them to
 LangSmith in the background, where they can be read at smith.langchain.com.
 

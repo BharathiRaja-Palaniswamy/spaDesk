@@ -1,0 +1,22 @@
+/* The booking request pop-up: the form, then the "request received" view. */
+
+dialog {
+  border: 0; border-radius: var(--radius); padding: 0; width: min(560px, calc(100vw - 2rem));
+  background: var(--surface); color: var(--ink); box-shadow: var(--shadow);
+}
+dialog::backdrop { background: rgba(25, 30, 73, 0.4); backdrop-filter: blur(3px); }
+dialog form, #booking-done { padding: 1.6rem; display: grid; gap: 1rem; }
+dialog header { display: flex; justify-content: space-between; align-items: center; }
+dialog h2 { font-size: 1.5rem; }
+dialog label { display: grid; gap: 0.3rem; font-size: 0.86rem; font-weight: 600; }
+.optional { font-weight: 400; color: var(--ink-soft); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+.close { border: 0; background: none; font-size: 1.6rem; line-height: 1; color: var(--ink-soft); cursor: pointer; }
+.notice { background: var(--wash); border-radius: 12px; padding: 0.7rem 0.9rem; font-size: 0.9rem; }
+.error { color: var(--error); font-size: 0.9rem; }
+.pill { width: fit-content; background: var(--wash); color: var(--accent-dark); border-radius: var(--pill); padding: 0.25rem 0.8rem; font-size: 0.8rem; font-weight: 600; }
+.reference { color: var(--ink-soft); }
+
+@media (max-width: 600px) {
+  .row { grid-template-columns: 1fr; }
+}

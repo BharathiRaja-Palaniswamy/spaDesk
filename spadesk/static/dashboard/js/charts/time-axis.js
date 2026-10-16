@@ -11,6 +11,7 @@
 
 /** A date read as UTC, so it never shifts a day in the visitor's time zone. */
 const utc = (iso) => new Date(`${iso}T00:00:00Z`);
+/** A date written out with the given Intl options, e.g. {month: "long"} -> "September". */
 const text = (iso, options) => utc(iso).toLocaleDateString("en-GB", { ...options, timeZone: "UTC" });
 
 /**

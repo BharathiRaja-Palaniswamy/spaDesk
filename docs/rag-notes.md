@@ -27,8 +27,8 @@ question -> its vector -> closest chunks -> prompt -> model -> answer
 | 3. Index | `spadesk/rag/index.py` | Builds the store from the document; rebuilds when something changed |
 | 4. Retrieval | `spadesk/rag/retriever.py` | Embeds the question and returns the closest chunks with scores |
 | 5. Context | `spadesk/rag/context.py` | Lays the chunks out between `<excerpt>` tags for the prompt |
-| 5. Chat route | `spadesk/reports/routes.py` | Sends the excerpts, or the whole document, depending on `rag` in the request |
-| 5. Switch | `static/dashboard/js/chat/rag-switch.js` | The "RAG on / RAG off" switch and the label under each answer |
+| 5. Prompt | `spadesk/assistant/prompt.py` | Puts the excerpts, or the whole document, into the system prompt, depending on `rag` in the request. Both chat routes use it: `assistant/customer.py` (customer site) and `reports/routes.py` (owner) |
+| 5. Switch | `static/home/js/chat/rag-switch.js`, `static/dashboard/js/chat/rag-switch.js` | The "RAG on / RAG off" switch on each page and the label under each answer |
 
 To try a step alone:
 

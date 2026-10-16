@@ -14,11 +14,10 @@ one line. That keeps these routes out of app.py.
 """
 
 import json
-from datetime import date, datetime
+from datetime import date
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
 
 import anthropic
 from fastapi import APIRouter, HTTPException
@@ -26,10 +25,11 @@ from fastapi.responses import FileResponse
 from langsmith import traceable
 from pydantic import BaseModel, Field
 
+from ..assistant.model import ask_model
+from ..assistant.prompt import checked_sections, profile_prompt
+from ..assistant.replies import MAX_SUGGESTIONS, ChatQuestion, ReplyItem
 from ..business.store import get_knowledge
 from ..config import get_settings
-from ..rag.context import retrieved_context
-from ..tracing import model_messages, model_reply
 from .dataset import Dataset, load
 from .report import build_report
 from .tools import TOOL_NAME, report_label, report_tool, run_report
@@ -87,29 +87,12 @@ def report(
     return build_report(dataset, start, end, category, channel)
 
 
-class ChatQuestion(BaseModel):
-    """The JSON body of POST /api/report/chat."""
-
-    question: str
-    # How the model is given the business document. False: all of it. True:
-    # only the chunks retrieved for this question (RAG). Set by the chat's toggle.
-    rag: bool = False
-
-
 # Structured output. The model is not asked for free text: it is given this
 # class as a schema and must fill in every field, so the page can rely on them
 # (show the answer, lay a list out as a list, say where it came from, style a
 # "not covered" reply differently). The model returns data; the page decides
 # how it looks. The docstring and each field's `description` are sent to the
 # model as part of the schema; they are how it learns what each field is for.
-class ReplyItem(BaseModel):
-    """One entry of a list in the assistant's reply, for example one service."""
-
-    name: str = Field(description="What the entry is, e.g. 'Swedish Massage', 'Late cancellations' or 'Revenue'.")
-    detail: str = Field(description="The facts about it, kept short, e.g. '60 / 90 minutes, $115 / $160', or for "
-                                    "a figure its value and change: '$19,818, down 2.1% from $20,235'.")
-
-
 class ChatReply(BaseModel):
     """The assistant's reply to one question from the spa's owner."""
 
@@ -149,31 +132,14 @@ class ChatAnswer(ChatReply):
     reports: list[str]  # the reports the model asked for, e.g. "2026-09-01 to 2026-09-30"
 
 
-# How many follow-up questions the chat shows under an answer.
-MAX_SUGGESTIONS = 3
 # How many times in one question the model may ask for tools before it must
 # answer. A comparison needs two reports; this leaves room and still ends.
 MAX_TOOL_ROUNDS = 4
 
-# The standing instructions. The current time and the business document are
-# added below them on every request, between tags, so the model can tell
-# instructions apart from data.
+# The owner assistant's own instructions. The rules for using the profile, the
+# current time and the profile itself are added after them (assistant/prompt.py).
 SYSTEM = """You are the assistant for the owner of a spa. You answer the owner's \
 questions about their own business.
-
-The business profile is given below between <profile> tags. It is the only \
-source of facts about what the business offers. Quote prices, hours and policies exactly \
-as written there. If the profile does not cover the question, say so plainly; \
-do not guess or fill in what spas usually do.
-
-The current date and time at the spa are given below between <currentTime> \
-tags. Use them to work out dates, days of the week and how much time is left \
-when a question depends on them, then answer from the profile as usual.
-
-The profile's headings and sub-headings are listed between <sections> tags. \
-When you name the sections an answer came from, use those names exactly, and \
-prefer the most specific one: the sub-heading the answer sits under, where \
-there is one.
 
 For questions about how the business is doing (revenue, bookings, \
 cancellations, channels, customers, feedback), call the get_report tool and \
@@ -182,63 +148,12 @@ out the dates to ask for from the current time; "last month" means the last \
 full calendar month. Say which period your figures cover. If the tool \
 reports that there is no data for a period, tell the owner what the data covers."""
 
-# Added to the instructions when RAG is on, so the model knows it is looking
-# at part of the profile and does not mistake a cut for a mistake.
-RAG_NOTE = """Only the parts of the profile that best match the question are \
-given, each between <excerpt> tags. They were cut by length, so an excerpt \
-may begin or end mid-sentence. The rest of the profile is not shown: if the \
-excerpts do not contain the answer, say you could not find it in the profile."""
-
-
-# The model call, as its own function so it shows up as one step of the trace
-# (see spadesk/tracing.py): `ls_provider` and `ls_model_name` tell LangSmith
-# which model ran, so it can price the tokens.
-@traceable(run_type="llm", process_inputs=model_messages, process_outputs=model_reply,
-           metadata={"ls_provider": "anthropic", "ls_model_name": get_settings().model})
-def ask_model(system: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> Any:
-    """Send the conversation so far to the model and return the SDK's response.
-    The response is either the structured reply or a request to run a tool.
-    """
-    # `parse` works like `create`, with one addition: `output_format` is a
-    # pydantic class, the model must reply with JSON matching it, and the
-    # SDK turns that JSON into an instance of the class (`parsed_output`).
-    return anthropic.Anthropic().messages.parse(
-        model=get_settings().model,
-        max_tokens=16000,
-        system=system,
-        messages=messages,
-        tools=tools,
-        output_format=ChatReply,
-    )
-
 
 @router.post("/chat")
 @traceable  # the whole request is the top step of the trace
 def chat(body: ChatQuestion) -> ChatAnswer:
     """Answer one question about the business, using the business document."""
-    settings = get_settings()
-    # The document's headings and sub-headings, e.g. "Policies" and
-    # "Cancellation Policy". The reply names its sources from this list.
-    # (dict.fromkeys removes repeats while keeping the document's order.)
-    outline = get_knowledge().outline
-    headings = list(dict.fromkeys(name for pair in outline for name in pair if name))
-    instructions, chunks = SYSTEM, 0
-    if body.rag:
-        # RAG: only the chunks that match the question, and only their headings
-        # to cite from, so a source the model was never shown cannot be named.
-        context = retrieved_context(body.question)
-        profile, chunks = context.text, context.chunks
-        headings = [name for name in headings if name in context.sections]
-        instructions = f"{SYSTEM}\n\n{RAG_NOTE}"
-    else:
-        # The whole business document, as text. It is small, so it fits.
-        profile = settings.data_path.read_text(encoding="utf-8")
-    # The model has no clock, so it is told the current date and time in the
-    # spa's own time zone, e.g. "Friday, 09 October 2026, 3:42 PM (PDT)".
-    current_time = datetime.now(ZoneInfo(settings.timezone)).strftime("%A, %d %B %Y, %-I:%M %p (%Z)")
-
-    system = (f"{instructions}\n\n<currentTime>{current_time}</currentTime>\n\n"
-              f"<sections>\n{chr(10).join(headings)}\n</sections>\n\n<profile>\n{profile}\n</profile>")
+    prompt = profile_prompt(SYSTEM, body.question, body.rag)
     dataset = get_dataset()
     tools = [report_tool(dataset)]
     # The conversation with the model. It starts as the one question and grows
@@ -248,7 +163,7 @@ def chat(body: ChatQuestion) -> ChatAnswer:
     messages: list[dict[str, Any]] = [{"role": "user", "content": body.question}]
     reports: list[str] = []
     try:
-        response = ask_model(system, messages, tools)
+        response = ask_model(prompt.system, messages, tools, ChatReply)
         rounds = 0
         # stop_reason says why the model stopped: "tool_use" means it is
         # waiting for a tool result rather than giving its answer.
@@ -263,7 +178,7 @@ def chat(body: ChatQuestion) -> ChatAnswer:
                     results.append({"type": "tool_result", "tool_use_id": block.id,
                                     "content": json.dumps(run_report(dataset, block.input))})
             messages.append({"role": "user", "content": results})
-            response = ask_model(system, messages, tools)
+            response = ask_model(prompt.system, messages, tools, ChatReply)
     except (anthropic.AnthropicError, TypeError):
         # TypeError is what the SDK raises when no API key is set.
         raise HTTPException(status_code=503, detail="The assistant is unavailable right now.")
@@ -274,14 +189,7 @@ def chat(body: ChatQuestion) -> ChatAnswer:
         # to answer, or was still asking for tools when the rounds ran out.
         raise HTTPException(status_code=503, detail="The assistant could not answer that.")
 
-    # Structured output guarantees the shape of the reply, not that its content
-    # is right. Section names are checked against the real headings, so the
-    # page never shows a source that does not exist.
-    cited = [name for name in reply.sections if name in headings]
-    # When a sub-heading is cited, its parent heading adds nothing: "Cancellation
-    # Policy" already says where the answer is, so "Policies" is dropped.
-    parents = {heading for heading, subheading in outline if subheading in cited}
-    reply.sections = [name for name in cited if name not in parents]
+    reply.sections = checked_sections(reply.sections, prompt.headings)
     # The schema cannot limit how many suggestions come back, so the limit is applied here.
     reply.suggestions = reply.suggestions[:MAX_SUGGESTIONS]
-    return ChatAnswer(**reply.model_dump(), rag=body.rag, chunks=chunks, reports=reports)
+    return ChatAnswer(**reply.model_dump(), rag=body.rag, chunks=prompt.chunks, reports=reports)

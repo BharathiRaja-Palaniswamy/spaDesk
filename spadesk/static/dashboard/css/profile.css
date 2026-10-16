@@ -6,8 +6,8 @@
 
 /* A group is one sub-heading of the document with its text and entries. */
 .profile-group + .profile-group { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--hairline); }
-/* Sub-headings and entry names stay in the body font: small serif text is harder to read. */
-.profile-group h3 { margin: 0 0 8px; font-family: var(--font); font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-soft); }
+/* Sub-headings: small uppercase labels in the mono font. */
+.profile-group h3 { margin: 0 0 8px; font: 500 12px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-soft); }
 
 .profile-text p { margin: 0 0 8px; }
 .profile-text p:last-child { margin-bottom: 0; }
