@@ -4,13 +4,17 @@ These use the real local embedding model and the real business document,
 because the point is to check that the right parts of it are found. Each
 test gets its own empty folder for the store.
 
-Run with:  .venv/bin/pytest tests/test_rag_retriever.py
+These test the first search on its own, so the reranker is switched off
+here; reranking has its own tests in test_rag_reranker.py.
+
+Run with:  .venv/bin/python -m pytest tests/test_rag_retriever.py
 """
 
 import pytest
 
 from spadesk.config import get_settings
 from spadesk.rag.embeddings import get_embedder
+from spadesk.rag.rerankers import get_reranker
 from spadesk.rag.retriever import retrieve
 from spadesk.rag.stores import get_store
 
@@ -22,9 +26,10 @@ def empty_store(tmp_path, monkeypatch):
     """
     monkeypatch.setenv("SPADESK_VECTOR_STORE_PATH", str(tmp_path / "chroma"))
     monkeypatch.setenv("SPADESK_RETRIEVAL_TOP_K", "3")
-    get_embedder.cache_clear(), get_store.cache_clear()
+    monkeypatch.setenv("SPADESK_RERANKER", "none")
+    get_embedder.cache_clear(), get_store.cache_clear(), get_reranker.cache_clear()
     yield
-    get_embedder.cache_clear(), get_store.cache_clear()
+    get_embedder.cache_clear(), get_store.cache_clear(), get_reranker.cache_clear()
 
 
 @pytest.mark.parametrize("question, section", [

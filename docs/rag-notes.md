@@ -16,7 +16,7 @@ business_doc.md -> chunks -> one vector per chunk -> vector store
 Done for every question:
 
 ```
-question -> its vector -> closest chunks -> prompt -> model -> answer
+question -> its vector -> closest 20 chunks -> reranker keeps the best 7 -> prompt -> model -> answer
 ```
 
 | Step | File | What it does |
@@ -26,6 +26,7 @@ question -> its vector -> closest chunks -> prompt -> model -> answer
 | 3. Vector store | `spadesk/rag/stores/` | Saves chunks with their vectors in Chroma (`storage/chroma`) |
 | 3. Index | `spadesk/rag/index.py` | Builds the store from the document; rebuilds when something changed |
 | 4. Retrieval | `spadesk/rag/retriever.py` | Embeds the question and returns the closest chunks with scores |
+| 4b. Reranking | `spadesk/rag/rerankers/` | A small local model reads the question and each of the 20 closest chunks together, scores how well each answers it, and the best 7 are kept (`SPADESK_RERANKER`, `SPADESK_RERANK_CANDIDATES`; "none" switches it off) |
 | 5. Context | `spadesk/rag/context.py` | Lays the chunks out between `<excerpt>` tags for the prompt |
 | 5. Prompt | `spadesk/assistant/prompt.py` | Puts the excerpts, or the whole document, into the system prompt, depending on `rag` in the request. Both chat routes use it: `assistant/customer.py` (customer site) and `reports/routes.py` (owner) |
 | 5. Switch | `static/home/js/chat/rag-switch.js`, `static/dashboard/js/chat/rag-switch.js` | The "RAG on / RAG off" switch on each page and the label under each answer |

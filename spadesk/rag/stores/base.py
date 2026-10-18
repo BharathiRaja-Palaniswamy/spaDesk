@@ -21,6 +21,9 @@ class Match:
     # How close the chunk's vector is to the searched one (cosine similarity):
     # near 1 means the same meaning, near 0 unrelated.
     score: float
+    # The reranker's score, when the matches were reranked (see rag/rerankers/);
+    # None otherwise. Higher is better; it only compares chunks for one question.
+    rerank_score: float | None = None
 
 
 class VectorStore(Protocol):

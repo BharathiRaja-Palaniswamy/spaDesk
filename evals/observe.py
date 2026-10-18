@@ -22,6 +22,8 @@ from typing import Any
 from fastapi.testclient import TestClient
 from langsmith import get_current_run_tree, traceable, tracing_context
 
+from spadesk.config import get_settings
+
 from .checks import grade
 
 EVAL_PROJECT = os.getenv("LANGSMITH_EVAL_PROJECT", "spadesk-evals")
@@ -51,8 +53,15 @@ def _ask_and_grade(client: TestClient, case: dict[str, Any], mode: str) -> dict[
     return {"answer": reply["answer"], "passed": not problems, "problems": problems, "seconds": seconds}
 
 
-def ask_case(client: TestClient, case: dict[str, Any], mode: str) -> dict[str, Any]:
-    """`_ask_and_grade`, recorded in the eval project under the case's name."""
-    with tracing_context(project_name=EVAL_PROJECT, tags=["eval", mode, case["chat"]],
-                         metadata={"case": case["id"], "mode": mode}):
+def ask_case(client: TestClient, case: dict[str, Any], mode: str, label: str) -> dict[str, Any]:
+    """`_ask_and_grade`, recorded in the eval project under the case's name.
+
+    `label` names the run (e.g. "rerank"), so two runs can be told apart and
+    compared in LangSmith: filter or group by the `run:<label>` tag, or by the
+    `run` and `reranker` metadata.
+    """
+    settings = get_settings()
+    with tracing_context(project_name=EVAL_PROJECT, tags=["eval", mode, case["chat"], f"run:{label}"],
+                         metadata={"case": case["id"], "mode": mode, "run": label,
+                                   "reranker": settings.reranker, "top_k": settings.retrieval_top_k}):
         return _ask_and_grade(client, case, mode, langsmith_extra={"name": f"eval: {case['id']} ({mode})"})

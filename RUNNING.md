@@ -67,8 +67,11 @@ cost a few dollars per full run.
 
 ```sh
 .venv/bin/python -m evals.retrieval   # retrieval only: free, a few seconds
-.venv/bin/python -m evals.run         # every case, both modes: about 15 minutes
+.venv/bin/python -m evals.run --label rerank   # every case, both modes: about 15 minutes
 ```
+
+`--label` names the run in LangSmith (tag `run:<label>`), so two runs can be
+compared there. Set `SPADESK_RERANKER=none` to measure without reranking.
 
 The results so far, and what changed between runs, are in
 [docs/eval-report.md](docs/eval-report.md).

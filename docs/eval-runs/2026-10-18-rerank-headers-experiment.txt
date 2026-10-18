@@ -1,0 +1,25 @@
+# 2026-10-18 retrieval experiment: reranking and contextual chunk headers (fact hit rate, k=7, 29 cases)
+
+plain                        24/29  missed ['studio-hours-sunday', 'first-class-free', 'appointment-cancellation-fee', 'restorative-sunday', 'membership-with-yoga']
+plain              + rerank  26/29  missed ['studio-hours-sunday', 'list-yoga-classes', 'casual-saturday-hours']
+A headings                   23/29  missed ['studio-hours-sunday', 'first-class-free', 'appointment-cancellation-fee', 'restorative-sunday', 'casual-saturday-hours', 'membership-with-yoga']
+A headings         + rerank  27/29  missed ['studio-hours-sunday', 'casual-saturday-hours']
+B headings+labels            24/29  missed ['studio-hours-sunday', 'appointment-cancellation-fee', 'restorative-sunday', 'casual-saturday-hours', 'membership-with-yoga']
+B headings+labels  + rerank  27/29  missed ['casual-saturday-hours', 'membership-with-yoga']
+
+example B header: Location and Hours | Facials | Yoga Studio Hours, Glow Express Facial, Signature Radiance Facial
+
+# Reranking settings (plain chunks)
+no rerank, keep 7: (24, ['studio-hours-sunday', 'first-class-free', 'appointment-cancellation-fee', 'restorative-sunday', 'membership-with-yoga'])
+ms-marco-MiniLM-L-6-v2   fetch 15 keep 5: 25/29    54 ms/q  missed ['studio-hours-sunday', 'list-yoga-classes', 'casual-saturday-hours', 'membership-with-yoga']
+ms-marco-MiniLM-L-6-v2   fetch 15 keep 7: 26/29    54 ms/q  missed ['studio-hours-sunday', 'list-yoga-classes', 'casual-saturday-hours']
+ms-marco-MiniLM-L-6-v2   fetch 20 keep 5: 25/29    77 ms/q  missed ['studio-hours-sunday', 'list-yoga-classes', 'casual-saturday-hours', 'membership-with-yoga']
+ms-marco-MiniLM-L-6-v2   fetch 20 keep 7: 26/29    77 ms/q  missed ['studio-hours-sunday', 'list-yoga-classes', 'casual-saturday-hours']
+ms-marco-MiniLM-L-6-v2   fetch 33 keep 5: 25/29   132 ms/q  missed ['studio-hours-sunday', 'list-yoga-classes', 'casual-saturday-hours', 'membership-with-yoga']
+ms-marco-MiniLM-L-6-v2   fetch 33 keep 7: 26/29   132 ms/q  missed ['studio-hours-sunday', 'list-yoga-classes', 'casual-saturday-hours']
+bge-reranker-base        fetch 15 keep 5: 24/29   275 ms/q  missed ['studio-hours-sunday', 'cheapest-facial', 'list-yoga-classes', 'casual-saturday-hours', 'mom-and-child-together']
+bge-reranker-base        fetch 15 keep 7: 26/29   275 ms/q  missed ['studio-hours-sunday', 'list-yoga-classes', 'casual-saturday-hours']
+bge-reranker-base        fetch 20 keep 5: 24/29   369 ms/q  missed ['studio-hours-sunday', 'cheapest-facial', 'list-yoga-classes', 'casual-saturday-hours', 'mom-and-child-together']
+bge-reranker-base        fetch 20 keep 7: 26/29   369 ms/q  missed ['studio-hours-sunday', 'list-yoga-classes', 'casual-saturday-hours']
+bge-reranker-base        fetch 33 keep 5: 24/29   618 ms/q  missed ['studio-hours-sunday', 'cheapest-facial', 'list-yoga-classes', 'casual-saturday-hours', 'mom-and-child-together']
+bge-reranker-base        fetch 33 keep 7: 26/29   618 ms/q  missed ['studio-hours-sunday', 'list-yoga-classes', 'casual-saturday-hours']

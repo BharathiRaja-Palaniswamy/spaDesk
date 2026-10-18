@@ -151,7 +151,8 @@ The browser never reads the data file; filtering and maths happen on the server.
    class.
    With the RAG switch on, step 3 sends only the retrieved chunks instead:
    `rag/retriever.py` embeds the question and finds the closest chunks in the
-   vector store, and `rag/context.py` lays them out for the prompt.
+   vector store, a reranker (`rag/rerankers/`) reorders them and keeps the
+   best, and `rag/context.py` lays them out for the prompt.
    If the model replies with a request for the `get_report` tool instead of
    an answer, the route runs it (`reports/tools.py`), sends the figures back
    and asks again, until the model answers.
@@ -183,6 +184,7 @@ spadesk/
     stores/                    keeps chunks and vectors (Chroma); the store is a setting
     index.py                   builds the index, and rebuilds it when something changed
     retriever.py               finds the chunks that match a question
+    rerankers/                 reorders them with a small local model and keeps the best; a setting
     context.py                 lays the retrieved chunks out for the model
   reports/
     dataset.py                 loads the bookings JSON, joins it to the services, filters it
@@ -217,7 +219,7 @@ evals/                         questions asked to the real model and graded (pyt
   run.py                       asks each case with RAG off and on, times it, prints each result
   observe.py                   traces each question to its own LangSmith project, tagged by case and mode
   summary.py                   compares the two modes: pass rate, latency, cases that differ
-  retrieval.py                 retrieval alone, no model calls: are the expected sections in the top-k chunks?
+  retrieval.py                 retrieval alone, no model calls: is the chunk holding each answer in the top k?
 tests/                         one test file per area
 ```
 
@@ -257,6 +259,6 @@ route in `spadesk/app.py`, then `spadesk/business/knowledge.py`.
 |---|---|
 | Another tool for the assistant | a description and a function in `reports/tools.py`, and one more case in the `chat` route's tool loop |
 | Follow-up questions (memory) | the same route, keeping earlier messages per session |
-| Another embedding provider or vector store | a file in `rag/embeddings/` or `rag/stores/`, and one line in its `__init__.py` |
+| Another embedding provider, vector store or reranker | a file in `rag/embeddings/`, `rag/stores/` or `rag/rerankers/`, and one line in its `__init__.py` |
 | A new dashboard chart | a metric in `reports/metrics/`, a line in `report.py`, a file in `js/sections/` |
 | Real calendar booking | `BookingDesk.submit` in `booking/service.py` |

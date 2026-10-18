@@ -8,6 +8,7 @@ them, so they can be updated:
 
   cites            every section must still be a heading in the document
   mentions         every text must still appear in the document
+  evidence         every line must still appear in the document
   mentions_report  every period must lie within the bookings data, and every
                    figure must be one figures.py knows
   judge            must be a non-empty list of criteria
@@ -37,6 +38,8 @@ def stale_cases(cases: list[dict[str, Any]]) -> list[str]:
                      for section in expect.get("cites", []) if section not in headings]
         problems += [f"{case['id']}: expects '{text}', which is no longer in the document"
                      for text in expect.get("mentions", []) if text.lower() not in document]
+        problems += [f"{case['id']}: evidence '{text}' is no longer in the document"
+                     for text in case.get("evidence", []) if text.lower() not in document]
         if "judge" in expect and not (isinstance(expect["judge"], list) and expect["judge"]):
             problems.append(f"{case['id']}: judge must be a non-empty list of criteria")
         for spec in expect.get("mentions_report", []):

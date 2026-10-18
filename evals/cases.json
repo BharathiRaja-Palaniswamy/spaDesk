@@ -48,6 +48,9 @@
     "id": "body-wrap-price-duration",
     "chat": "customer",
     "question": "How much is the Sea Mineral Body Wrap and how long does it take?",
+    "evidence": [
+      "$145"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -63,6 +66,9 @@
     "id": "hours-sunday",
     "chat": "customer",
     "question": "What time does the spa close on Sunday?",
+    "evidence": [
+      "Sunday: 10:00 AM – 5:00 PM"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -77,6 +83,9 @@
     "id": "studio-hours-sunday",
     "chat": "customer",
     "question": "What are the yoga studio hours on Sunday?",
+    "evidence": [
+      "Sunday: 8:00 AM – 4:00 PM"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -136,6 +145,9 @@
     "id": "recent-chemical-peel",
     "chat": "customer",
     "question": "I had a chemical peel four days ago. Can I get the Brightening Vitamin C Facial?",
+    "evidence": [
+      "7 days of a chemical peel"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -153,6 +165,9 @@
     "id": "waxing-retinoids",
     "chat": "customer",
     "question": "Can I get an eyebrow wax if I used retinoids three days ago?",
+    "evidence": [
+      "retinoids in the past 7 days"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -184,6 +199,9 @@
     "id": "new-guest-discount",
     "chat": "customer",
     "question": "Do you have a discount for first-time customers?",
+    "evidence": [
+      "15% off one full-priced service"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -198,14 +216,19 @@
     "id": "first-class-free",
     "chat": "customer",
     "question": "Is my first yoga class free, and how do I book it?",
+    "evidence": [
+      "Book by phone or at the front desk"
+    ],
     "expect": {
       "covered": true,
       "cites": [
         "First-Time Customer Offer"
       ],
       "mentions": [
-        "phone",
         "front desk"
+      ],
+      "judge": [
+        "Says the class can be booked by phone (calling the spa) or at the front desk."
       ]
     }
   },
@@ -213,6 +236,9 @@
     "id": "class-pass-sharing",
     "chat": "customer",
     "question": "Can I share the 10-Class Pass with my spouse?",
+    "evidence": [
+      "Can be shared with one family member"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -227,6 +253,9 @@
     "id": "class-cancellation-window",
     "chat": "customer",
     "question": "How late can I cancel a yoga class and still keep my credit?",
+    "evidence": [
+      "at least 12 hours before class"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -241,6 +270,9 @@
     "id": "appointment-cancellation-fee",
     "chat": "customer",
     "question": "What happens if I cancel my facial less than 24 hours before my appointment?",
+    "evidence": [
+      "Late cancellations may incur a 50% service fee"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -255,6 +287,9 @@
     "id": "no-show-charge",
     "chat": "customer",
     "question": "What is the no-show charge for a booked service?",
+    "evidence": [
+      "100% of the reserved service cost"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -283,6 +318,9 @@
     "id": "kids-yoga-saturday",
     "chat": "customer",
     "question": "When is Kids Yoga offered on Saturday and who teaches it?",
+    "evidence": [
+      "11:30 AM – Kids Yoga with Leah Porter"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -298,6 +336,9 @@
     "id": "restorative-sunday",
     "chat": "customer",
     "question": "What time is Restorative Yoga on Sunday?",
+    "evidence": [
+      "10:00 AM – Restorative Yoga"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -362,6 +403,9 @@
     "id": "membership-cancellation",
     "chat": "customer",
     "question": "How do I cancel a membership?",
+    "evidence": [
+      "30 days’ notice"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -376,6 +420,9 @@
     "id": "monthly-service-rollover",
     "chat": "customer",
     "question": "Do unused monthly membership spa services carry over?",
+    "evidence": [
+      "carry over for one month"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -458,8 +505,9 @@
     "chat": "customer",
     "question": "Do you offer Botox injections?",
     "expect": {
-      "covered": false,
-      "cites": []
+      "judge": [
+        "Says the spa does not offer Botox or injections."
+      ]
     }
   },
   {
@@ -556,6 +604,9 @@
     "id": "casual-saturday-hours",
     "chat": "customer",
     "question": "u guys open sat?",
+    "evidence": [
+      "Saturday: 9:00 AM – 7:00 PM"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -582,6 +633,9 @@
     "id": "membership-with-yoga",
     "chat": "customer",
     "question": "Is there a membership that includes yoga classes?",
+    "evidence": [
+      "unlimited group yoga classes"
+    ],
     "expect": {
       "covered": true,
       "cites": [
@@ -683,7 +737,7 @@
     "expect": {
       "judge": [
         "Does not claim a groom-specific service or package exists.",
-        "Does not invent a service or price that the spa does not offer."
+        "Any service it suggests is offered as an alternative, not as a groom service."
       ]
     }
   },

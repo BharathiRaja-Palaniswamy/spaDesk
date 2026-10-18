@@ -1,6 +1,9 @@
 """Runs every case in cases.json against the real model and prints a score.
 
-    .venv/bin/python -m evals.run
+    .venv/bin/python -m evals.run --label rerank
+
+The label names the run in LangSmith (the `run:<label>` tag), so runs can be
+compared there; it defaults to "unlabelled".
 
 Unlike the tests in tests/, which replace the model with a fake, an eval asks
 the real model, so each run costs API credits and the answers can differ from
@@ -16,6 +19,7 @@ With LANGSMITH_TRACING=true, every question is also traced to LangSmith, in
 its own project (see observe.py).
 """
 
+import argparse
 import json
 from pathlib import Path
 
@@ -32,6 +36,9 @@ CASES = Path(__file__).parent / "cases.json"
 
 def main() -> None:
     """Asks each case in both modes, grades the replies and prints the result."""
+    parser = argparse.ArgumentParser(description="Run the evals against the real model.")
+    parser.add_argument("--label", default="unlabelled", help='names this run in LangSmith, e.g. "rerank"')
+    label = parser.parse_args().label
     cases = json.loads(CASES.read_text())
     # Stop before spending anything if a case no longer matches the document or data.
     if stale := stale_cases(cases):
@@ -42,7 +49,7 @@ def main() -> None:
 
     for case in cases:
         for mode in ("full", "rag"):
-            outcome = ask_case(client, case, mode)
+            outcome = ask_case(client, case, mode, label)
             result = Result(case["id"], mode, outcome["problems"], outcome["seconds"])
             results.append(result)
             print(f"{'PASS' if result.passed else 'FAIL'}  {mode:4}  {result.seconds:5.1f}s  {case['id']}")

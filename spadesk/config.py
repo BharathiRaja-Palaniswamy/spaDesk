@@ -49,7 +49,9 @@ class Settings:
     embedding_provider: str  # RAG: which provider turns text into vectors
     vector_store: str  # RAG: which vector store keeps the chunks and their vectors
     vector_store_path: Path  # RAG: the folder a local vector store saves to
-    retrieval_top_k: int  # RAG: how many chunks are fetched for a question
+    retrieval_top_k: int  # RAG: how many chunks are given to the model for a question
+    reranker: str  # RAG: which reranker reorders the candidates, or "none"
+    rerank_candidates: int  # RAG: how many chunks the first search fetches for the reranker to choose from
 
 
 def get_settings() -> Settings:
@@ -68,4 +70,6 @@ def get_settings() -> Settings:
         vector_store=os.getenv("SPADESK_VECTOR_STORE", "chroma"),
         vector_store_path=Path(os.getenv("SPADESK_VECTOR_STORE_PATH", ROOT / "storage" / "chroma")),
         retrieval_top_k=int(os.getenv("SPADESK_RETRIEVAL_TOP_K", "3")),
+        reranker=os.getenv("SPADESK_RERANKER", "cross-encoder"),
+        rerank_candidates=int(os.getenv("SPADESK_RERANK_CANDIDATES", "20")),
     )
