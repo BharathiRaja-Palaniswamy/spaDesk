@@ -1,7 +1,7 @@
 /**
  * @file Opens and closes the chat panel. Any button with a data-open-chat
- * attribute opens it (the avatar in the corner and the hero's "Ask our
- * assistant"); the × button, the Escape key and a click on the dimmed page
+ * attribute opens it (the avatar in the corner and the "Ask Pebby!" bubble
+ * beside it); the × button, the Escape key and a click on the dimmed page
  * close it.
  *
  * Opening adds the "open" class, and css/chat-panel.css slides the panel in

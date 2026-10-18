@@ -71,10 +71,15 @@ duration and price per category, packages, offers, add-ons, FAQs and policies.
   question is recorded as a trace: the chunks retrieved, the exact prompt
   sent to the model, its reply, the tokens used and the time each step took.
   See `spadesk/tracing.py`.
-- **Evals**: 60 questions asked to the real model with the whole document
+- **Evals**: 61 questions asked to the real model with the whole document
   and with RAG, graded by code checks and, for yes/no and safety answers, by
   a second model call. See `evals/` and
   [docs/eval-report.md](docs/eval-report.md).
+- **LangChain pipeline**: the same RAG steps rebuilt with LangChain in
+  `spadesk/lc/`, chosen by `SPADESK_RAG_ENGINE`, every provider pluggable.
+
+How the project got here, stage by stage, and what each stage taught us:
+[docs/evolution.md](docs/evolution.md).
 
 ## Running it
 

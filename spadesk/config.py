@@ -29,8 +29,6 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # The bold block that lists opening hours, shown in the customer site's welcome panel.
 HOURS_BLOCK = "Business Hours"
-# The section whose first paragraph introduces the spa in the welcome panel.
-ABOUT_SECTION = "About"
 
 
 # ---- Per-machine settings --------------------------------------------------

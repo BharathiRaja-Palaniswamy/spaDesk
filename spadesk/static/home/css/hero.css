@@ -1,5 +1,5 @@
 /* The hero: the "mind and body" pebbles illustration, with the welcome text
-   and two cards (opening hours, the assistant) beside it.
+   and the opening hours card beside it.
 
    The illustration is portrait, with the pebbles in its lower half, so it is
    never stretched across the full width (that would crop either the sky or
@@ -37,12 +37,11 @@
 /* Full-strength ink: the softer grey is too faint on the coloured sky. */
 .hero-copy .eyebrow, .lede { color: var(--ink); }
 .lede { font-size: 1.1rem; max-width: 36rem; }
-.hero-actions { display: flex; flex-wrap: wrap; gap: 0.7rem; }
 
-.hero-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: stretch; }
+.hero-cards { display: grid; grid-template-columns: minmax(0, 24rem); }
 
 /* Frosted glass: a see-through white with the picture blurred behind it. */
-.hours-card, .ask-card {
+.hours-card {
   background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(14px);
   border: 1px solid rgba(255, 255, 255, 0.8); border-radius: var(--radius); box-shadow: var(--shadow);
 }
@@ -52,11 +51,6 @@
 .hours li { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px dashed var(--line); padding-bottom: 0.3rem; }
 .hours li:last-child { border-bottom: 0; padding-bottom: 0; }
 .hours li span:last-child { color: var(--ink-soft); white-space: nowrap; }
-
-.ask-card { display: grid; align-content: start; gap: 0.6rem; justify-items: start; padding: 1.3rem; }
-.ask-card h2 { font-size: 1.25rem; }
-.ask-card p { color: var(--ink-soft); font-size: 0.95rem; }
-.avatar { display: block; border-radius: 50%; }
 
 /* Below 1100px there is no room beside the illustration: the content goes
    on top and the illustration underneath, full width. The bottom padding is
@@ -68,9 +62,4 @@
     -webkit-mask-image: linear-gradient(transparent 0%, #000 30%);
     mask-image: linear-gradient(transparent 0%, #000 30%);
   }
-}
-
-/* Phones: the two cards stack. */
-@media (max-width: 640px) {
-  .hero-cards { grid-template-columns: 1fr; }
 }

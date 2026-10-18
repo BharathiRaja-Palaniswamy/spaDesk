@@ -12,8 +12,8 @@
  * @returns {string}
  */
 export const greeting = (business) =>
-  `Hi, welcome to ${business}! Ask me about our services and prices, opening hours, `
-  + "offers or policies. Pick a question below or type your own.";
+  `Hello 👋 I'm Pebby, your virtual assistant. Welcome to ${business}! Ask me about our `
+  + "services and prices, opening hours, offers or policies. Pick a question below or type your own.";
 
 /** Questions offered under the greeting. */
 export const STARTER_QUESTIONS = [

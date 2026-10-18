@@ -1,0 +1,52 @@
+/* The speech bubble beside the avatar in the bottom-right corner: "👋 Any
+   questions? Ask Pebby!". It starts off to the right and slides out as the
+   page loads, when js/chat/nudge.js adds the "show" class; the hand waves twice. It sits
+   just left of the avatar (64px wide, 24px from the edge) and hides while the
+   chat is open. */
+
+.chat-nudge {
+  position: fixed; right: calc(24px + 64px + 12px); bottom: 34px; z-index: 20;
+  display: flex; align-items: center;
+  max-width: calc(100vw - 24px - 64px - 12px - 16px);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--pill);
+  box-shadow: 0 12px 30px -10px rgba(25, 30, 73, 0.35);
+  opacity: 0; transform: translateX(24px); pointer-events: none; visibility: hidden;
+  transition: opacity 0.35s ease, transform 0.35s ease, visibility 0s 0.35s;
+}
+.chat-nudge.show {
+  opacity: 1; transform: none; pointer-events: auto; visibility: visible;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+/* A small tail pointing at the avatar. */
+.chat-nudge::after {
+  content: ""; position: absolute; right: -6px; top: 50%; width: 12px; height: 12px;
+  background: var(--surface); border: solid var(--line); border-width: 1px 1px 0 0;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.chat-nudge-ask {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.65rem 0.4rem 0.65rem 1rem; border: 0; background: none;
+  font: 500 0.95rem var(--sans); color: var(--ink); text-align: left; cursor: pointer;
+}
+.chat-nudge-ask strong { color: var(--accent); }
+.chat-nudge-close {
+  position: relative; z-index: 1; /* above the tail */
+  margin-right: 0.4rem; width: 28px; height: 28px; border: 0; border-radius: 50%;
+  background: none; color: var(--ink-soft); font-size: 1.1rem; line-height: 1; cursor: pointer;
+}
+.chat-nudge-close:hover { background: var(--wash); }
+
+/* The wave: the hand rocks from the wrist, twice, after the bubble arrives. */
+.chat-nudge-wave { display: inline-block; font-size: 1.3rem; transform-origin: 70% 80%; }
+.chat-nudge.show .chat-nudge-wave { animation: chat-nudge-wave 1.2s ease-in-out 0.4s 2; }
+@keyframes chat-nudge-wave {
+  0%, 100% { transform: rotate(0); }
+  15%, 45% { transform: rotate(16deg); }
+  30%, 60% { transform: rotate(-10deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-nudge, .chat-nudge.show { transition: none; transform: none; }
+  .chat-nudge.show .chat-nudge-wave { animation: none; }
+}

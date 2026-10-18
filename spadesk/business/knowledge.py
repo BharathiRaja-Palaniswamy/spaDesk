@@ -104,17 +104,15 @@ class KnowledgeBase:
         """The piece of the document with exactly this title, or None."""
         return self._by_title.get(title)
 
-    def public(self, hours: str, about: str) -> dict[str, Any]:
+    def public(self, hours: str) -> dict[str, Any]:
         """Everything the customer site shows, taken from the document.
 
-        The arguments are titles from config.py that say where the opening
-        hours and the introduction are.
+        `hours` is the title from config.py that says where the opening hours are.
         """
         priced = {i.name: i for i in self.items if i.priced}
-        hours_chunk, about_chunk = self.find(hours), self.find(about)
+        hours_chunk = self.find(hours)
         return {
             "name": self.name,
-            "about": about_chunk.lines[0] if about_chunk else "",
             "contact": self.facts,
             # "Friday: 10:00 AM – 7:00 PM" -> {"days": "Friday", "times": "10:00 AM – 7:00 PM"}
             "hours": [dict(zip(("days", "times"), line.split(": ", 1))) for line in hours_chunk.lines]

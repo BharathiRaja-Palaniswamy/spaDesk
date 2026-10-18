@@ -28,7 +28,7 @@ from .assistant.customer import router as customer_chat
 from .booking.service import BookingDesk, BookingError, BookingRequest
 from .business.profile import build_profile
 from .business.store import get_knowledge
-from .config import ABOUT_SECTION, HOURS_BLOCK, get_settings
+from .config import HOURS_BLOCK, get_settings
 from .reports.routes import page_router as manage_page, router as report_router
 
 STATIC = Path(__file__).parent / "static"
@@ -57,8 +57,8 @@ def get_booking_desk() -> BookingDesk:
 
 @app.get("/api/spa")
 def spa():
-    """Spa facts for the customer site: name, introduction, hours, services, contact."""
-    return get_knowledge().public(HOURS_BLOCK, ABOUT_SECTION)
+    """Spa facts for the customer site: name, hours, services, contact."""
+    return get_knowledge().public(HOURS_BLOCK)
 
 
 @app.get("/api/profile")

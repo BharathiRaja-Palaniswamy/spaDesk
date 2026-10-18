@@ -1,23 +1,14 @@
 /**
- * @file Fills the page with the spa's facts from /api/spa: its name, a short
- * introduction, the opening hours and the contact details.
+ * @file Fills the page with the spa's facts from /api/spa: its name, the
+ * opening hours and the contact details.
  *
  * Everything about the spa comes from the business document through the
- * server; nothing is hard-coded here.
+ * server; nothing is hard-coded here. (The hero's welcome line is page
+ * wording, written in index.html; the spa's own introduction is in the
+ * About band.)
  */
 
 import { $, el } from "./dom.js";
-
-/**
- * The opening sentences of a paragraph, for a short introduction.
- * @param {string} text e.g. the "About" paragraph
- * @param {number} count how many sentences to keep
- * @returns {string}
- */
-function firstSentences(text, count) {
-  // A sentence ends at ". ", "! " or "? ".
-  return text.split(/(?<=[.!?])\s+/).slice(0, count).join(" ");
-}
 
 /**
  * Writes the spa's facts into the page.
@@ -26,7 +17,6 @@ function firstSentences(text, count) {
 export function renderSpa(spa) {
   document.title = spa.name;
   document.querySelectorAll("[data-spa-name]").forEach((node) => (node.textContent = spa.name));
-  $("#about").textContent = firstSentences(spa.about, 2);
 
   $("#hours").replaceChildren(...spa.hours.map((h) =>
     el("li", {}, el("span", { textContent: h.days }), el("span", { textContent: h.times }))));

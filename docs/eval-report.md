@@ -185,6 +185,36 @@ same score at about 5 times the time (389 ms against 74 ms per question).
 |---|---|---|---|---|---|
 | Baseline | top 7 chunks, dense search only | | 54/60 (90%) | 24/29 (83%) | |
 | Reranking | first search fetches 20, MiniLM-L-6 cross-encoder keeps the best 7 (`spadesk/rag/rerankers/`) | near misses at ranks 8 to 13 | **56/60 (93%)**; full 58/60 | 26/29 (90%) | see 2d |
+| LangChain + relevance rule | customer chat on the LangChain chain (`spadesk/lc/`); new prompt rule "answer the question that was asked"; 61 cases | same pipeline by framework parts; a true but off-question answer | **57/61 (93%)**; full **61/61** | 26/29 (90%) | see 2e |
+
+### 2e. LangChain and the relevance rule (18 Oct, `--label langchain`, `docs/eval-runs/2026-10-18-langchain.txt`)
+
+Two changes at once: the customer chat answered through the LangChain pipeline, and the shared prompt
+gained a rule: "Answer the question that was asked. If the profile has only related information, not
+the answer itself, say first that the answer is not in the profile, then offer what is related." A new
+case, child-accompany-adult ("can i bring my kid with me ?"), is judged on that.
+
+| | Reranking run | LangChain run |
+|---|---|---|
+| Whole document | 58/60 | **61/61** |
+| RAG | 56/60 (93%) | **57/61 (93%)** |
+| RAG average / slowest | 5.0 s / 12.5 s | 5.0 s / 20.7 s |
+
+- **The relevance rule worked:** child-accompany-adult passed in both modes. Full mode reached 61/61.
+- **Three RAG failures are the known retrieval misses** (studio Sunday hours, the yoga class list,
+  "u guys open sat?"), the ones the fact-level retrieval score already flags.
+- **One is the check being too strict:** for Botox, the RAG answer said it could not find it in the
+  profile and could not confirm it, the honest answer from 7 excerpts; the judge wanted a flat "we
+  don't offer Botox". The criterion should also accept "not in the spa's information".
+- **What caused the gains cannot be split from this run alone.** Both engines build the same prompt and
+  retrieve the same chunks (proven by tests), so the gains most likely come from the new rule, plus
+  about one case of run-to-run noise. A hand-built run with the new rule would separate them.
+- **Cost (LangSmith, tag `run:langchain`):** 122 traces, 1,057,275 tokens, **$5.07**, about 4.2 cents per
+  traced question, the same as the reranking run ($4.95 for 120). LangChain adds no model tokens: it sends
+  the same prompt. Latency p50 4.90 s, p99 12.31 s; 0% errors.
+- **Prompt cache hits: 0%.** Every question resends the same instructions (and, with RAG off, the whole
+  guide) without Anthropic's prompt caching. Caching that fixed part is the clearest way to cut cost
+  further; noted for the roadmap.
 
 ### 2d. Reranking: the paid run (18 Oct, `--label rerank`, `docs/eval-runs/2026-10-18-rerank.txt`)
 
@@ -218,5 +248,6 @@ groom-service's criteria no longer need facts the judge cannot see. Not yet reru
 and groom answers differed from the baseline run's, and live availability passed this time. One run of
 each is a measurement with noise of about one case.
 
-**Cost:** to read from LangSmith (filter on the tag `run:rerank`). Reranking adds no tokens: the model
-still receives 7 chunks.
+**Cost (LangSmith, tag `run:rerank`):** 120 traces, 1,040,551 tokens, **$4.95**, against 1,029,393 tokens
+and $4.90 for the baseline: the same within 1%. Reranking adds no model tokens, because the model still
+receives 7 chunks; the reranker runs on the machine. Latency p50 4.62 s, p99 11.13 s; 0% errors.

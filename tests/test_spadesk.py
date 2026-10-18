@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from spadesk import app as app_module
 from spadesk.booking.service import BookingDesk, BookingError, BookingRequest
-from spadesk.config import ABOUT_SECTION, HOURS_BLOCK, ROOT
+from spadesk.config import HOURS_BLOCK, ROOT
 from spadesk.business.knowledge import KnowledgeBase
 from spadesk.business.profile import build_profile
 
@@ -39,8 +39,8 @@ def test_pieces_can_be_found_by_title(kb):
 
 
 def test_public_data_for_the_landing_page(kb):
-    spa = kb.public(HOURS_BLOCK, ABOUT_SECTION)
-    assert spa["name"] == "Pebble Spa" and spa["about"].startswith("Pebble Spa is a neighborhood wellness spa")
+    spa = kb.public(HOURS_BLOCK)
+    assert spa["name"] == "Pebble Spa"
     assert spa["hours"][0] == {"days": "Monday to Thursday", "times": "10:00 AM – 8:00 PM"}
 
 

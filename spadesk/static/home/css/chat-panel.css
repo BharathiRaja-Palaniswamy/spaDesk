@@ -26,6 +26,7 @@
 
 .chat-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.9rem 1rem; border-bottom: 1px solid var(--line); }
 .chat-header > div { flex: 1; }
+.chat-header .avatar { display: block; border-radius: 50%; }
 .chat-header h2 { font-size: 1.15rem; }
 .chat-header p { font-size: 0.8rem; color: var(--ink-soft); }
 .chat-close { border: 0; background: none; padding: 0 0.2rem; font-size: 1.6rem; line-height: 1; color: var(--ink-soft); cursor: pointer; }
