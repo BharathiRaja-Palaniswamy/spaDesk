@@ -24,8 +24,8 @@
 </head>
 <body>
   <!--
-    The customer site: a hero with a photo behind it (the welcome on the left,
-    the assistant card on the right), the whole business document in bands
+    The customer site: a hero with an illustration on the right (the welcome,
+    opening hours and assistant card on the left), the whole business document in bands
     below it, and a chat panel that slides in from the right. Spa facts (name, about, hours, contact, services) are filled in by
     js/spa.js from /api/spa. Elements with an id or a data- attribute are the
     places the scripts write into or listen on: any [data-open-chat] button
@@ -38,7 +38,8 @@
     <button class="btn" type="button" data-open-booking>Request a booking</button>
   </header>
 
-  <!-- The hero. Its photo is a CSS background (css/hero.css). -->
+  <!-- The hero. Its illustration is drawn by CSS (css/hero.css); all the
+       content stays on the left so it never covers the two pebbles. -->
   <main class="hero" id="top">
     <section class="hero-copy" aria-labelledby="welcome-title">
       <p class="eyebrow">Wellness for the whole family</p>
@@ -47,19 +48,23 @@
       <div class="hero-actions">
         <button class="btn" type="button" data-open-booking>Request a booking</button>
       </div>
+    </section>
+
+    <!-- Two cards side by side: opening hours, and the assistant. -->
+    <div class="hero-cards">
       <div class="hours-card">
         <p class="eyebrow">Opening hours</p>
         <ul class="hours" id="hours"></ul>
       </div>
-    </section>
 
-    <!-- The assistant card: one line on what it can answer, and a button that opens the chat. -->
-    <aside class="ask-card" aria-labelledby="ask-title">
-      <img class="avatar" src="/static/home/img/assistant.svg" alt="" width="56" height="56">
-      <h2 id="ask-title">Questions before you visit?</h2>
-      <p>Our AI assistant answers from our own service guide: treatments, prices, hours and policies.</p>
-      <button class="btn" type="button" data-open-chat>Ask our assistant</button>
-    </aside>
+      <!-- The assistant card: one line on what it can answer, and a button that opens the chat. -->
+      <aside class="ask-card" aria-labelledby="ask-title">
+        <img class="avatar" src="/static/home/img/pebble-agent-avatar-named.svg" alt="" width="56" height="56">
+        <h2 id="ask-title">Questions before you visit?</h2>
+        <p>Our AI assistant answers from our own service guide: treatments, prices, hours and policies.</p>
+        <button class="btn" type="button" data-open-chat>Ask our assistant</button>
+      </aside>
+    </div>
   </main>
 
   <!-- The decorative wave under the hero: lavender to pink to peach. -->
@@ -88,7 +93,7 @@
 
   <!-- The avatar button in the corner: opens the chat from anywhere on the page. -->
   <button class="chat-launcher" type="button" data-open-chat aria-controls="chat-panel" aria-label="Chat with our assistant">
-    <img src="/static/home/img/assistant.svg" alt="" width="60" height="60">
+    <img src="/static/home/img/pebble-agent-avatar-named.svg" alt="" width="60" height="60">
   </button>
 
   <!-- The chat: a panel that slides in from the right when a [data-open-chat]
@@ -98,7 +103,7 @@
   <div class="chat-veil" id="chat-veil"></div>
   <section class="chat-panel" id="chat-panel" aria-labelledby="chat-title">
     <header class="chat-header">
-      <img class="avatar" src="/static/home/img/assistant.svg" alt="" width="36" height="36">
+      <img class="avatar" src="/static/home/img/pebble-agent-avatar-named.svg" alt="" width="36" height="36">
       <div>
         <h2 id="chat-title">Ask <span data-spa-name>us</span></h2>
         <p>Services, prices, hours and policies</p>

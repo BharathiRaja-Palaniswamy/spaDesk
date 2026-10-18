@@ -1,55 +1,76 @@
-/* The hero: the pebbles photo across the full width, with the welcome text
-   over its left side and the assistant card on its right.
+/* The hero: the "mind and body" pebbles illustration, with the welcome text
+   and two cards (opening hours, the assistant) beside it.
 
-   The photo is a CSS background, cropped to the hero's shape (cover). A
-   white fade runs over the left of it, so the navy text stays readable over
-   both the light sky and the darker water. */
+   The illustration is portrait, with the pebbles in its lower half, so it is
+   never stretched across the full width (that would crop either the sky or
+   the pebbles). Instead:
+   - wide screens: it fills the hero's height on the right, fading in from
+     the left, and the content sits on the left;
+   - narrow screens: it sits at the bottom, under the content.
+   Around it, the hero's own background repeats the illustration's colours
+   from top to bottom (sky, sunset, sea, sand), so the two blend. */
 
 .hero {
-  position: relative;
-  display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
-  gap: clamp(1.5rem, 4vw, 4rem); align-items: center;
+  position: relative; isolation: isolate; overflow: hidden;
+  display: grid; align-content: center; gap: 1.6rem;
   min-height: calc(100vh - 72px);
   padding: clamp(2rem, 5vw, 4rem) var(--gutter);
-  background:
-    linear-gradient(90deg, rgba(252, 250, 250, 0.92) 0%, rgba(252, 250, 250, 0.7) 38%, rgba(252, 250, 250, 0) 62%),
-    url("/static/home/img/pebbles.jpg") center 58% / cover no-repeat;
+  background: linear-gradient(#8a9eea 0%, #a9abe5 20%, #d0b0cd 33%, #eeb0b6 41%,
+                              #b8a6c6 50%, #c4a6b0 70%, #c79a8f 85%, #d4a294 100%);
 }
 
-.hero-copy { display: flex; flex-direction: column; gap: 1.1rem; max-width: 36rem; }
+/* The illustration itself, behind the content (z-index -1 inside the hero). */
+.hero::before {
+  content: ""; position: absolute; z-index: -1;
+  top: 0; right: 0; bottom: 0;
+  aspect-ratio: 1088 / 1440;  /* the image's own shape: its width follows the hero's height */
+  background: url("/static/home/img/pebble-mind-body-rest-v4.png") center / cover no-repeat;
+  /* Fades the left edge into the hero's background instead of a hard line. */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 22%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 22%);
+}
+
+/* The content keeps to the left, clear of the pebbles. */
+.hero-copy, .hero-cards { max-width: 46rem; }
+.hero-copy { display: flex; flex-direction: column; gap: 1.1rem; }
 .hero-copy h1 { font-size: clamp(2.4rem, 5vw, 4rem); }
-.lede { font-size: 1.1rem; color: var(--ink-soft); }
+/* Full-strength ink: the softer grey is too faint on the coloured sky. */
+.hero-copy .eyebrow, .lede { color: var(--ink); }
+.lede { font-size: 1.1rem; max-width: 36rem; }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 0.7rem; }
 
-/* Frosted glass: a see-through white with the photo blurred behind it. */
+.hero-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: stretch; }
+
+/* Frosted glass: a see-through white with the picture blurred behind it. */
 .hours-card, .ask-card {
   background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(14px);
   border: 1px solid rgba(255, 255, 255, 0.8); border-radius: var(--radius); box-shadow: var(--shadow);
 }
 
-.hours-card { display: grid; gap: 0.5rem; max-width: 24rem; padding: 1.1rem 1.3rem; margin-top: 0.5rem; }
+.hours-card { display: grid; align-content: start; gap: 0.5rem; padding: 1.1rem 1.3rem; }
 .hours { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.3rem; font-size: 0.95rem; }
 .hours li { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px dashed var(--line); padding-bottom: 0.3rem; }
 .hours li:last-child { border-bottom: 0; padding-bottom: 0; }
 .hours li span:last-child { color: var(--ink-soft); white-space: nowrap; }
 
-/* The assistant card sits low on the right, with room under it for the
-   avatar button in the corner (css/chat-launcher.css). */
-.ask-card {
-  justify-self: end; align-self: end; margin-bottom: 4.5rem;
-  display: grid; gap: 0.6rem; justify-items: start; max-width: 21rem; padding: 1.4rem;
-}
-.ask-card h2 { font-size: 1.3rem; }
+.ask-card { display: grid; align-content: start; gap: 0.6rem; justify-items: start; padding: 1.3rem; }
+.ask-card h2 { font-size: 1.25rem; }
 .ask-card p { color: var(--ink-soft); font-size: 0.95rem; }
 .avatar { display: block; border-radius: 50%; }
 
-/* Narrow screens: one column, the fade over the whole photo instead. */
-@media (max-width: 900px) {
-  .hero {
-    grid-template-columns: 1fr; min-height: 0;
-    background:
-      linear-gradient(rgba(252, 250, 250, 0.82), rgba(252, 250, 250, 0.82)),
-      url("/static/home/img/pebbles.jpg") center / cover no-repeat;
+/* Below 1100px there is no room beside the illustration: the content goes
+   on top and the illustration underneath, full width. The bottom padding is
+   the room left for the pebbles (the lower half of the picture) to show. */
+@media (max-width: 1100px) {
+  .hero { min-height: 0; align-content: start; padding-bottom: 70vw; }
+  .hero::before {
+    top: auto; left: 0; width: 100%;
+    -webkit-mask-image: linear-gradient(transparent 0%, #000 30%);
+    mask-image: linear-gradient(transparent 0%, #000 30%);
   }
-  .ask-card { justify-self: stretch; max-width: none; }
+}
+
+/* Phones: the two cards stack. */
+@media (max-width: 640px) {
+  .hero-cards { grid-template-columns: 1fr; }
 }

@@ -8,5 +8,5 @@
   cursor: pointer; transition: transform 0.2s;
 }
 .chat-launcher:hover { transform: translateY(-2px) scale(1.04); }
-.chat-launcher img { display: block; width: 100%; height: 100%; }
+.chat-launcher img { display: block; width: 100%; height: 100%; border-radius: 50%; }
 .chat-launcher[aria-expanded="true"] { display: none; }
