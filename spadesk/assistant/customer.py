@@ -11,8 +11,10 @@ it is told.
 import anthropic
 from fastapi import APIRouter, HTTPException
 from langsmith import traceable
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
+from ..config import get_settings
+from ..lc.chat import answer as lc_answer
 from .model import ask_model
 from .prompt import checked_sections, profile_prompt
 from .replies import MAX_SUGGESTIONS, ChatQuestion, ReplyItem
@@ -65,24 +67,44 @@ class CustomerAnswer(CustomerReply):
     chunks: int  # how many chunks were retrieved; 0 without RAG
 
 
+ENGINES = ("handbuilt", "langchain")
+
+
+def _reply(question: str, rag: bool) -> tuple[CustomerReply | None, list[str], int]:
+    """The model's reply, the headings it may cite, and how many chunks it was given.
+
+    SPADESK_RAG_ENGINE picks the pipeline. Both build the same prompt and ask
+    for the same reply; they differ only in the code that does it:
+      handbuilt  rag/ for retrieval, assistant/model.py for the call
+      langchain  lc/: a LangChain retriever, prompt template and chat model
+    """
+    engine = get_settings().rag_engine
+    if engine not in ENGINES:
+        raise ValueError(f"Unknown SPADESK_RAG_ENGINE: {engine!r}. Choose one of: {', '.join(ENGINES)}.")
+    if engine == "langchain":
+        result = lc_answer(SYSTEM, question, rag, CustomerReply)
+        return result.reply, result.headings, result.chunks
+    prompt = profile_prompt(SYSTEM, question, rag)
+    # No tools: one call, and the reply is the answer.
+    response = ask_model(prompt.system, [{"role": "user", "content": question}], [], CustomerReply)
+    return response.parsed_output, prompt.headings, prompt.chunks
+
+
 @router.post("/chat")
 @traceable  # the whole request is the top step of the trace
 def chat(body: ChatQuestion) -> CustomerAnswer:
     """Answer one customer question from the business profile."""
-    prompt = profile_prompt(SYSTEM, body.question, body.rag)
-    messages = [{"role": "user", "content": body.question}]
     try:
-        # No tools: one call, and the reply is the answer.
-        response = ask_model(prompt.system, messages, [], CustomerReply)
-    except (anthropic.AnthropicError, TypeError):
-        # TypeError is what the SDK raises when no API key is set.
+        reply, headings, chunks = _reply(body.question, body.rag)
+    except (anthropic.AnthropicError, TypeError, ValidationError):
+        # TypeError is what the SDK raises when no API key is set; LangChain's
+        # chat model reports a missing key as a ValidationError.
         raise HTTPException(status_code=503, detail="The assistant is unavailable right now.")
 
-    reply = response.parsed_output
     if reply is None:
         # No structured reply came back, for example because the model declined.
         raise HTTPException(status_code=503, detail="The assistant could not answer that.")
 
-    reply.sections = checked_sections(reply.sections, prompt.headings)
+    reply.sections = checked_sections(reply.sections, headings)
     reply.suggestions = reply.suggestions[:MAX_SUGGESTIONS]
-    return CustomerAnswer(**reply.model_dump(), rag=body.rag, chunks=prompt.chunks)
+    return CustomerAnswer(**reply.model_dump(), rag=body.rag, chunks=chunks)

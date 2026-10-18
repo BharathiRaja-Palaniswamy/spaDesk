@@ -58,10 +58,13 @@ def ask_case(client: TestClient, case: dict[str, Any], mode: str, label: str) ->
 
     `label` names the run (e.g. "rerank"), so two runs can be told apart and
     compared in LangSmith: filter or group by the `run:<label>` tag, or by the
-    `run` and `reranker` metadata.
+    `run`, `engine` and `reranker` metadata. `engine` is the pipeline that
+    answered: the owner chat is always hand-built for now, whatever
+    SPADESK_RAG_ENGINE says.
     """
     settings = get_settings()
+    engine = settings.rag_engine if case["chat"] == "customer" else "handbuilt"
     with tracing_context(project_name=EVAL_PROJECT, tags=["eval", mode, case["chat"], f"run:{label}"],
-                         metadata={"case": case["id"], "mode": mode, "run": label,
+                         metadata={"case": case["id"], "mode": mode, "run": label, "engine": engine,
                                    "reranker": settings.reranker, "top_k": settings.retrieval_top_k}):
         return _ask_and_grade(client, case, mode, langsmith_extra={"name": f"eval: {case['id']} ({mode})"})

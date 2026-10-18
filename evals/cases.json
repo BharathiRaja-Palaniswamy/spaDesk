@@ -742,6 +742,17 @@
     }
   },
   {
+    "id": "child-accompany-adult",
+    "chat": "customer",
+    "question": "can i bring my kid with me ?",
+    "expect": {
+      "judge": [
+        "Says whether a child can come along with an adult, or says plainly that this is not in the spa's information.",
+        "Does not answer only by listing services for children."
+      ]
+    }
+  },
+  {
     "id": "owner-revenue-september",
     "chat": "owner",
     "question": "What was our revenue in September 2026?",
