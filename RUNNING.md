@@ -54,10 +54,24 @@ http://127.0.0.1:8000/manage for the owner's manage page.
 ## 5. Run the tests
 
 ```sh
-.venv/bin/pytest
+.venv/bin/python -m pytest
 ```
 
 The tests do not need an API key and do not call Claude.
+
+## 6. Run the evals
+
+The evals ask the real model the questions in `evals/cases.json` and grade
+the answers, with the whole document and with RAG. They need the API key and
+cost a few dollars per full run.
+
+```sh
+.venv/bin/python -m evals.retrieval   # retrieval only: free, a few seconds
+.venv/bin/python -m evals.run         # every case, both modes: about 15 minutes
+```
+
+The results so far, and what changed between runs, are in
+[docs/eval-report.md](docs/eval-report.md).
 
 ## Changing things
 

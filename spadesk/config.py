@@ -2,9 +2,9 @@
 
 Two kinds of configuration live here:
 
-1. Constants that say HOW the app uses the business document (which services
-   to feature, which policies to highlight). They only name headings and entries;
-   the facts themselves are always read from the document.
+1. Constants that say HOW the app uses the business document (which block
+   holds the opening hours, which section introduces the spa). They only name
+   headings; the facts themselves are always read from the document.
 2. `Settings`: values that can differ per machine (API model, file paths).
    Each one can be overridden with an environment variable or a line in the
    `.env` file.

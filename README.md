@@ -71,6 +71,10 @@ duration and price per category, packages, offers, add-ons, FAQs and policies.
   question is recorded as a trace: the chunks retrieved, the exact prompt
   sent to the model, its reply, the tokens used and the time each step took.
   See `spadesk/tracing.py`.
+- **Evals**: 60 questions asked to the real model with the whole document
+  and with RAG, graded by code checks and, for yes/no and safety answers, by
+  a second model call. See `evals/` and
+  [docs/eval-report.md](docs/eval-report.md).
 
 ## Running it
 
@@ -204,6 +208,16 @@ spadesk/
         charts/                column and bar list charts, and their helpers
         sections/              one file per dashboard card
         chat/                  the assistant window and the call to the server
+evals/                         questions asked to the real model and graded (python -m evals.run)
+  cases.json                   each question and what a good reply must contain
+  checks.py                    one function per kind of check
+  judge.py                     a second model call that grades an answer against written criteria
+  figures.py                   owner figures read from the bookings data at run time, so they never go stale
+  validate.py                  stops a run when a case no longer matches the document or the data
+  run.py                       asks each case with RAG off and on, times it, prints each result
+  observe.py                   traces each question to its own LangSmith project, tagged by case and mode
+  summary.py                   compares the two modes: pass rate, latency, cases that differ
+  retrieval.py                 retrieval alone, no model calls: are the expected sections in the top-k chunks?
 tests/                         one test file per area
 ```
 
