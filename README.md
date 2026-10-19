@@ -77,6 +77,7 @@ duration and price per category, packages, offers, add-ons, FAQs and policies.
   [docs/eval-report.md](docs/eval-report.md).
 - **LangChain pipeline**: the same RAG steps rebuilt with LangChain in
   `spadesk/lc/`, chosen by `SPADESK_RAG_ENGINE`, every provider pluggable.
+  The owner chat's tool loop is a LangGraph graph (`spadesk/lc/owner/`).
 
 How the project got here, stage by stage, and what each stage taught us:
 [docs/evolution.md](docs/evolution.md).
@@ -202,6 +203,9 @@ spadesk/
     model.py                   the traced model call
     replies.py                 the question body and one reply list entry
     customer.py                the customer assistant: /api/chat, profile only, no tools
+    engine.py                  which pipeline answers both chats: hand-built or LangChain
+  lc/                          the same pipeline with LangChain; each provider a setting
+    owner/                     the owner chat as a LangGraph graph: state, nodes, graph
   static/
     home/                      the customer site: index.html, css/ and js/, one file per area
     dashboard/

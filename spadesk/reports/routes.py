@@ -6,6 +6,8 @@
   POST /api/report/chat     one assistant question about the business -> a structured reply.
                             The body says whether to answer with RAG or the whole document.
                             The model may call the report tool (tools.py) to get figures.
+                            SPADESK_RAG_ENGINE picks the code that answers: the loop
+                            below, or the LangGraph graph in lc/owner/.
 
 Example:  /api/report?start=2026-09-01&end=2026-09-30&category=Facials
 
@@ -23,16 +25,18 @@ import anthropic
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from langsmith import traceable
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
+from ..assistant.engine import rag_engine
 from ..assistant.model import ask_model
 from ..assistant.prompt import checked_sections, profile_prompt
 from ..assistant.replies import MAX_SUGGESTIONS, ChatQuestion, ReplyItem
 from ..business.store import get_knowledge
 from ..config import get_settings
+from ..lc.owner import answer as graph_answer
 from .dataset import Dataset, load
 from .report import build_report
-from .tools import TOOL_NAME, report_label, report_tool, run_report
+from .tools import MAX_TOOL_ROUNDS, TOOL_NAME, report_label, report_tool, run_report
 
 PAGE = Path(__file__).resolve().parent.parent / "static" / "dashboard" / "index.html"
 
@@ -132,10 +136,6 @@ class ChatAnswer(ChatReply):
     reports: list[str]  # the reports the model asked for, e.g. "2026-09-01 to 2026-09-30"
 
 
-# How many times in one question the model may ask for tools before it must
-# answer. A comparison needs two reports; this leaves room and still ends.
-MAX_TOOL_ROUNDS = 4
-
 # The owner assistant's own instructions. The rules for using the profile, the
 # current time and the profile itself are added after them (assistant/prompt.py).
 SYSTEM = """You are the assistant for the owner of a spa. You answer the owner's \
@@ -149,47 +149,62 @@ full calendar month. Say which period your figures cover. If the tool \
 reports that there is no data for a period, tell the owner what the data covers."""
 
 
-@router.post("/chat")
-@traceable  # the whole request is the top step of the trace
-def chat(body: ChatQuestion) -> ChatAnswer:
-    """Answer one question about the business, using the business document."""
-    prompt = profile_prompt(SYSTEM, body.question, body.rag)
-    dataset = get_dataset()
+def _loop_reply(question: str, rag: bool, dataset: Dataset) -> tuple[ChatReply | None, list[str], int, list[str]]:
+    """The hand-built engine: the model call in a plain loop, run until the
+    model answers instead of asking for a tool.
+
+    Returns the reply (None when there is none), the headings it may cite,
+    how many chunks it was given, and the reports it asked for.
+    """
+    prompt = profile_prompt(SYSTEM, question, rag)
     tools = [report_tool(dataset)]
     # The conversation with the model. It starts as the one question and grows
     # by two messages each time the model asks for a tool: its request, then
     # the result. The model has no memory between calls, so all of it is sent
     # again every time.
-    messages: list[dict[str, Any]] = [{"role": "user", "content": body.question}]
+    messages: list[dict[str, Any]] = [{"role": "user", "content": question}]
     reports: list[str] = []
-    try:
+    response = ask_model(prompt.system, messages, tools, ChatReply)
+    rounds = 0
+    # stop_reason says why the model stopped: "tool_use" means it is
+    # waiting for a tool result rather than giving its answer.
+    while response.stop_reason == "tool_use" and rounds < MAX_TOOL_ROUNDS:
+        rounds += 1
+        messages.append({"role": "assistant", "content": response.content})
+        results = []
+        for block in response.content:
+            if block.type == "tool_use" and block.name == TOOL_NAME:
+                reports.append(report_label(block.input))
+                # A result is tied to its request by id, and sent as text.
+                results.append({"type": "tool_result", "tool_use_id": block.id,
+                                "content": json.dumps(run_report(dataset, block.input))})
+        messages.append({"role": "user", "content": results})
         response = ask_model(prompt.system, messages, tools, ChatReply)
-        rounds = 0
-        # stop_reason says why the model stopped: "tool_use" means it is
-        # waiting for a tool result rather than giving its answer.
-        while response.stop_reason == "tool_use" and rounds < MAX_TOOL_ROUNDS:
-            rounds += 1
-            messages.append({"role": "assistant", "content": response.content})
-            results = []
-            for block in response.content:
-                if block.type == "tool_use" and block.name == TOOL_NAME:
-                    reports.append(report_label(block.input))
-                    # A result is tied to its request by id, and sent as text.
-                    results.append({"type": "tool_result", "tool_use_id": block.id,
-                                    "content": json.dumps(run_report(dataset, block.input))})
-            messages.append({"role": "user", "content": results})
-            response = ask_model(prompt.system, messages, tools, ChatReply)
-    except (anthropic.AnthropicError, TypeError):
-        # TypeError is what the SDK raises when no API key is set.
+    return response.parsed_output, prompt.headings, prompt.chunks, reports
+
+
+@router.post("/chat")
+@traceable  # the whole request is the top step of the trace
+def chat(body: ChatQuestion) -> ChatAnswer:
+    """Answer one question about the business, using the business document."""
+    dataset = get_dataset()
+    try:
+        if rag_engine() == "langchain":
+            result = graph_answer(SYSTEM, body.question, body.rag, ChatReply, dataset)
+            reply, headings, chunks, reports = result.reply, result.headings, result.chunks, result.reports
+        else:
+            reply, headings, chunks, reports = _loop_reply(body.question, body.rag, dataset)
+    except (anthropic.AnthropicError, TypeError, ValidationError):
+        # TypeError is what the SDK raises when no API key is set; LangChain's
+        # chat model reports a missing key as a ValidationError.
         raise HTTPException(status_code=503, detail="The assistant is unavailable right now.")
 
-    reply = response.parsed_output
     if reply is None:
         # No structured reply came back, for example because the model declined
         # to answer, or was still asking for tools when the rounds ran out.
         raise HTTPException(status_code=503, detail="The assistant could not answer that.")
 
-    reply.sections = checked_sections(reply.sections, prompt.headings)
+    reply.sections = checked_sections(reply.sections, headings)
     # The schema cannot limit how many suggestions come back, so the limit is applied here.
     reply.suggestions = reply.suggestions[:MAX_SUGGESTIONS]
-    return ChatAnswer(**reply.model_dump(), rag=body.rag, chunks=prompt.chunks, reports=reports)
+    return ChatAnswer(**reply.model_dump(), rag=body.rag, chunks=chunks, reports=reports)

@@ -13,11 +13,12 @@ shows how LangChain packages the same steps:
                                         pluggable reranking compressor
     assistant/prompt.py, model.py  ->   prompt.py + chat.py: ChatPromptTemplate + a pluggable chat
                                         model (ChatAnthropic), replying in the same structured shape
-    owner tool loop                ->   (later) a LangGraph graph with the get_report tool
+    owner tool loop (reports/)     ->   owner/: a LangGraph graph with the get_report tool
 
-SPADESK_RAG_ENGINE=langchain makes the customer chat (POST /api/chat) answer
-through this pipeline; "handbuilt", the default, keeps the original. The owner
-chat still uses the hand-built pipeline until its LangGraph version is built.
+SPADESK_RAG_ENGINE=langchain makes both chats answer through this package:
+the customer chat (POST /api/chat) with a chain, the owner chat
+(POST /api/report/chat) with a graph, because its tool loop needs one.
+"handbuilt", the default, keeps the original code for both.
 
 Every provider is pluggable, as in the hand-built pipeline: the embedding
 model, the vector store, the reranker and the chat model are each chosen by a

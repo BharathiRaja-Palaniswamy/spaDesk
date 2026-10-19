@@ -22,6 +22,10 @@ from .report import build_report
 
 TOOL_NAME = "get_report"
 
+# How many times in one question the model may ask for tools before it must
+# answer. A comparison needs two reports; this leaves room and still ends.
+MAX_TOOL_ROUNDS = 4
+
 
 def report_tool(dataset: Dataset) -> dict[str, Any]:
     """The description of the tool that is sent to the model: its name, when

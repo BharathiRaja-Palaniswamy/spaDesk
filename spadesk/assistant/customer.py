@@ -13,8 +13,8 @@ from fastapi import APIRouter, HTTPException
 from langsmith import traceable
 from pydantic import BaseModel, Field, ValidationError
 
-from ..config import get_settings
 from ..lc.chat import answer as lc_answer
+from .engine import rag_engine
 from .model import ask_model
 from .prompt import checked_sections, profile_prompt
 from .replies import MAX_SUGGESTIONS, ChatQuestion, ReplyItem
@@ -67,21 +67,15 @@ class CustomerAnswer(CustomerReply):
     chunks: int  # how many chunks were retrieved; 0 without RAG
 
 
-ENGINES = ("handbuilt", "langchain")
-
-
 def _reply(question: str, rag: bool) -> tuple[CustomerReply | None, list[str], int]:
     """The model's reply, the headings it may cite, and how many chunks it was given.
 
-    SPADESK_RAG_ENGINE picks the pipeline. Both build the same prompt and ask
-    for the same reply; they differ only in the code that does it:
+    SPADESK_RAG_ENGINE picks the pipeline (engine.py). Both build the same
+    prompt and ask for the same reply; they differ only in the code that does it:
       handbuilt  rag/ for retrieval, assistant/model.py for the call
       langchain  lc/: a LangChain retriever, prompt template and chat model
     """
-    engine = get_settings().rag_engine
-    if engine not in ENGINES:
-        raise ValueError(f"Unknown SPADESK_RAG_ENGINE: {engine!r}. Choose one of: {', '.join(ENGINES)}.")
-    if engine == "langchain":
+    if rag_engine() == "langchain":
         result = lc_answer(SYSTEM, question, rag, CustomerReply)
         return result.reply, result.headings, result.chunks
     prompt = profile_prompt(SYSTEM, question, rag)

@@ -164,7 +164,14 @@ judge criterion too strict for an honest "I couldn't find that" about Botox.
 The run changed two things at once, so the gains most likely come from the
 rule rather than the framework, which by design behaves the same.
 
-**Next.** The owner chat as a LangGraph graph, then the roadmap below.
+**The owner chat on LangGraph.** Its report tool needs a loop: Claude asks for
+a report, the app runs it, Claude answers, and Claude decides how many times
+(none for a profile question, one for "last month"). A chain runs once, so
+the owner chat became a graph (`spadesk/lc/owner/`): `prepare` (search and
+prompt), `agent` (one Claude call), `tools` (run the report), and a choice
+after `agent` between `tools` and the end, at most 4 rounds. It uses the same
+prompt, tool and reply shape as the hand-built loop; the same setting picks
+it. Not yet measured with a paid eval run.
 
 ## Findings that run through every stage
 
@@ -181,7 +188,7 @@ rule rather than the framework, which by design behaves the same.
 ## Roadmap
 
 - Section headings in the embedded chunks (27/29 in the experiment).
-- The owner chat as a LangGraph graph; then one shared flow for both assistants.
+- One shared flow for both assistants; when tool rounds run out, one last call without tools instead of an error.
 - Agentic RAG (search as a tool), hybrid keyword and vector search.
 - Conversation memory for follow-up questions; escalation to the front desk when an answer is not covered.
 - The document in S3, refreshed by its ETag.
