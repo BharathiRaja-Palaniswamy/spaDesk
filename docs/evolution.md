@@ -198,9 +198,17 @@ then block titles); chunk size + budget must fit the model; and every text
 is measured before it is embedded. A budget of 40 cut three FAQ headers and
 scored 27; 50 scored 28 (longest embedded text 194 tokens).
 
-**Result.** Fact hit rate 26 → 28 of 29 with both pipelines. Still missed:
-"u guys open sat?", which is slang, not a header problem. Not yet confirmed
-with a paid eval run.
+**Result.** Fact hit rate 26 → 28 of 29 with both pipelines. In the paid
+run (`--label headers`) the whole document scored 61/61 and RAG 57/60, with
+one answer ungraded because the API credit ran out on the last call. Fixed:
+the yoga studio's Sunday hours (its line was cut across two chunks, and the
+one holding the closing time ranked 21st) and the yoga class list. Still
+missed: "u guys open sat?", slang, not a header problem. Two failures were
+judge criteria stricter than the document (Botox, acne); both were loosened.
+
+**Finding.** In the embedding alone the header gained nothing (26/29): the
+search put the right chunk among the 20 candidates, and the reranker, reading
+plain text, dropped it again. A header has to be where the final choice is made.
 
 ## Findings that run through every stage
 

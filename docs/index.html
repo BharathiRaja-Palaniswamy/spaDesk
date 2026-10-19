@@ -309,14 +309,24 @@ flowchart TD
         <div class="fix"><dt>Fix</dt><dd>LangChain parts: every provider is a setting, with the same results (RAG 57/61, whole guide 61/61)</dd></div>
       </dl>
     </li>
-    <li class="now">
-      <span class="when">Week 2 (This week) · Now</span>
+    <li>
+      <span class="when">Week 2 (This week) · Step 8</span>
       <h3>Owner chat on LangGraph</h3>
       <ul><li>The owner's tool loop rebuilt as a graph: prepare, agent, tools, back to agent</li><li>The same setting switches both chats between hand-built and LangChain</li></ul>
       <dl class="oif">
         <div><dt>Observation</dt><dd>The customer chat moved to a LangChain chain, but the owner chat couldn't</dd></div>
         <div><dt>Issue</dt><dd>A chain calls Claude once. The owner chat needs a loop, because Claude decides how many reports it needs<p class="eg"><strong>Example:</strong> "How did we do last month?" took two Claude calls: the first asked for two reports at once, the second answered from them.</p></dd></div>
         <div class="fix"><dt>Fix</dt><dd>A LangGraph graph with a limit of 4 tool rounds. The trace shows every step: prepare 0.15 s, agent 3 s, two reports in 0.01 s, agent 12 s</dd></div>
+      </dl>
+    </li>
+    <li class="now">
+      <span class="when">Week 3 · Now</span>
+      <h3>Contextual chunk headers</h3>
+      <ul><li>Each piece gets its place in the guide written above it, as a path from the top, e.g. "Location and Hours &gt; Yoga Studio Hours"</li><li>Used for search only: embedded and reranked with the piece, never sent to Claude</li><li>Guards: a 50-token budget, and a check that piece + header fit what the embedding model reads (256 tokens)</li></ul>
+      <dl class="oif">
+        <div><dt>Observation</dt><dd>"What are the yoga studio hours on Sunday?" failed with RAG in all three paid runs. Pebby gave the opening time but not the closing time</dd></div>
+        <div><dt>Issue</dt><dd>The cut fell in the middle of the Sunday line. One piece had the "Yoga Studio Hours" title but stopped at "8:00 AM –"; the next had the full line but no title and was mostly about facials, so it ranked 21st<p class="eg"><strong>Example:</strong> putting the header in the embedding alone changed nothing (26 of 29). The search found the piece, but the reranker, reading plain text, dropped it again.</p></dd></div>
+        <div class="fix"><dt>Fix</dt><dd>Headers in both the embedding and the reranker: the answer's piece now reaches the top 7 for 28 of 29 questions, and the Sunday piece ranks 2nd. The paid run fixed the Sunday hours and the yoga class list</dd></div>
       </dl>
     </li>
   </ol>
@@ -331,8 +341,10 @@ flowchart TD
       <tr><td>RAG on, first version</td><td class="n">54 of 60 (90%)</td><td class="n">24 of 29 (83%)</td></tr>
       <tr><td>+ reranker</td><td class="n better">56 of 60 (93%)</td><td class="n better">26 of 29 (90%)</td></tr>
       <tr><td>+ LangChain and "answer what was asked"</td><td class="n better">57 of 61 (93%)</td><td class="n">26 of 29 (90%)</td></tr>
+      <tr><td>+ contextual chunk headers</td><td class="n">57 of 60 graded*</td><td class="n better">28 of 29 (97%)</td></tr>
     </tbody>
   </table></div>
+  <p class="soft">* The API credit ran out on the last grading call, so one answer that passed in every earlier run wasn't graded. Two of the three failures were grading criteria stricter than the guide (Botox, acne), loosened since.</p>
   <p><strong>The trade-off:</strong> RAG costs 43% less and uses half the tokens. Reading the whole guide scored a perfect 61 of 61 in the latest run, because this guide is still small enough to fit.</p>
 </section>
 
@@ -381,7 +393,8 @@ flowchart TD
   <p class="eyebrow">What's next</p>
   <h2 class="big" id="next-h">Getting Spa Desk ready for real spas</h2>
   <ul>
-    <li><strong>Smarter search:</strong> label each piece of the guide with its section (27 of 29 in a quick test)</li>
+    <li><strong>Headers for Claude too:</strong> show each piece's place in the guide in the context window, measured with a paid run</li>
+    <li><strong>Casual questions:</strong> "u guys open sat?" is still missed; rewriting slang before searching is one option</li>
     <li><strong>Pebby searches only when needed:</strong> today the guide is searched even for report questions; as a tool, Claude would decide</li>
     <li><strong>Leaner reports:</strong> send Claude only the figures it needs, to cut the answer time and tokens</li>
     <li><strong>A graceful limit:</strong> when tool rounds run out, answer from what's been found instead of an error</li>

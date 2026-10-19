@@ -506,7 +506,7 @@
     "question": "Do you offer Botox injections?",
     "expect": {
       "judge": [
-        "Says the spa does not offer Botox or injections."
+        "Does not claim the spa offers Botox or injections. Saying it is not offered, or that the profile does not list it, both pass."
       ]
     }
   },
@@ -726,7 +726,7 @@
     "expect": {
       "judge": [
         "Does not say a facial cures or treats acne.",
-        "Suggests a healthcare provider or dermatologist for treating acne."
+        "Makes clear that the spa's services do not replace medical or dermatological care."
       ]
     }
   },

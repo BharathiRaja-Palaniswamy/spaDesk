@@ -174,10 +174,11 @@ same score at about 5 times the time (389 ms against 74 ms per question).
 | Chunks sent to the model | 7 | 5 lost accuracy in the experiment |
 | Metadata filtering | not now | deferred |
 | Reranking | yes: MiniLM-L-6 cross-encoder, 20 candidates, keep 7, on the machine | +3 cases with headers, 74 ms per question, no API key, no cost per question |
-| Contextual chunk headers | yes, version to choose (A or B) | needed for reranking to work well; both scored 27/29 |
+| Contextual chunk headers | yes: breadcrumb + block titles (option D), 50-token budget, search only (embedded and reranked, never sent to the model) | 28/29 in the free check; in the embedding alone they gained nothing, the reranker must read them too |
 | Eval answers that change with the data | owner figures computed from the bookings at run time; document facts kept as written, guarded by a drift check | figures change when bookings are regenerated; facts change rarely and the drift check names any stale case |
 | RAG on/off switch | hide on the customer site before submission; keep full-document mode for evals | customers should not choose; full mode is the baseline that shows what RAG costs |
-| LangChain | after submission | a rewrite now would change behaviour on the deadline day; the eval is the baseline to compare it against |
+| LangChain | done: customer chat as a chain, owner chat as a LangGraph graph | same steps and prompt as the hand-built pipeline, proven by tests |
+| Hybrid chunking (sections, then size) | not now | same 28/29 in a free test; ~1/3 fewer context tokens but tiny pieces (8 tokens) and more code |
 
 ## 4. Results by step
 
@@ -186,6 +187,32 @@ same score at about 5 times the time (389 ms against 74 ms per question).
 | Baseline | top 7 chunks, dense search only | | 54/60 (90%) | 24/29 (83%) | |
 | Reranking | first search fetches 20, MiniLM-L-6 cross-encoder keeps the best 7 (`spadesk/rag/rerankers/`) | near misses at ranks 8 to 13 | **56/60 (93%)**; full 58/60 | 26/29 (90%) | see 2d |
 | LangChain + relevance rule | customer chat on the LangChain chain (`spadesk/lc/`); new prompt rule "answer the question that was asked"; 61 cases | same pipeline by framework parts; a true but off-question answer | **57/61 (93%)**; full **61/61** | 26/29 (90%) | see 2e |
+| Contextual chunk headers | each chunk's place in the document, embedded and reranked with it (`spadesk/rag/headers.py`); owner chat on LangGraph | chunks cut mid-section lost their topic | **57/60** graded, 1 not graded (credit ran out); full **61/61** | **28/29 (97%)** | see 2f |
+
+### 2f. Contextual chunk headers (19 Oct, `--label headers`, `docs/eval-runs/2026-10-19-headers.txt`)
+
+Each chunk gets a header for search only: its path from the top of the document plus the titles of
+the blocks it covers, e.g. "Location and Hours > Yoga Studio Hours | Core Services > Facials > Glow
+Express Facial, ...". Free check first: no header 26/29; the header in the embedding only, 26/29; in
+the embedding and the reranker, 28/29. Budgets: 40 tokens 27/29 (three FAQ headers cut), 50 tokens 28/29.
+
+| | LangChain run | Headers run |
+|---|---|---|
+| Whole document | 61/61 | **61/61** |
+| RAG | 57/61 | **57/60**, owner-outside-data not graded |
+
+- **The run stopped on its last grading call: the API credit ran out.** 121 of 122 answers were graded.
+  The missing one, owner-outside-data (RAG), passed in every earlier run; if it passes, RAG is 58/61.
+- **Fixed by headers:** studio-hours-sunday (the full "Sunday: 8:00 AM – 4:00 PM" line now ranks 2nd;
+  before, the chunk holding it ranked 21st and Pebby gave the opening time only) and list-yoga-classes.
+- **Still failing:** casual-saturday-hours ("u guys open sat?"), slang that no header fixes; and
+  out-of-scope-botox, the too-strict criterion.
+- **New failure: acne-cure-claim, the criterion again.** Pebby said the services do not replace medical
+  or dermatological care (the document's own words) and suggested telling the spa team, as its
+  instructions say; the judge wanted "suggests a dermatologist". It passed in the previous run.
+- **Criteria loosened after this run** (not yet re-run): Botox now passes "not offered" or "not listed
+  in the profile"; acne now asks that the answer makes clear the services do not replace medical or
+  dermatological care.
 
 ### 2e. LangChain and the relevance rule (18 Oct, `--label langchain`, `docs/eval-runs/2026-10-18-langchain.txt`)
 
