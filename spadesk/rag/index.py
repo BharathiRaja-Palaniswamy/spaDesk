@@ -1,6 +1,9 @@
 """Builds the index: every chunk of the business document, embedded and stored.
 
-    document -> split into chunks -> one vector per chunk -> vector store
+    document -> split into chunks -> a header for each -> one vector per chunk -> vector store
+
+Each vector is made from the chunk's header and text together (headers.py),
+so a chunk is found by where it sits in the document as well as by what it says.
 
 The index is only as good as what it was built from. If the document is
 edited, the chunk size changes, or a different embedding model is chosen,
@@ -15,6 +18,7 @@ import hashlib
 from ..config import get_settings
 from .chunking import split
 from .embeddings import get_embedder
+from .headers import FORMAT, check_budget, check_fits, search_text, with_headers
 from .stores import get_store
 
 
@@ -26,20 +30,20 @@ def ensure_index() -> bool:
     embedder = get_embedder()
     store = get_store()
 
-    if settings.chunk_tokens > embedder.max_tokens:
-        raise ValueError(
-            f"SPADESK_CHUNK_TOKENS is {settings.chunk_tokens}, but {embedder.name} reads at most "
-            f"{embedder.max_tokens} tokens of a text. Use a smaller chunk size.")
+    check_budget(settings.chunk_tokens, settings.header_tokens, embedder.max_tokens, embedder.name)
 
     text = settings.data_path.read_text(encoding="utf-8")
     # A hash turns any amount of text into a short fixed-length code that
     # changes completely if even one character of the input changes.
-    recipe = f"{embedder.name}|{settings.chunk_tokens}|{settings.chunk_overlap}|{text}"
+    recipe = (f"{embedder.name}|{settings.chunk_tokens}|{settings.chunk_overlap}|"
+              f"{settings.header_tokens}|{FORMAT}|{text}")
     signature = hashlib.sha256(recipe.encode("utf-8")).hexdigest()
     if store.signature() == signature:
         return False
 
-    chunks = split(text, settings.chunk_tokens, settings.chunk_overlap)
-    vectors = embedder.embed([chunk.text for chunk in chunks])
+    chunks = with_headers(text, split(text, settings.chunk_tokens, settings.chunk_overlap), settings.header_tokens)
+    texts = {chunk.id: search_text(chunk.text, chunk.header) for chunk in chunks}
+    check_fits(texts, embedder.max_tokens, embedder.name)
+    vectors = embedder.embed(list(texts.values()))
     store.replace(chunks, vectors, signature)
     return True

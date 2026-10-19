@@ -38,6 +38,9 @@ class Chunk:
     # ("Late Arrival Policy", "Refund Policy"). Retrieval uses them to say
     # where an answer came from. A chunk cut by size often spans several.
     sections: tuple[str, ...]
+    # Where the chunk sits in the document, written above it for search only
+    # (see headers.py); "" until headers.with_headers() adds it.
+    header: str = ""
 
 
 def split(text: str, size: int, overlap: int) -> list[Chunk]:

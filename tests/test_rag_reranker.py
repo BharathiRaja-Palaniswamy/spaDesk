@@ -12,6 +12,7 @@ import pytest
 
 from spadesk.rag import rerankers
 from spadesk.rag.embeddings import get_embedder
+from spadesk.rag.headers import search_text
 from spadesk.rag.rerankers import get_reranker
 from spadesk.rag.retriever import retrieve
 from spadesk.rag.stores import get_store
@@ -51,7 +52,8 @@ def test_candidates_are_reordered_by_the_reranker_and_trimmed(monkeypatch):
     assert len(matches) == 7  # SPADESK_RETRIEVAL_TOP_K, not the 20 candidates
     # Best first by the reranker's score, which each match now carries.
     assert [m.rerank_score for m in matches] == sorted((m.rerank_score for m in matches), reverse=True)
-    assert all(m.rerank_score == len(m.chunk.text) for m in matches)
+    # The reranker reads each chunk with its header above it, as the embedder did.
+    assert all(m.rerank_score == len(search_text(m.chunk.text, m.chunk.header)) for m in matches)
     # Each match keeps the first search's similarity too.
     assert all(0 < m.score <= 1 for m in matches)
 

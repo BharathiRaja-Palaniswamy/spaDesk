@@ -173,6 +173,35 @@ after `agent` between `tools` and the end, at most 4 rounds. It uses the same
 prompt, tool and reply shape as the hand-built loop; the same setting picks
 it. Not yet measured with a paid eval run.
 
+## Stage 7: contextual chunk headers (19 Oct)
+
+**Built.** Above each chunk, its place in the document as a path from the
+top: section > subsection > block titles, e.g. "Location and Hours > Yoga
+Studio Hours | Core Services > Facials > Glow Express Facial, ...". It is
+embedded and reranked with the chunk, and never sent to the model, so the
+prompt and its cost do not change. Both pipelines write the same headers.
+
+**Why.** A chunk cut by size can start mid-section with its heading left in
+the chunk before. The yoga studio's Sunday hours start a chunk that is
+otherwise about facials, so it ranked 21st.
+
+**Tried first, for free (fact hit rate, k=7, 29 cases):** no header 26;
+headings 27; headings + block titles 28; breadcrumb 27; breadcrumb + block
+titles 28. The block titles did the work: they name what a chunk that starts
+mid-list is about. The breadcrumb was kept for the same score, as it shows
+the full path.
+
+**Guards.** The embedding model reads 256 tokens and silently ignores the
+rest, and the header comes first. So a header has a budget
+(SPADESK_HEADER_TOKENS) and is shortened when longer (parent section first,
+then block titles); chunk size + budget must fit the model; and every text
+is measured before it is embedded. A budget of 40 cut three FAQ headers and
+scored 27; 50 scored 28 (longest embedded text 194 tokens).
+
+**Result.** Fact hit rate 26 → 28 of 29 with both pipelines. Still missed:
+"u guys open sat?", which is slang, not a header problem. Not yet confirmed
+with a paid eval run.
+
 ## Findings that run through every stage
 
 1. **Measure before and after every change**, on the same questions; a free
@@ -187,7 +216,6 @@ it. Not yet measured with a paid eval run.
 
 ## Roadmap
 
-- Section headings in the embedded chunks (27/29 in the experiment).
 - One shared flow for both assistants; when tool rounds run out, one last call without tools instead of an error.
 - Agentic RAG (search as a tool), hybrid keyword and vector search.
 - Conversation memory for follow-up questions; escalation to the front desk when an answer is not covered.

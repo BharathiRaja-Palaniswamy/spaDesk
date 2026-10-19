@@ -44,6 +44,7 @@ class Settings:
     timezone: str  # the spa's time zone, used to tell the assistant the current time
     chunk_tokens: int  # RAG: how many tokens each chunk of the document holds
     chunk_overlap: int  # RAG: how many tokens a chunk shares with the one before it
+    header_tokens: int  # RAG: the most tokens of a chunk's header, used for search only; 0 for no headers
     embedding_provider: str  # RAG: which provider turns text into vectors
     vector_store: str  # RAG: which vector store keeps the chunks and their vectors
     vector_store_path: Path  # RAG: the folder a local vector store saves to
@@ -67,6 +68,7 @@ def get_settings() -> Settings:
         timezone=os.getenv("SPADESK_TIMEZONE", "America/Los_Angeles"),
         chunk_tokens=int(os.getenv("SPADESK_CHUNK_TOKENS", "150")),
         chunk_overlap=int(os.getenv("SPADESK_CHUNK_OVERLAP", "30")),
+        header_tokens=int(os.getenv("SPADESK_HEADER_TOKENS", "50")),
         embedding_provider=os.getenv("SPADESK_EMBEDDING_PROVIDER", "chroma"),
         vector_store=os.getenv("SPADESK_VECTOR_STORE", "chroma"),
         vector_store_path=Path(os.getenv("SPADESK_VECTOR_STORE_PATH", ROOT / "storage" / "chroma")),

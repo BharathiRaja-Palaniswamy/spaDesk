@@ -13,7 +13,8 @@ the usual default, prefers to cut between paragraphs instead; the chunks
 stay fixed-size here because that is the choice made for this project.)
 
 Each chunk's metadata says which headings its text covers ("sections"), so
-answers can cite them, exactly as the hand-built chunks do.
+answers can cite them, and holds its header ("header"), the path written
+above it for search only (rag/headers.py), exactly as the hand-built chunks do.
 """
 
 from langchain_core.documents import Document
@@ -21,6 +22,7 @@ from langchain_text_splitters import TokenTextSplitter
 
 from ..config import get_settings
 from ..rag.chunking import ENCODING, _section_spans  # the same heading rules as the hand-built chunks
+from ..rag.headers import document_lines, header_for
 
 
 def load_document() -> Document:
@@ -36,12 +38,14 @@ def split_document(document: Document) -> list[Document]:
       id        its position, e.g. "chunk-3" (the same ids as the hand-built chunks)
       start     where it begins in the document, as a character offset
       sections  the headings whose content it includes, in document order
+      header    its place in the document, for search only ("" with headers off)
     """
     settings = get_settings()
     splitter = TokenTextSplitter(encoding_name=ENCODING, chunk_size=settings.chunk_tokens,
                                  chunk_overlap=settings.chunk_overlap)
     text = document.page_content
     labels = _section_spans(text)  # (heading, where its content begins, where it ends)
+    lines = document_lines(text)  # every line's place in the document, for the headers
     chunks, begin = [], 0
     for number, chunk in enumerate(splitter.split_documents([document])):
         # Where the chunk sits in the text, searching on from the previous
@@ -55,5 +59,6 @@ def split_document(document: Document) -> list[Document]:
             name for name, line_begin, line_end in labels if line_begin < end and line_end > begin))
         chunks.append(Document(page_content=chunk.page_content,
                                metadata={**chunk.metadata, "id": f"chunk-{number}", "start": begin,
-                                         "sections": sections}))
+                                         "sections": sections,
+                                         "header": header_for(lines, begin, end, settings.header_tokens)}))
     return chunks

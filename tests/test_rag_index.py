@@ -22,7 +22,7 @@ class FakeEmbedder:
     """
 
     name = "fake"
-    max_tokens = 200
+    max_tokens = 256
     calls = 0
 
     def embed(self, texts):
@@ -39,6 +39,7 @@ def rag(tmp_path, monkeypatch):
     # Known chunk settings, whatever the developer's `.env` says.
     monkeypatch.setenv("SPADESK_CHUNK_TOKENS", "150")
     monkeypatch.setenv("SPADESK_CHUNK_OVERLAP", "30")
+    monkeypatch.setenv("SPADESK_HEADER_TOKENS", "50")
     monkeypatch.setattr(FakeEmbedder, "calls", 0)
     # get_embedder() and get_store() remember their result; forget it so the
     # settings above are read, and again afterwards so later tests are not affected.
@@ -96,6 +97,6 @@ def test_changing_the_chunk_size_rebuilds_the_index(rag, monkeypatch):
 
 
 def test_chunks_must_fit_the_embedding_model(rag, monkeypatch):
-    monkeypatch.setenv("SPADESK_CHUNK_TOKENS", "500")  # the stand-in model reads 200
-    with pytest.raises(ValueError, match="reads at most 200 tokens"):
+    monkeypatch.setenv("SPADESK_CHUNK_TOKENS", "500")  # the stand-in model reads 256
+    with pytest.raises(ValueError, match=r"plus SPADESK_HEADER_TOKENS \(50\) is more than fake reads \(256 tokens\)"):
         ensure_index()

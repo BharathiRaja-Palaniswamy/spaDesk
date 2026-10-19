@@ -7,7 +7,8 @@ RAG has two steps: retrieval (embed the question, find the closest chunks)
 and generation (the chat model writes the answer from them). This file
 checks the first step only. The embedder runs on this machine and Chroma is
 a local file, so a run costs nothing and takes seconds, which makes it the
-tool for trying retrieval changes (top-k, reranking) before a paid eval run.
+tool for trying retrieval changes (top-k, reranking, chunk headers) before
+a paid eval run. Facts are looked for in a chunk's own text, never its header.
 
 Each case is scored two ways, from what it already lists in cases.json:
 
@@ -44,7 +45,7 @@ from langsmith import tracing_context
 
 from spadesk.config import get_settings
 from spadesk.lc.rerankers import get_compressor
-from spadesk.lc.vectorstores import get_vectorstore
+from spadesk.lc.retriever import search_chunks
 from spadesk.rag.embeddings import get_embedder
 from spadesk.rag.index import ensure_index
 from spadesk.rag.rerankers import get_reranker
@@ -84,11 +85,11 @@ def ranked_handbuilt(question: str) -> Ranked:
 def ranked_langchain(question: str) -> Ranked:
     """Every chunk, in the order the LangChain pipeline ranks them: the same
     steps as SpaRetriever in spadesk/lc/retriever.py, without the cut to top-k."""
-    documents = [doc for doc, _ in get_vectorstore().similarity_search_with_relevance_scores(question, EVERY_CHUNK)]
+    documents = search_chunks({"query": question, "k": EVERY_CHUNK})
     if (compressor := get_compressor()) is not None:
         candidates = get_settings().rerank_candidates
         documents = list(compressor.compress_documents(documents[:candidates], question)) + documents[candidates:]
-    return [(doc.page_content, doc.metadata["sections"].split("\n")) for doc in documents]
+    return [(doc.page_content, doc.metadata["sections"]) for doc in documents]
 
 
 ENGINES = {"handbuilt": ranked_handbuilt, "langchain": ranked_langchain}

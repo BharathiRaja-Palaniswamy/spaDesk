@@ -54,8 +54,10 @@ class ChromaStore:
             embeddings=vectors,
             documents=[chunk.text for chunk in chunks],
             # Metadata values must be plain text or numbers, so the section
-            # names are joined into one string, one per line.
-            metadatas=[{"tokens": chunk.tokens, "sections": "\n".join(chunk.sections)} for chunk in chunks],
+            # names are joined into one string, one per line. The text stored
+            # is the chunk's own, without its header: that is what the model reads.
+            metadatas=[{"tokens": chunk.tokens, "sections": "\n".join(chunk.sections), "header": chunk.header}
+                       for chunk in chunks],
         )
 
     def search(self, vector: list[float], k: int) -> list[Match]:
@@ -69,7 +71,7 @@ class ChromaStore:
                                  include=["documents", "metadatas", "distances"])
         return [
             Match(
-                Chunk(id, text, fields["tokens"], tuple(fields["sections"].split("\n"))),
+                Chunk(id, text, fields["tokens"], tuple(fields["sections"].split("\n")), fields.get("header", "")),
                 score=1 - distance,  # Chroma reports cosine distance, which is 1 - similarity
             )
             for id, text, fields, distance in zip(

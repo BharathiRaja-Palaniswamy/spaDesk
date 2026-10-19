@@ -21,6 +21,7 @@ from langsmith import traceable
 from ..config import get_settings
 from ..tracing import retrieved_documents
 from .embeddings import get_embedder
+from .headers import search_text
 from .index import ensure_index
 from .rerankers import get_reranker
 from .stores import get_store
@@ -49,7 +50,8 @@ def retrieve(question: str) -> list[Match]:
 @traceable(name="rerank", process_outputs=retrieved_documents)
 def rerank(question: str, candidates: list[Match]) -> list[Match]:
     """`candidates` reordered by the reranker's score, best first. Each match
-    keeps its similarity score and gains its rerank score."""
-    scores = get_reranker().scores(question, [match.chunk.text for match in candidates])
+    keeps its similarity score and gains its rerank score. The reranker reads
+    each chunk with its header, as the embedder did."""
+    scores = get_reranker().scores(question, [search_text(m.chunk.text, m.chunk.header) for m in candidates])
     scored = [replace(match, rerank_score=score) for match, score in zip(candidates, scores)]
     return sorted(scored, key=lambda match: match.rerank_score, reverse=True)

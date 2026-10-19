@@ -38,7 +38,8 @@ def retrieved_documents(matches: list) -> dict[str, Any]:
          "type": "Document",
          "metadata": {"id": match.chunk.id, "score": round(match.score, 3),
                       **({"rerank_score": round(match.rerank_score, 3)} if match.rerank_score is not None else {}),
-                      "sections": list(match.chunk.sections), "tokens": match.chunk.tokens}}
+                      "sections": list(match.chunk.sections), "tokens": match.chunk.tokens,
+                      **({"header": match.chunk.header} if match.chunk.header else {})}}
         for match in matches
     ]}
 

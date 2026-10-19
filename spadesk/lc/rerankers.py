@@ -20,6 +20,7 @@ from langchain_core.callbacks import Callbacks
 from langchain_core.documents import BaseDocumentCompressor, Document
 
 from ..config import get_settings
+from ..rag.headers import search_text
 from ..rag.rerankers.cross_encoder import CrossEncoderReranker
 
 
@@ -32,12 +33,14 @@ def _cross_encoder() -> CrossEncoderReranker:
 class CrossEncoderCompressor(BaseDocumentCompressor):
     """Scores each document against the question with the local cross-encoder,
     and returns them best first, each with its score in metadata["rerank_score"].
-    The retriever keeps the top few."""
+    It reads each document with its header, as the embedder did. The retriever
+    keeps the top few."""
 
     def compress_documents(self, documents: Sequence[Document], query: str,
                            callbacks: Callbacks | None = None) -> Sequence[Document]:
         """`documents` reordered by how well each answers `query`."""
-        scores = _cross_encoder().scores(query, [doc.page_content for doc in documents])
+        scores = _cross_encoder().scores(
+            query, [search_text(doc.page_content, doc.metadata.get("header", "")) for doc in documents])
         scored = [doc.model_copy(update={"metadata": {**doc.metadata, "rerank_score": score}})
                   for doc, score in zip(documents, scores)]
         return sorted(scored, key=lambda doc: doc.metadata["rerank_score"], reverse=True)

@@ -2,7 +2,8 @@
 
 The LangChain pipeline must cut the document exactly as the hand-built one
 does, so the two can be compared fairly with the same evals. These check that
-every chunk has the same text and the same sections as rag/chunking.py makes.
+every chunk has the same text, sections and header as rag/chunking.py and
+rag/headers.py make.
 
 Run with:  .venv/bin/python -m pytest tests/test_lc_documents.py
 """
@@ -10,11 +11,13 @@ Run with:  .venv/bin/python -m pytest tests/test_lc_documents.py
 from spadesk.config import get_settings
 from spadesk.lc.documents import load_document, split_document
 from spadesk.rag.chunking import split
+from spadesk.rag.headers import with_headers
 
 
 def hand_built_chunks():
     settings = get_settings()
-    return split(settings.data_path.read_text(encoding="utf-8"), settings.chunk_tokens, settings.chunk_overlap)
+    text = settings.data_path.read_text(encoding="utf-8")
+    return with_headers(text, split(text, settings.chunk_tokens, settings.chunk_overlap), settings.header_tokens)
 
 
 def test_the_document_loads_as_one_document_with_its_source():
@@ -30,6 +33,7 @@ def test_chunks_match_the_hand_built_ones():
         assert lc_chunk.page_content == chunk.text
         assert lc_chunk.metadata["sections"] == list(chunk.sections)
         assert lc_chunk.metadata["id"] == chunk.id
+        assert lc_chunk.metadata["header"] == chunk.header
 
 
 def test_each_chunk_knows_where_it_starts():

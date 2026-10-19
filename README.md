@@ -189,6 +189,7 @@ spadesk/
     service.py                 mock booking requests
   rag/
     chunking.py                cuts the document into fixed-size chunks with overlap
+    headers.py                 writes each chunk's place in the document above it, for search only
     embeddings/                turns text into vectors; the provider is a setting
     stores/                    keeps chunks and vectors (Chroma); the store is a setting
     index.py                   builds the index, and rebuilds it when something changed

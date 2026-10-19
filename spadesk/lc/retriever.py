@@ -24,6 +24,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.runnables import RunnableLambda
 
 from ..config import get_settings
+from ..rag.headers import without_header
 from .rerankers import get_compressor
 from .vectorstores import get_vectorstore
 
@@ -49,7 +50,7 @@ class SpaRetriever(BaseRetriever):
         settings = get_settings()
         compressor = get_compressor()
         k = max(settings.rerank_candidates, settings.retrieval_top_k) if compressor else settings.retrieval_top_k
-        documents = RunnableLambda(_search, name="search").invoke(
+        documents = RunnableLambda(search_chunks, name="search").invoke(
             {"query": query, "k": k}, config={"callbacks": run_manager.get_child()})
         if compressor:
             documents = RunnableLambda(
@@ -59,15 +60,19 @@ class SpaRetriever(BaseRetriever):
         return documents[:settings.retrieval_top_k]
 
 
-def _search(step: dict) -> list[Document]:
+def search_chunks(step: dict) -> list[Document]:
     """The `k` chunks closest to `query` in the vector store, best first, each
-    with its sections as a list and its similarity score in metadata."""
+    with its own text (the header taken off), its sections as a list and its
+    similarity score in metadata."""
     found = get_vectorstore().similarity_search_with_relevance_scores(step["query"], k=step["k"])
-    return [doc.model_copy(update={"metadata": {
-        **doc.metadata,
-        "sections": doc.metadata["sections"].split("\n"),  # stored as one string, a heading per line
-        "score": score,
-    }}) for doc, score in found]
+    return [doc.model_copy(update={
+        # Stored as header + text for the search; the model is given the text alone.
+        "page_content": without_header(doc.page_content, doc.metadata.get("header", "")),
+        "metadata": {
+            **doc.metadata,
+            "sections": doc.metadata["sections"].split("\n"),  # stored as one string, a heading per line
+            "score": score,
+        }}) for doc, score in found]
 
 
 def get_retriever() -> SpaRetriever:

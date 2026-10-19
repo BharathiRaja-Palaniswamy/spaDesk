@@ -10,7 +10,7 @@ on and off, so both ways can be compared on the same question.
 Done once, and again whenever the document or a setting changes:
 
 ```
-business_doc.md -> chunks -> one vector per chunk -> vector store
+business_doc.md -> chunks -> a header for each -> one vector per chunk (header + text) -> vector store
 ```
 
 Done for every question:
@@ -22,6 +22,7 @@ question -> its vector -> closest 20 chunks -> reranker keeps the best 7 -> prom
 | Step | File | What it does |
 |---|---|---|
 | 1. Chunking | `spadesk/rag/chunking.py` | Cuts the document every 150 tokens, each chunk repeating the last 30 tokens of the one before |
+| 1b. Headers | `spadesk/rag/headers.py` | Writes each chunk's place in the document above it, e.g. "Location and Hours > Yoga Studio Hours", for search only: embedded and reranked with the chunk, never sent to the model. At most `SPADESK_HEADER_TOKENS` (50) tokens; 0 turns headers off |
 | 2. Embeddings | `spadesk/rag/embeddings/` | Turns text into a vector of 384 numbers that stands for its meaning |
 | 3. Vector store | `spadesk/rag/stores/` | Saves chunks with their vectors in Chroma (`storage/chroma`) |
 | 3. Index | `spadesk/rag/index.py` | Builds the store from the document; rebuilds when something changed |
