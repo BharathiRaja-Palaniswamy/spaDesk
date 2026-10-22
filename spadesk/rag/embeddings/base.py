@@ -17,7 +17,7 @@ from typing import Protocol
 class Embedder(Protocol):
     """Turns text into vectors."""
 
-    # Which model made the vectors, e.g. "chroma/all-MiniLM-L6-v2". Vectors
+    # Which model made the vectors, e.g. "fastembed/all-MiniLM-L6-v2". Vectors
     # from different models cannot be compared, so the index remembers this
     # name and is rebuilt when it changes.
     name: str

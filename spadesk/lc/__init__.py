@@ -8,7 +8,7 @@ shows how LangChain packages the same steps:
     business_doc.md read as text   ->   documents.py: a Document with metadata
     chunking.py (150/30 tokens)    ->   documents.py: TokenTextSplitter, same sizes
     embeddings/ (MiniLM)           ->   embeddings.py: an Embeddings class, same model
-    stores/ (Chroma)               ->   vectorstores/: any LangChain VectorStore (Chroma, Pinecone)
+    stores/ (in memory)            ->   vectorstores/: any LangChain VectorStore (Pinecone, in memory)
     retriever.py + rerankers/      ->   retriever.py + rerankers.py: a BaseRetriever with a
                                         pluggable reranking compressor
     assistant/prompt.py, model.py  ->   prompt.py + chat.py: ChatPromptTemplate + a pluggable chat
@@ -27,6 +27,6 @@ setting, behind LangChain's common interface for that kind of component
 package's __init__.py lists its providers and how to add one.
 
 Only langchain-core and the standalone packages (langchain-text-splitters,
-langchain-chroma, langchain-anthropic, langgraph) are used: langchain-community
+langchain-pinecone, langchain-anthropic, langgraph) are used: langchain-community
 is being retired, so nothing here depends on it.
 """

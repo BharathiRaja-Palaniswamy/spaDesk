@@ -25,7 +25,7 @@ question -> its vector -> closest 20 chunks -> reranker keeps the best 7 -> prom
 | 1. Chunking | `spadesk/rag/chunking.py` | Cuts the document every 150 tokens, each chunk repeating the last 30 tokens of the one before |
 | 1b. Headers | `spadesk/rag/headers.py` | Writes each chunk's place in the document above it, e.g. "Location and Hours > Yoga Studio Hours", for search only: embedded and reranked with the chunk, never sent to the model. At most `SPADESK_HEADER_TOKENS` (50) tokens; 0 turns headers off |
 | 2. Embeddings | `spadesk/rag/embeddings/` | Turns text into a vector of 384 numbers that stands for its meaning |
-| 3. Vector store | `spadesk/rag/stores/` | Saves chunks with their vectors in Chroma (`storage/chroma`) |
+| 3. Vector store | `spadesk/rag/stores/` (hand-built: in memory), `spadesk/lc/vectorstores/` (Pinecone, or in memory) | Keeps chunks with their vectors and finds the closest. Chroma was used until 22 Oct 2026, when a critical security flaw (CVE-2026-45829) got it blocked from package registries |
 | 3. Index | `spadesk/rag/index.py` | Builds the store from the document; rebuilds when something changed |
 | 4. Retrieval | `spadesk/rag/retriever.py` | Embeds the question and returns the closest chunks with scores |
 | 4b. Reranking | `spadesk/rag/rerankers/` | A small local model reads the question and each of the 20 closest chunks together, scores how well each answers it, and the best 7 are kept (`SPADESK_RERANKER`, `SPADESK_RERANK_CANDIDATES`; "none" switches it off) |
@@ -102,8 +102,9 @@ answer a little differently on every call. Compare the facts, not the words.
 
 **9. Keep providers behind a small interface.** The embedder and the vector
 store are each one interface, one file per provider, and one setting. The
-rest of the app never imports Chroma directly, so swapping is a change to
-`.env`.
+rest of the app never imports a provider's library directly, so swapping is a
+change to `.env`. That is how Chroma was replaced by Pinecone and fastembed
+in one change, with the same retrieval score (28/29).
 
 **10. `.env` is read at start-up.** A changed setting needs a server restart.
 
@@ -113,9 +114,9 @@ rest of the app never imports Chroma directly, so swapping is a change to
 |---|---|---|
 | `SPADESK_CHUNK_TOKENS` | 150 | Tokens per chunk |
 | `SPADESK_CHUNK_OVERLAP` | 30 | Tokens shared with the chunk before |
-| `SPADESK_EMBEDDING_PROVIDER` | chroma | Which model makes the vectors |
-| `SPADESK_VECTOR_STORE` | chroma | Where chunks and vectors are kept |
-| `SPADESK_VECTOR_STORE_PATH` | storage/chroma | The folder a local store saves to |
+| `SPADESK_EMBEDDING_PROVIDER` | fastembed | Which model makes the vectors (all-MiniLM-L6-v2, on this machine) |
+| `SPADESK_VECTOR_STORE` | pinecone | Where chunks and vectors are kept: `pinecone` (needs `PINECONE_API_KEY`) or `memory` |
+| `SPADESK_VECTOR_STORE_PATH` | storage/vectors | Names a local index; tests give each their own |
 | `SPADESK_RETRIEVAL_TOP_K` | 3 | Chunks retrieved per question |
 
 ## Not done yet

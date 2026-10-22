@@ -5,17 +5,24 @@ one it returns is a setting, SPADESK_VECTOR_STORE.
 
 To add a store: write a class with the three methods in base.py in its own
 file here, and add one line to STORES below.
+
+  memory  in this process's memory, rebuilt when the app starts
+
+This pipeline is the reference one and keeps its store in memory. The app's
+hosted store, Pinecone, is used through the LangChain pipeline (lc/vectorstores/),
+the default engine; with the hand-built engine, set SPADESK_VECTOR_STORE=memory.
 """
 
+from collections.abc import Callable
 from functools import lru_cache
 
-from ...config import get_settings
+from ...config import Settings, get_settings
 from .base import VectorStore
-from .chroma import ChromaStore
+from .memory import MemoryStore
 
 # Setting value -> how to make that store from the settings.
-STORES = {
-    "chroma": lambda settings: ChromaStore(settings.vector_store_path),
+STORES: dict[str, Callable[[Settings], VectorStore]] = {
+    "memory": lambda settings: MemoryStore(),
 }
 
 

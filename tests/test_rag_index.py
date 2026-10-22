@@ -13,7 +13,7 @@ from spadesk.rag.chunking import Chunk
 from spadesk.rag.embeddings import get_embedder
 from spadesk.rag.index import ensure_index
 from spadesk.rag.stores import get_store
-from spadesk.rag.stores.chroma import ChromaStore
+from spadesk.rag.stores.memory import MemoryStore
 
 
 class FakeEmbedder:
@@ -49,8 +49,8 @@ def rag(tmp_path, monkeypatch):
 
 
 # ---- The store ----
-def test_search_returns_the_closest_chunks_first(tmp_path):
-    store = ChromaStore(tmp_path)
+def test_search_returns_the_closest_chunks_first():
+    store = MemoryStore()
     hours = Chunk("chunk-0", "Sunday: 10:00 AM – 5:00 PM", 9, ("Location and Hours",))
     waxing = Chunk("chunk-1", "Lip Wax — $18", 5, ("Hair Removal", "Kids Services"))
     store.replace([hours, waxing], [[1.0, 0.0], [0.0, 1.0]], signature="v1")
@@ -61,19 +61,13 @@ def test_search_returns_the_closest_chunks_first(tmp_path):
     assert len(store.search([0.9, 0.1], k=1)) == 1
 
 
-def test_the_index_survives_a_restart(tmp_path):
-    ChromaStore(tmp_path).replace([Chunk("chunk-0", "text", 1, ("About",))], [[1.0, 0.0]], signature="v1")
-    reopened = ChromaStore(tmp_path)  # what a restarted server would see
-    assert reopened.signature() == "v1" and len(reopened.search([1.0, 0.0], k=5)) == 1
-
-
-def test_an_empty_store_has_no_index(tmp_path):
-    store = ChromaStore(tmp_path)
+def test_an_empty_store_has_no_index():
+    store = MemoryStore()
     assert store.signature() is None and store.search([1.0, 0.0], k=3) == []
 
 
-def test_replace_discards_what_was_there(tmp_path):
-    store = ChromaStore(tmp_path)
+def test_replace_discards_what_was_there():
+    store = MemoryStore()
     store.replace([Chunk("chunk-0", "old", 1, ("About",)), Chunk("chunk-1", "old too", 2, ("About",))],
                   [[1.0, 0.0], [0.0, 1.0]], signature="v1")
     store.replace([Chunk("chunk-0", "new", 1, ("Mission",))], [[1.0, 0.0]], signature="v2")

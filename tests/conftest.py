@@ -11,6 +11,7 @@ developer's `.env` says (load_dotenv never replaces a variable already set):
   most simply. Tests of the LangChain pipeline switch to it themselves.
 - The model gateway uses Claude with no fallback, whatever `.env` says, so a
   test never reaches another provider.
+- The vector store is the in-memory one, so a test never touches Pinecone.
 """
 
 import os
@@ -21,3 +22,5 @@ os.environ["SPADESK_RAG_ENGINE"] = "handbuilt"
 os.environ["SPADESK_MODEL_PROVIDER"] = "anthropic"
 os.environ["SPADESK_MODEL"] = "claude-opus-5-5"
 os.environ["SPADESK_MODEL_FALLBACK"] = ""
+os.environ["SPADESK_VECTOR_STORE"] = "memory"
+os.environ["SPADESK_EMBEDDING_PROVIDER"] = "fastembed"

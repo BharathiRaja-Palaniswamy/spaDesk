@@ -194,7 +194,7 @@ spadesk/
     chunking.py                cuts the document into fixed-size chunks with overlap
     headers.py                 writes each chunk's place in the document above it, for search only
     embeddings/                turns text into vectors; the provider is a setting
-    stores/                    keeps chunks and vectors (Chroma); the store is a setting
+    stores/                    keeps chunks and vectors (in memory); the store is a setting
     index.py                   builds the index, and rebuilds it when something changed
     retriever.py               finds the chunks that match a question
     rerankers/                 reorders them with a small local model and keeps the best; a setting

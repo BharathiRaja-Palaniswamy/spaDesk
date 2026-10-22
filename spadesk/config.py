@@ -50,8 +50,8 @@ class Settings:
     header_tokens: int  # RAG: the most tokens of a chunk's header, used for search only; 0 for no headers
     embedding_provider: str  # RAG: which provider turns text into vectors
     vector_store: str  # RAG: which vector store keeps the chunks and their vectors
-    vector_store_path: Path  # RAG: the folder a local vector store saves to
-    pinecone_index: str  # RAG, LangChain pipeline: the Pinecone index used when the store is "pinecone"
+    vector_store_path: Path  # RAG: names a local index (tests give each its own, so in-memory stores stay apart)
+    pinecone_index: str  # RAG, LangChain pipeline: the Pinecone index to use
     retrieval_top_k: int  # RAG: how many chunks are given to the model for a question
     reranker: str  # RAG: which reranker reorders the candidates, or "none"
     rerank_candidates: int  # RAG: how many chunks the first search fetches for the reranker to choose from
@@ -63,6 +63,7 @@ class Settings:
     profile_models: dict[str, str]  # profile -> "provider:model", from SPADESK_PROFILE_<NAME> variables
     nebius_base_url: str  # the address of Nebius's OpenAI-compatible API
     nebius_api_key: str = field(repr=False)  # repr=False: never shown when settings are printed
+    pinecone_api_key: str = field(repr=False)  # the Pinecone vector store's key
 
 
 def get_settings() -> Settings:
@@ -78,9 +79,9 @@ def get_settings() -> Settings:
         chunk_tokens=int(os.getenv("SPADESK_CHUNK_TOKENS", "150")),
         chunk_overlap=int(os.getenv("SPADESK_CHUNK_OVERLAP", "30")),
         header_tokens=int(os.getenv("SPADESK_HEADER_TOKENS", "50")),
-        embedding_provider=os.getenv("SPADESK_EMBEDDING_PROVIDER", "chroma"),
-        vector_store=os.getenv("SPADESK_VECTOR_STORE", "chroma"),
-        vector_store_path=Path(os.getenv("SPADESK_VECTOR_STORE_PATH", ROOT / "storage" / "chroma")),
+        embedding_provider=os.getenv("SPADESK_EMBEDDING_PROVIDER", "fastembed"),
+        vector_store=os.getenv("SPADESK_VECTOR_STORE", "pinecone"),
+        vector_store_path=Path(os.getenv("SPADESK_VECTOR_STORE_PATH", ROOT / "storage" / "vectors")),
         pinecone_index=os.getenv("SPADESK_PINECONE_INDEX", "spadesk"),
         retrieval_top_k=int(os.getenv("SPADESK_RETRIEVAL_TOP_K", "3")),
         reranker=os.getenv("SPADESK_RERANKER", "cross-encoder"),
@@ -93,4 +94,5 @@ def get_settings() -> Settings:
                         for name, value in os.environ.items() if name.startswith(PROFILE_PREFIX) and value},
         nebius_base_url=os.getenv("SPADESK_NEBIUS_BASE_URL", "https://api.studio.nebius.com/v1/"),
         nebius_api_key=os.getenv("NEBIUS_API_KEY", ""),
+        pinecone_api_key=os.getenv("PINECONE_API_KEY", ""),
     )

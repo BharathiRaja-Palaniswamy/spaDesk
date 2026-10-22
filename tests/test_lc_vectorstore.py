@@ -28,7 +28,7 @@ QUESTIONS = ["What is the cancellation policy?", "How much is a Swedish massage?
 @pytest.fixture(autouse=True)
 def empty_store(tmp_path, monkeypatch):
     """Each test gets its own store folders, away from the app's real ones."""
-    monkeypatch.setenv("SPADESK_VECTOR_STORE_PATH", str(tmp_path / "chroma"))
+    monkeypatch.setenv("SPADESK_VECTOR_STORE_PATH", str(tmp_path / "vectors"))
     get_store.cache_clear()
     yield
     get_store.cache_clear()
@@ -41,19 +41,17 @@ def test_the_embeddings_match_the_hand_built_model():
     assert ours == pytest.approx(theirs)
 
 
-def test_the_index_is_kept_apart_and_built_once(tmp_path):
-    assert len(get_vectorstore().get()["ids"]) == 33
-    assert (tmp_path / "chroma-langchain").is_dir()  # not the hand-built folder
-    record = (tmp_path / "langchain-index-chroma.json").read_text()
-    get_vectorstore()
-    assert (tmp_path / "langchain-index-chroma.json").read_text() == record  # nothing changed, nothing rebuilt
+def test_the_index_is_built_once_and_then_reused():
+    store = get_vectorstore()
+    assert len(store.store) == 33  # one entry per chunk
+    assert get_vectorstore() is store  # nothing changed: the same filled store, not rebuilt
 
 
 def test_an_edit_to_the_document_rebuilds_the_index(tmp_path, monkeypatch):
     document = tmp_path / "business_doc.md"
     document.write_text("## Parking\n\nThere is free bicycle parking behind the building.\n", encoding="utf-8")
     monkeypatch.setenv("SPADESK_DATA", str(document))
-    assert len(get_vectorstore().get()["ids"]) == 1
+    assert len(get_vectorstore().store) == 1
 
     document.write_text(document.read_text(encoding="utf-8") + "\n## Bikes\n\nBring a lock.\n", encoding="utf-8")
     best = get_vectorstore().similarity_search("Do I need a bike lock?", k=1)[0]
@@ -61,11 +59,16 @@ def test_an_edit_to_the_document_rebuilds_the_index(tmp_path, monkeypatch):
 
 
 def test_any_langchain_store_can_be_plugged_in(monkeypatch):
-    # One store shared across calls, as a real database would be.
+    # A store provider returns the store for a signature and whether it is
+    # already filled. This one is shared across calls, as a real database would be.
     shared = {}
-    monkeypatch.setitem(vectorstores.PROVIDERS, "memory",
-                        lambda embeddings: shared.setdefault("store", InMemoryVectorStore(embeddings)))
-    monkeypatch.setenv("SPADESK_VECTOR_STORE", "memory")
+
+    def plugged(embeddings, signature):
+        store = shared.setdefault(signature, InMemoryVectorStore(embedding=embeddings))
+        return store, bool(store.store)
+
+    monkeypatch.setitem(vectorstores.PROVIDERS, "plugged", plugged)
+    monkeypatch.setenv("SPADESK_VECTOR_STORE", "plugged")
     store = get_vectorstore()
     assert len(store.store) == 33
     best = store.similarity_search("How much is a Swedish massage?", k=1)[0]

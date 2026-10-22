@@ -5,8 +5,8 @@
 
 RAG has two steps: retrieval (embed the question, find the closest chunks)
 and generation (the chat model writes the answer from them). This file
-checks the first step only. The embedder runs on this machine and Chroma is
-a local file, so a run costs nothing and takes seconds, which makes it the
+checks the first step only. The embedder runs on this machine and the store
+is the in-memory one (or Pinecone's free plan), so a run costs nothing and takes seconds, which makes it the
 tool for trying retrieval changes (top-k, reranking, chunk headers) before
 a paid eval run. Facts are looked for in a chunk's own text, never its header.
 
