@@ -11,19 +11,27 @@ This is what libraries such as fastembed do inside. Doing it here keeps the
 app's dependencies to those two (fastembed also pulls in an image library
 the app never uses), and shows each step.
 
-The files are downloaded once, on first use, from Hugging Face (a public
-host for models) to ~/.cache/spadesk-models, then read from there.
+The files are downloaded once from Hugging Face (a public host for models)
+to storage/models in the project (SPADESK_MODEL_CACHE), then read from there.
+A host can download them while building the app (scripts/download_models.py),
+so the first question does not wait for them, and a network problem shows
+at build time rather than in the chat.
 """
 
 from dataclasses import dataclass
-from pathlib import Path
 
 import numpy as np
 import onnxruntime
 from huggingface_hub import hf_hub_download
+from huggingface_hub.errors import HfHubHTTPError, LocalEntryNotFoundError
 from tokenizers import Tokenizer
 
-CACHE = Path.home() / ".cache" / "spadesk-models"
+from ..config import get_settings
+
+
+class ModelUnavailable(RuntimeError):
+    """A local model could not be downloaded or loaded. The chat routes turn
+    this into "the assistant is unavailable"; the message says why, for the logs."""
 
 
 @dataclass(frozen=True)
@@ -51,8 +59,12 @@ def load(repo: str, model_file: str, max_tokens: int) -> LocalModel:
     """Download (the first time) and load a model from the Hugging Face
     repository `repo`. Texts longer than `max_tokens` are cut to that length,
     the most the model reads."""
-    model_path = hf_hub_download(repo, model_file, cache_dir=CACHE)
-    tokenizer = Tokenizer.from_file(hf_hub_download(repo, "tokenizer.json", cache_dir=CACHE))
+    cache = get_settings().model_cache
+    try:
+        model_path = hf_hub_download(repo, model_file, cache_dir=cache)
+        tokenizer = Tokenizer.from_file(hf_hub_download(repo, "tokenizer.json", cache_dir=cache))
+    except (LocalEntryNotFoundError, HfHubHTTPError, OSError) as error:
+        raise ModelUnavailable(f"Could not download {repo}/{model_file} to {cache}: {error}") from error
     tokenizer.enable_truncation(max_length=max_tokens)
     tokenizer.enable_padding(pad_id=tokenizer.token_to_id("[PAD]"), pad_token="[PAD]")
     session = onnxruntime.InferenceSession(model_path, providers=["CPUExecutionProvider"])

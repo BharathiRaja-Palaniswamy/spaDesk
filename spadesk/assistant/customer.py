@@ -8,6 +8,8 @@ a customer can see is limited by what the model is given, not only by what
 it is told.
 """
 
+import logging
+
 import anthropic
 from fastapi import APIRouter, HTTPException
 from langsmith import traceable
@@ -15,12 +17,14 @@ from pydantic import BaseModel, Field
 
 from ..lc.chat import answer as lc_answer
 from ..models import ModelError
+from ..rag.onnx import ModelUnavailable
 from .engine import rag_engine
 from .model import ask_model
 from .prompt import checked_sections, profile_prompt
 from .replies import MAX_SUGGESTIONS, ChatQuestion, ReplyItem
 
 router = APIRouter(prefix="/api")
+log = logging.getLogger("spadesk.assistant")
 
 # Who the assistant is talking to, and what it must not do. The rules for
 # using the profile are added after these (prompt.py).
@@ -91,10 +95,12 @@ def chat(body: ChatQuestion) -> CustomerAnswer:
     """Answer one customer question from the business profile."""
     try:
         reply, headings, chunks = _reply(body.question, body.rag)
-    except (ModelError, anthropic.AnthropicError, TypeError):
+    except (ModelError, ModelUnavailable, anthropic.AnthropicError, TypeError) as error:
         # ModelError: the gateway's error, whichever provider failed (LangChain engine).
+        # ModelUnavailable: the local search model could not be loaded (rag/onnx.py).
         # The others: the hand-built engine calls the Anthropic library itself,
         # which raises TypeError when no API key is set.
+        log.warning("assistant unavailable: %s", error)  # the reason, for whoever reads the server log
         raise HTTPException(status_code=503, detail="The assistant is unavailable right now.")
 
     if reply is None:

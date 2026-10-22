@@ -16,6 +16,7 @@ one line. That keeps these routes out of app.py.
 """
 
 import json
+import logging
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
@@ -35,6 +36,7 @@ from ..business.store import get_knowledge
 from ..config import get_settings
 from ..lc.owner import answer as graph_answer
 from ..models import ModelError
+from ..rag.onnx import ModelUnavailable
 from .dataset import Dataset, load
 from .report import build_report
 from .tools import MAX_TOOL_ROUNDS, TOOL_NAME, report_label, report_tool, run_report
@@ -43,6 +45,7 @@ PAGE = Path(__file__).resolve().parent.parent / "static" / "dashboard" / "index.
 
 router = APIRouter(prefix="/api/report")  # the data routes
 page_router = APIRouter()  # the page itself, at /manage
+log = logging.getLogger("spadesk.assistant")
 
 
 @page_router.get("/manage")
@@ -196,10 +199,12 @@ def chat(body: ChatQuestion) -> ChatAnswer:
             reply, headings, chunks, reports = result.reply, result.headings, result.chunks, result.reports
         else:
             reply, headings, chunks, reports = _loop_reply(body.question, body.rag, dataset)
-    except (ModelError, anthropic.AnthropicError, TypeError):
+    except (ModelError, ModelUnavailable, anthropic.AnthropicError, TypeError) as error:
         # ModelError: the gateway's error, whichever provider failed (LangChain engine).
+        # ModelUnavailable: the local search model could not be loaded (rag/onnx.py).
         # The others: the hand-built engine calls the Anthropic library itself,
         # which raises TypeError when no API key is set.
+        log.warning("assistant unavailable: %s", error)  # the reason, for whoever reads the server log
         raise HTTPException(status_code=503, detail="The assistant is unavailable right now.")
 
     if reply is None:

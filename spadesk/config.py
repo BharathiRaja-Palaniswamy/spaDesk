@@ -50,6 +50,7 @@ class Settings:
     header_tokens: int  # RAG: the most tokens of a chunk's header, used for search only; 0 for no headers
     embedding_provider: str  # RAG: which provider turns text into vectors
     vector_store: str  # RAG: which vector store keeps the chunks and their vectors
+    model_cache: Path  # RAG: where the local models (embedder, reranker) are downloaded to
     vector_store_path: Path  # RAG: names a local index (tests give each its own, so in-memory stores stay apart)
     pinecone_index: str  # RAG, LangChain pipeline: the Pinecone index to use
     retrieval_top_k: int  # RAG: how many chunks are given to the model for a question
@@ -81,6 +82,7 @@ def get_settings() -> Settings:
         header_tokens=int(os.getenv("SPADESK_HEADER_TOKENS", "50")),
         embedding_provider=os.getenv("SPADESK_EMBEDDING_PROVIDER", "minilm"),
         vector_store=os.getenv("SPADESK_VECTOR_STORE", "pinecone"),
+        model_cache=Path(os.getenv("SPADESK_MODEL_CACHE", ROOT / "storage" / "models")),
         vector_store_path=Path(os.getenv("SPADESK_VECTOR_STORE_PATH", ROOT / "storage" / "vectors")),
         pinecone_index=os.getenv("SPADESK_PINECONE_INDEX", "spadesk"),
         retrieval_top_k=int(os.getenv("SPADESK_RETRIEVAL_TOP_K", "3")),
