@@ -79,7 +79,7 @@ def get_settings() -> Settings:
         chunk_tokens=int(os.getenv("SPADESK_CHUNK_TOKENS", "150")),
         chunk_overlap=int(os.getenv("SPADESK_CHUNK_OVERLAP", "30")),
         header_tokens=int(os.getenv("SPADESK_HEADER_TOKENS", "50")),
-        embedding_provider=os.getenv("SPADESK_EMBEDDING_PROVIDER", "fastembed"),
+        embedding_provider=os.getenv("SPADESK_EMBEDDING_PROVIDER", "minilm"),
         vector_store=os.getenv("SPADESK_VECTOR_STORE", "pinecone"),
         vector_store_path=Path(os.getenv("SPADESK_VECTOR_STORE_PATH", ROOT / "storage" / "vectors")),
         pinecone_index=os.getenv("SPADESK_PINECONE_INDEX", "spadesk"),

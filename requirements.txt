@@ -4,7 +4,10 @@ uvicorn[standard]>=0.30
 python-dotenv>=1.0
 pydantic>=2.7
 tiktoken>=0.9
-fastembed>=0.9
+# The two small local models (embeddings, reranker): see spadesk/rag/onnx.py.
+onnxruntime>=1.20
+tokenizers>=0.20
+huggingface-hub>=0.24
 numpy>=1.26
 langchain-core>=1.6
 langchain-text-splitters>=1.1

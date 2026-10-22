@@ -7,7 +7,7 @@ provider is a change to `.env`, not to code.
 To add a provider: write a class with `name`, `max_tokens` and `embed` in its
 own file here (see base.py), and add one line to PROVIDERS below.
 
-  fastembed  all-MiniLM-L6-v2 run by fastembed (the default)
+  minilm  all-MiniLM-L6-v2, run on this machine (the default)
 """
 
 from collections.abc import Callable
@@ -15,12 +15,12 @@ from functools import lru_cache
 
 from ...config import get_settings
 from .base import Embedder
-from .fastembed import FastEmbedEmbedder
+from .minilm import MiniLMEmbedder
 
 
 # Setting value -> how to make that embedder.
 PROVIDERS: dict[str, Callable[[], Embedder]] = {
-    "fastembed": FastEmbedEmbedder,
+    "minilm": MiniLMEmbedder,
 }
 
 

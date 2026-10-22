@@ -32,7 +32,7 @@ def test_one_vector_comes_back_per_text():
     vectors = embedder.embed(["Swedish Massage", "Cancellation Policy"])
     assert len(vectors) == 2 and len(vectors[0]) == len(vectors[1]) == 384
     assert isinstance(vectors[0][0], float)
-    assert embedder.name == "fastembed/all-MiniLM-L6-v2"
+    assert embedder.name == "onnx/all-MiniLM-L6-v2"
 
 
 def test_text_with_a_similar_meaning_gets_a_similar_vector():

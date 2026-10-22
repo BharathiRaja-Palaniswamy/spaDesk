@@ -7,7 +7,7 @@ how LangChain supports many providers behind one interface.
 
 This one adapts the hand-built pipeline's embedder (rag/embeddings/) to that
 interface, so both pipelines use the same provider, chosen by the same
-setting, SPADESK_EMBEDDING_PROVIDER ("fastembed" by default), and find the
+setting, SPADESK_EMBEDDING_PROVIDER ("minilm" by default), and find the
 same chunks. To add a provider, add it there; this adapter picks it up.
 """
 

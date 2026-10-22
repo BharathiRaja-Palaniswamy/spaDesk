@@ -19,7 +19,7 @@ from typing import Protocol
 class Reranker(Protocol):
     """Scores how well each text answers a question."""
 
-    # Which model scores, e.g. "fastembed/ms-marco-MiniLM-L-6-v2". Shown in traces.
+    # Which model scores, e.g. "onnx/ms-marco-MiniLM-L-6-v2". Shown in traces.
     name: str
 
     def scores(self, question: str, texts: list[str]) -> list[float]:

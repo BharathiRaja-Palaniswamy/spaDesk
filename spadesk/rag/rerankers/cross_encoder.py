@@ -6,29 +6,29 @@ the chunk. The embedder ("bi-encoder") turns each into a vector on its own
 and only compares the vectors afterwards.
 
 The model (ms-marco-MiniLM-L-6-v2, trained on web search questions and the
-passages that answer them) runs through the fastembed library: no API key,
-no network call per question. It is downloaded once, on first use, to
-~/.cache/fastembed (about 80 MB). Scoring 20 chunks takes about 75 ms.
+passages that answer them) runs on this machine (rag/onnx.py): no API key,
+no network call per question. It is downloaded once, on first use (about
+80 MB). Scoring 20 chunks takes about 75 ms.
 """
 
-from pathlib import Path
+from ..onnx import load
 
-from fastembed.rerank.cross_encoder import TextCrossEncoder
-
-MODEL = "Xenova/ms-marco-MiniLM-L-6-v2"
-# fastembed's default is a temporary folder, which the system may empty; this one is kept.
-CACHE = Path.home() / ".cache" / "fastembed"
+REPO, MODEL_FILE = "Xenova/ms-marco-MiniLM-L-6-v2", "onnx/model.onnx"
+MAX_TOKENS = 512  # question and chunk together; the model reads no more
 
 
 class CrossEncoderReranker:
     """A Reranker (see base.py) backed by a local cross-encoder."""
 
-    name = f"fastembed/{MODEL.split('/')[1]}"
+    name = "onnx/ms-marco-MiniLM-L-6-v2"
 
     def __init__(self) -> None:
         """Load the model, downloading it the first time."""
-        self._model = TextCrossEncoder(MODEL, cache_dir=str(CACHE))
+        self._model = load(REPO, MODEL_FILE, MAX_TOKENS)
 
     def scores(self, question: str, texts: list[str]) -> list[float]:
-        """One score per text, in the same order."""
-        return [float(score) for score in self._model.rerank(question, texts)]
+        """One score per text, in the same order: higher means a better answer
+        to `question`. The model reads each (question, text) pair together and
+        gives one number for it."""
+        logits, _ = self._model.run([(question, text) for text in texts])
+        return [float(score) for score in logits[:, 0]]

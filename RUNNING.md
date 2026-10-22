@@ -106,7 +106,7 @@ files, so after changing `.env`, stop the server and start it again.
 | `SPADESK_REPORT_DATA` | `data/spadesk_bookings.json` | The bookings file the dashboard reads. |
 | `SPADESK_CHUNK_TOKENS` | `150` | RAG: how many tokens each chunk of the document holds. |
 | `SPADESK_CHUNK_OVERLAP` | `30` | RAG: how many tokens a chunk shares with the one before it. |
-| `SPADESK_EMBEDDING_PROVIDER` | `fastembed` | RAG: which provider turns text into vectors. `fastembed` runs on this machine. |
+| `SPADESK_EMBEDDING_PROVIDER` | `minilm` | RAG: which provider turns text into vectors. `minilm` runs on this machine. |
 | `SPADESK_VECTOR_STORE` | `pinecone` | RAG: which vector store keeps the chunks and their vectors: `pinecone` (needs `PINECONE_API_KEY`) or `memory` (offline). |
 | `SPADESK_VECTOR_STORE_PATH` | `storage/vectors` | RAG: names a local index (tests give each its own). |
 | `SPADESK_RETRIEVAL_TOP_K` | `3` | RAG: how many chunks are fetched for a question. |

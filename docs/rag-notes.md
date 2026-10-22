@@ -103,8 +103,9 @@ answer a little differently on every call. Compare the facts, not the words.
 **9. Keep providers behind a small interface.** The embedder and the vector
 store are each one interface, one file per provider, and one setting. The
 rest of the app never imports a provider's library directly, so swapping is a
-change to `.env`. That is how Chroma was replaced by Pinecone and fastembed
-in one change, with the same retrieval score (28/29).
+change to `.env`. That is how Chroma was replaced by Pinecone, and the
+embedder and reranker moved from fastembed to running the same models
+directly (`spadesk/rag/onnx.py`), with the same retrieval score (28/29).
 
 **10. `.env` is read at start-up.** A changed setting needs a server restart.
 
@@ -114,7 +115,7 @@ in one change, with the same retrieval score (28/29).
 |---|---|---|
 | `SPADESK_CHUNK_TOKENS` | 150 | Tokens per chunk |
 | `SPADESK_CHUNK_OVERLAP` | 30 | Tokens shared with the chunk before |
-| `SPADESK_EMBEDDING_PROVIDER` | fastembed | Which model makes the vectors (all-MiniLM-L6-v2, on this machine) |
+| `SPADESK_EMBEDDING_PROVIDER` | minilm | Which model makes the vectors (all-MiniLM-L6-v2, on this machine) |
 | `SPADESK_VECTOR_STORE` | pinecone | Where chunks and vectors are kept: `pinecone` (needs `PINECONE_API_KEY`) or `memory` |
 | `SPADESK_VECTOR_STORE_PATH` | storage/vectors | Names a local index; tests give each their own |
 | `SPADESK_RETRIEVAL_TOP_K` | 3 | Chunks retrieved per question |
