@@ -25,6 +25,8 @@ class Embedder(Protocol):
     # the chunk size against this, because some models silently ignore the rest.
     max_tokens: int
 
-    def embed(self, texts: list[str]) -> list[list[float]]:
-        """One vector per text, in the same order."""
+    def embed(self, texts: list[str], *, query: bool = False) -> list[list[float]]:
+        """One vector per text, in the same order. `query` is True when the
+        texts are questions rather than chunks: some models embed the two
+        slightly differently, others ignore it."""
         ...

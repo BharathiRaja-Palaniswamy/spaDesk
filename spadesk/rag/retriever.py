@@ -38,7 +38,7 @@ def retrieve(question: str) -> list[Match]:
     # Checked on every question, so an edit to the document is picked up
     # without a restart. When nothing changed this costs almost nothing.
     ensure_index()
-    vector = get_embedder().embed([question])[0]  # one text in, so one vector out
+    vector = get_embedder().embed([question], query=True)[0]  # one text in, so one vector out
     if get_reranker() is None:
         return get_store().search(vector, settings.retrieval_top_k)
     # Fetch more than needed, so the reranker can lift a chunk the first search ranked too low.

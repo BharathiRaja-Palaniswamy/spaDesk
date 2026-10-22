@@ -27,11 +27,7 @@ from huggingface_hub.errors import HfHubHTTPError, LocalEntryNotFoundError
 from tokenizers import Tokenizer
 
 from ..config import get_settings
-
-
-class ModelUnavailable(RuntimeError):
-    """A local model could not be downloaded or loaded. The chat routes turn
-    this into "the assistant is unavailable"; the message says why, for the logs."""
+from .errors import ModelUnavailable
 
 
 @dataclass(frozen=True)

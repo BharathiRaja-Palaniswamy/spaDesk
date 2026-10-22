@@ -50,7 +50,7 @@ class Settings:
     header_tokens: int  # RAG: the most tokens of a chunk's header, used for search only; 0 for no headers
     embedding_provider: str  # RAG: which provider turns text into vectors
     vector_store: str  # RAG: which vector store keeps the chunks and their vectors
-    model_cache: Path  # RAG: where the local models (embedder, reranker) are downloaded to
+    model_cache: Path  # RAG: where the local models (minilm, cross-encoder) are downloaded to, when chosen
     vector_store_path: Path  # RAG: names a local index (tests give each its own, so in-memory stores stay apart)
     pinecone_index: str  # RAG, LangChain pipeline: the Pinecone index to use
     retrieval_top_k: int  # RAG: how many chunks are given to the model for a question
@@ -64,7 +64,7 @@ class Settings:
     profile_models: dict[str, str]  # profile -> "provider:model", from SPADESK_PROFILE_<NAME> variables
     nebius_base_url: str  # the address of Nebius's OpenAI-compatible API
     nebius_api_key: str = field(repr=False)  # repr=False: never shown when settings are printed
-    pinecone_api_key: str = field(repr=False)  # the Pinecone vector store's key
+    pinecone_api_key: str = field(repr=False)  # Pinecone's key: the vector store, and its hosted models
 
 
 def get_settings() -> Settings:
@@ -80,13 +80,13 @@ def get_settings() -> Settings:
         chunk_tokens=int(os.getenv("SPADESK_CHUNK_TOKENS", "150")),
         chunk_overlap=int(os.getenv("SPADESK_CHUNK_OVERLAP", "30")),
         header_tokens=int(os.getenv("SPADESK_HEADER_TOKENS", "50")),
-        embedding_provider=os.getenv("SPADESK_EMBEDDING_PROVIDER", "minilm"),
+        embedding_provider=os.getenv("SPADESK_EMBEDDING_PROVIDER", "pinecone"),
         vector_store=os.getenv("SPADESK_VECTOR_STORE", "pinecone"),
         model_cache=Path(os.getenv("SPADESK_MODEL_CACHE", ROOT / "storage" / "models")),
         vector_store_path=Path(os.getenv("SPADESK_VECTOR_STORE_PATH", ROOT / "storage" / "vectors")),
         pinecone_index=os.getenv("SPADESK_PINECONE_INDEX", "spadesk"),
         retrieval_top_k=int(os.getenv("SPADESK_RETRIEVAL_TOP_K", "3")),
-        reranker=os.getenv("SPADESK_RERANKER", "cross-encoder"),
+        reranker=os.getenv("SPADESK_RERANKER", "pinecone"),
         rerank_candidates=int(os.getenv("SPADESK_RERANK_CANDIDATES", "20")),
         rag_engine=os.getenv("SPADESK_RAG_ENGINE", "langchain"),
         model_provider=os.getenv("SPADESK_MODEL_PROVIDER", "anthropic"),

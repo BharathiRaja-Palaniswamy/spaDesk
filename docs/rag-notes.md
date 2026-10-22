@@ -28,7 +28,7 @@ question -> its vector -> closest 20 chunks -> reranker keeps the best 7 -> prom
 | 3. Vector store | `spadesk/rag/stores/` (hand-built: in memory), `spadesk/lc/vectorstores/` (Pinecone, or in memory) | Keeps chunks with their vectors and finds the closest. Chroma was used until 22 Oct 2026, when a critical security flaw (CVE-2026-45829) got it blocked from package registries |
 | 3. Index | `spadesk/rag/index.py` | Builds the store from the document; rebuilds when something changed |
 | 4. Retrieval | `spadesk/rag/retriever.py` | Embeds the question and returns the closest chunks with scores |
-| 4b. Reranking | `spadesk/rag/rerankers/` | A small local model reads the question and each of the 20 closest chunks together, scores how well each answers it, and the best 7 are kept (`SPADESK_RERANKER`, `SPADESK_RERANK_CANDIDATES`; "none" switches it off) |
+| 4b. Reranking | `spadesk/rag/rerankers/` | A reranking model (on Pinecone's servers by default, or a small local one) reads the question and each of the 20 closest chunks together, scores how well each answers it, and the best 7 are kept (`SPADESK_RERANKER`, `SPADESK_RERANK_CANDIDATES`; "none" switches it off) |
 | 5. Context | `spadesk/rag/context.py` | Lays the chunks out between `<excerpt>` tags for the prompt |
 | 5. Prompt | `spadesk/assistant/prompt.py` | Puts the excerpts, or the whole document, into the system prompt, depending on `rag` in the request. Both chat routes use it: `assistant/customer.py` (customer site) and `reports/routes.py` (owner) |
 | 5. Always on | `spadesk/assistant/replies.py` (`rag`, default true) | Both chats always answer with RAG. Sending the whole document (`"rag": false`) is kept for the evals, to compare |
@@ -115,7 +115,8 @@ directly (`spadesk/rag/onnx.py`), with the same retrieval score (28/29).
 |---|---|---|
 | `SPADESK_CHUNK_TOKENS` | 150 | Tokens per chunk |
 | `SPADESK_CHUNK_OVERLAP` | 30 | Tokens shared with the chunk before |
-| `SPADESK_EMBEDDING_PROVIDER` | minilm | Which model makes the vectors (all-MiniLM-L6-v2, on this machine) |
+| `SPADESK_EMBEDDING_PROVIDER` | pinecone | Which model makes the vectors: `pinecone` (llama-text-embed-v2, 384 numbers, on Pinecone's servers) or `minilm` (all-MiniLM-L6-v2, on this machine) |
+| `SPADESK_RERANKER` | pinecone | Which model reranks: `pinecone` (bge-reranker-v2-m3), `cross-encoder` (ms-marco-MiniLM-L-6-v2, on this machine) or `none` |
 | `SPADESK_VECTOR_STORE` | pinecone | Where chunks and vectors are kept: `pinecone` (needs `PINECONE_API_KEY`) or `memory` |
 | `SPADESK_VECTOR_STORE_PATH` | storage/vectors | Names a local index; tests give each their own |
 | `SPADESK_RETRIEVAL_TOP_K` | 3 | Chunks retrieved per question |

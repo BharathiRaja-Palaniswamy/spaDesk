@@ -51,7 +51,7 @@ def test_the_provider_is_chosen_by_a_setting(monkeypatch):
         name = "fake"
         max_tokens = 100
 
-        def embed(self, texts):
+        def embed(self, texts, *, query=False):
             return [[0.0] for _ in texts]
 
     monkeypatch.setitem(embeddings.PROVIDERS, "fake", FakeEmbedder)

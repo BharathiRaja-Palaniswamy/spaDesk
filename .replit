@@ -5,12 +5,12 @@
 modules = ["python-3.12"]
 
 # The Run button in the workspace: install what is missing, then start the server.
-run = "pip install -q -r requirements.txt && python -m scripts.download_models && uvicorn spadesk.app:app --host 0.0.0.0 --port 8000"
+run = "pip install -q -r requirements.txt && uvicorn spadesk.app:app --host 0.0.0.0 --port 8000"
 
 [deployment]
 deploymentTarget = "autoscale"
-# Install, then download the two small local models, so the first question does not wait for them.
-build = ["sh", "-c", "pip install -r requirements.txt && python -m scripts.download_models"]
+# Nothing to download: the embedder and reranker run on Pinecone's servers (the default).
+build = ["sh", "-c", "pip install -r requirements.txt"]
 run = ["sh", "-c", "uvicorn spadesk.app:app --host 0.0.0.0 --port ${PORT:-8000}"]
 
 [[ports]]

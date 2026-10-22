@@ -25,7 +25,7 @@ class FakeEmbedder:
     max_tokens = 256
     calls = 0
 
-    def embed(self, texts):
+    def embed(self, texts, *, query=False):
         FakeEmbedder.calls += 1
         return [[1.0, 0.0, 0.0] for _ in texts]
 

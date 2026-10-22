@@ -29,8 +29,9 @@ class MiniLMEmbedder:
         """Load the model, downloading it the first time."""
         self._model = load(REPO, MODEL_FILE, self.max_tokens)
 
-    def embed(self, texts: list[str]) -> list[list[float]]:
-        """One vector per text, in the same order."""
+    def embed(self, texts: list[str], *, query: bool = False) -> list[list[float]]:
+        """One vector per text, in the same order. This model embeds questions
+        and chunks alike, so `query` is not used."""
         token_vectors, mask = self._model.run(texts)  # (texts, tokens, 384), (texts, tokens)
         weights = mask[:, :, None].astype(np.float32)  # 1 for real tokens, 0 for padding
         averaged = (token_vectors * weights).sum(axis=1) / np.clip(weights.sum(axis=1), 1e-9, None)

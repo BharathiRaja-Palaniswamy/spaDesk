@@ -2,10 +2,12 @@
 
     .venv/bin/python -m scripts.download_models
 
-Without this, they are downloaded on the first question, which then waits
-for about 170 MB, and fails in the chat if the network is not working. A host
-runs this while building the app (see .replit), so the models are in
-storage/models before anyone asks, and a download problem stops the build
+Only needed when the local models are chosen (SPADESK_EMBEDDING_PROVIDER=minilm,
+SPADESK_RERANKER=cross-encoder); the default ones run on Pinecone's servers
+and there is nothing to download. Without this, the local models are
+downloaded on the first question, which then waits for about 170 MB, and
+fails in the chat if the network is not working. Running it first puts them
+in storage/models before anyone asks, and shows a download problem here
 with a clear message instead.
 """
 

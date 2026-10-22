@@ -8,15 +8,12 @@ the candidates, reorder, keep the best few).
 Run with:  .venv/bin/python -m pytest tests/test_lc_retriever.py
 """
 
-from collections.abc import Sequence
-
 import pytest
 from langchain_core.callbacks import BaseCallbackHandler
-from langchain_core.documents import BaseDocumentCompressor, Document
 
-from spadesk.lc import rerankers
 from spadesk.lc.rerankers import get_compressor
 from spadesk.lc.retriever import get_retriever
+from spadesk.rag import rerankers
 from spadesk.rag.rerankers import get_reranker
 from spadesk.rag.retriever import retrieve
 from spadesk.rag.stores import get_store
@@ -25,13 +22,13 @@ QUESTIONS = ["What time is Restorative Yoga on Sunday?", "Is my first yoga class
              "How much is a Swedish massage?"]
 
 
-class LongestFirst(BaseDocumentCompressor):
+class LongestFirst:
     """A fake reranker: the longer the chunk, the better its score."""
 
-    def compress_documents(self, documents: Sequence[Document], query: str, callbacks=None) -> Sequence[Document]:
-        scored = [d.model_copy(update={"metadata": {**d.metadata, "rerank_score": len(d.page_content)}})
-                  for d in documents]
-        return sorted(scored, key=lambda d: d.metadata["rerank_score"], reverse=True)
+    name = "fake/longest-first"
+
+    def scores(self, question, texts):
+        return [float(len(text)) for text in texts]
 
 
 @pytest.fixture(autouse=True)
@@ -64,13 +61,13 @@ def test_documents_carry_their_sections_and_scores(monkeypatch):
     assert all("score" in doc.metadata and "rerank_score" in doc.metadata for doc in documents)
 
 
-def test_any_compressor_can_be_plugged_in_as_the_reranker(monkeypatch):
+def test_any_reranker_can_be_plugged_in(monkeypatch):
     monkeypatch.setitem(rerankers.PROVIDERS, "fake", LongestFirst)
     monkeypatch.setenv("SPADESK_RERANKER", "fake")
     documents = get_retriever().invoke("What time is Restorative Yoga on Sunday?")
     assert len(documents) == 7  # SPADESK_RETRIEVAL_TOP_K, not the 20 candidates
-    lengths = [len(doc.page_content) for doc in documents]
-    assert lengths == sorted(lengths, reverse=True)
+    scores = [doc.metadata["rerank_score"] for doc in documents]
+    assert scores == sorted(scores, reverse=True)
 
 
 class StepNames(BaseCallbackHandler):
@@ -103,6 +100,7 @@ def test_the_search_and_the_reranking_are_traced_as_steps(monkeypatch):
 def test_none_switches_reranking_off_and_an_unknown_name_is_reported(monkeypatch):
     monkeypatch.setenv("SPADESK_RERANKER", "none")
     assert get_compressor() is None
+    get_reranker.cache_clear()  # it remembers its result; forget it so the new setting is read
     monkeypatch.setenv("SPADESK_RERANKER", "nope")
     with pytest.raises(ValueError, match="Unknown reranker"):
         get_compressor()

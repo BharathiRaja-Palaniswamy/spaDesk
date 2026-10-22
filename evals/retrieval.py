@@ -29,7 +29,10 @@ The section score is kept so the two can be compared.
 
 Chunks are ranked as the app ranks them, reranker included (SPADESK_RERANKER);
 run with SPADESK_RERANKER=none to see the first search alone. Nothing is
-traced to LangSmith: this is a local measurement.
+traced to LangSmith and Claude is never called. With the default Pinecone
+models, every question is one embedding and one rerank request, counted
+against the Pinecone plan's monthly allowance; with the local models
+(minilm, cross-encoder) nothing leaves this machine.
 
 For each expected section or text, the rank of the first chunk that has it
 is printed (k = SPADESK_RETRIEVAL_TOP_K). A fact at rank 9 with k = 7 is a
@@ -75,7 +78,7 @@ def ranked_handbuilt(question: str) -> Ranked:
     so a chunk the reranker never saw still has a rank to show.
     """
     ensure_index()
-    matches = get_store().search(get_embedder().embed([question])[0], EVERY_CHUNK)
+    matches = get_store().search(get_embedder().embed([question], query=True)[0], EVERY_CHUNK)
     if get_reranker() is not None:
         candidates = get_settings().rerank_candidates
         matches = rerank(question, matches[:candidates]) + matches[candidates:]

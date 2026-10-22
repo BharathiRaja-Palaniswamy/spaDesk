@@ -3,35 +3,24 @@
 LangChain calls a reranker a "document compressor": anything that takes the
 retrieved documents and the question and returns fewer, better ones
 (`BaseDocumentCompressor.compress_documents`). Providers such as Cohere
-Rerank come as compressors; this one wraps the same small local
-cross-encoder the hand-built pipeline uses (rag/rerankers/cross_encoder.py),
-so both pipelines rerank alike.
-
-Which reranker is used is the same setting as the hand-built pipeline's,
-SPADESK_RERANKER: "cross-encoder" (the default), or "none" for no reranking.
-To add one: write or import a BaseDocumentCompressor, and add one line to
-PROVIDERS.
+Rerank come as compressors; this one adapts the hand-built pipeline's
+reranker (rag/rerankers/) to that interface, so both pipelines rerank alike,
+chosen by the same setting, SPADESK_RERANKER: "pinecone" (the default),
+"cross-encoder", or "none" for no reranking. To add a reranker, add it
+there; this adapter picks it up.
 """
 
-from collections.abc import Callable, Sequence
-from functools import lru_cache
+from collections.abc import Sequence
 
 from langchain_core.callbacks import Callbacks
 from langchain_core.documents import BaseDocumentCompressor, Document
 
-from ..config import get_settings
 from ..rag.headers import search_text
-from ..rag.rerankers.cross_encoder import CrossEncoderReranker
+from ..rag.rerankers import get_reranker
 
 
-@lru_cache  # created once: loading a model is slow
-def _cross_encoder() -> CrossEncoderReranker:
-    """The local cross-encoder model."""
-    return CrossEncoderReranker()
-
-
-class CrossEncoderCompressor(BaseDocumentCompressor):
-    """Scores each document against the question with the local cross-encoder,
+class SpaCompressor(BaseDocumentCompressor):
+    """Scores each document against the question with the configured reranker,
     and returns them best first, each with its score in metadata["rerank_score"].
     It reads each document with its header, as the embedder did. The retriever
     keeps the top few."""
@@ -39,25 +28,13 @@ class CrossEncoderCompressor(BaseDocumentCompressor):
     def compress_documents(self, documents: Sequence[Document], query: str,
                            callbacks: Callbacks | None = None) -> Sequence[Document]:
         """`documents` reordered by how well each answers `query`."""
-        scores = _cross_encoder().scores(
+        scores = get_reranker().scores(
             query, [search_text(doc.page_content, doc.metadata.get("header", "")) for doc in documents])
         scored = [doc.model_copy(update={"metadata": {**doc.metadata, "rerank_score": score}})
                   for doc, score in zip(documents, scores)]
         return sorted(scored, key=lambda doc: doc.metadata["rerank_score"], reverse=True)
 
 
-# Setting value -> how to make that reranker.
-PROVIDERS: dict[str, Callable[[], BaseDocumentCompressor]] = {
-    "cross-encoder": CrossEncoderCompressor,
-}
-OFF = "none"
-
-
 def get_compressor() -> BaseDocumentCompressor | None:
-    """The reranker named by SPADESK_RERANKER, or None when it is "none"."""
-    provider = get_settings().reranker
-    if provider == OFF:
-        return None
-    if provider not in PROVIDERS:
-        raise ValueError(f"Unknown reranker: {provider!r}. Choose one of: {', '.join([*PROVIDERS, OFF])}.")
-    return PROVIDERS[provider]()
+    """The reranker named by SPADESK_RERANKER as a compressor, or None when it is "none"."""
+    return SpaCompressor() if get_reranker() else None

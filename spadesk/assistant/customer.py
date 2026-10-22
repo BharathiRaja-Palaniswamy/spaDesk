@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 
 from ..lc.chat import answer as lc_answer
 from ..models import ModelError
-from ..rag.onnx import ModelUnavailable
+from ..rag.errors import ModelUnavailable
 from .engine import rag_engine
 from .model import ask_model
 from .prompt import checked_sections, profile_prompt
@@ -97,7 +97,7 @@ def chat(body: ChatQuestion) -> CustomerAnswer:
         reply, headings, chunks = _reply(body.question, body.rag)
     except (ModelError, ModelUnavailable, anthropic.AnthropicError, TypeError) as error:
         # ModelError: the gateway's error, whichever provider failed (LangChain engine).
-        # ModelUnavailable: the local search model could not be loaded (rag/onnx.py).
+        # ModelUnavailable: a search model could not be loaded or reached (rag/errors.py).
         # The others: the hand-built engine calls the Anthropic library itself,
         # which raises TypeError when no API key is set.
         log.warning("assistant unavailable: %s", error)  # the reason, for whoever reads the server log
