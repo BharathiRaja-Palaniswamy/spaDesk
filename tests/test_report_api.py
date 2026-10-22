@@ -108,7 +108,7 @@ class FakeAnthropic:
 
 def test_chat_returns_a_structured_reply(client, monkeypatch):
     monkeypatch.setattr(routes.anthropic, "Anthropic", FakeAnthropic)
-    reply = client.post("/api/report/chat", json={"question": "What is our cancellation policy?"})
+    reply = client.post("/api/report/chat", json={"question": "What is our cancellation policy?", "rag": False})
     # Every field reaches the browser. Of the three sources the "model" named,
     # one survives: the made-up one is not a heading, and "Policies" is only
     # the parent of "Cancellation Policy", which is already there.
@@ -179,7 +179,7 @@ class ToolThenAnswer:
 def test_chat_runs_the_report_tool_when_the_model_asks(client, monkeypatch):
     monkeypatch.setattr(routes.anthropic, "Anthropic", ToolThenAnswer)
     monkeypatch.setattr(ToolThenAnswer, "requests", [])
-    reply = client.post("/api/report/chat", json={"question": "How did facials do in September?"}).json()
+    reply = client.post("/api/report/chat", json={"question": "How did facials do in September?", "rag": False}).json()
     # A report answer has three parts: a sentence, the figures as points, then insights.
     assert reply["answer"] == "Facials in September 2026."
     assert reply["items"] == [{"name": "Revenue", "detail": "$7,530"}]

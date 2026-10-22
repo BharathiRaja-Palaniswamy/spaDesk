@@ -61,11 +61,9 @@ duration and price per category, packages, offers, add-ons, FAQs and policies.
   for the dates it has worked out, the server runs the same code that fills
   the Reports tab, and the model answers from those figures. The line under
   the answer names the period it looked up. See `spadesk/reports/tools.py`.
-- **RAG switch**: a switch in the chat header chooses how the assistant is
-  given the business document. Off, the whole document is sent. On, only the
-  few chunks that best match the question are sent (retrieval-augmented
-  generation). The line under each answer says which was used, so the same
-  question can be asked both ways and compared. See
+- **RAG**: both chats give the assistant only the few chunks of the business
+  document that best match the question (retrieval-augmented generation),
+  not the whole document. The evals still ask both ways, to compare. See
   [docs/rag-notes.md](docs/rag-notes.md).
 - **Tracing** (optional): with LangSmith switched on in `.env`, every
   question is recorded as a trace: the chunks retrieved, the exact prompt
@@ -75,9 +73,16 @@ duration and price per category, packages, offers, add-ons, FAQs and policies.
   and with RAG, graded by code checks and, for yes/no and safety answers, by
   a second model call. See `evals/` and
   [docs/eval-report.md](docs/eval-report.md).
-- **LangChain pipeline**: the same RAG steps rebuilt with LangChain in
-  `spadesk/lc/`, chosen by `SPADESK_RAG_ENGINE`, every provider pluggable.
-  The owner chat's tool loop is a LangGraph graph (`spadesk/lc/owner/`).
+- **LangChain pipeline** (the default): the RAG steps with LangChain in
+  `spadesk/lc/`, every provider pluggable. The owner chat's tool loop is a
+  LangGraph graph (`spadesk/lc/owner/`). The hand-built pipeline (`spadesk/rag/`,
+  `assistant/model.py`) is kept as the reference; `SPADESK_RAG_ENGINE=handbuilt`
+  switches to it.
+- **Model gateway**: every model call of the LangChain pipeline and the evals
+  goes through `spadesk/models/`, which maps a job ("chat-default", "judge")
+  to a model by settings: Claude by default, or an open model hosted by
+  Nebius, with an optional fallback model, and logs the tokens and time of
+  each call.
 
 How the project got here, stage by stage, and what each stage taught us:
 [docs/evolution.md](docs/evolution.md).
@@ -153,18 +158,16 @@ The browser never reads the data file; filtering and maths happen on the server.
 
 1. `js/chat/widget.js` shows the question and calls `askAssistant`.
 2. `js/chat/assistant.js` posts it to `/api/report/chat`.
-3. The route in `reports/routes.py` builds the system prompt with
-   `assistant/prompt.py` (rules, current time, the business document), sends
-   it to Claude with the question through `assistant/model.py` (using the API
-   key from `.env`), and asks for the reply in a fixed shape, the `ChatReply`
-   class.
-   With the RAG switch on, step 3 sends only the retrieved chunks instead:
-   `rag/retriever.py` embeds the question and finds the closest chunks in the
-   vector store, a reranker (`rag/rerankers/`) reorders them and keeps the
-   best, and `rag/context.py` lays them out for the prompt.
-   If the model replies with a request for the `get_report` tool instead of
-   an answer, the route runs it (`reports/tools.py`), sends the figures back
-   and asks again, until the model answers.
+3. The route in `reports/routes.py` runs the owner's LangGraph graph
+   (`lc/owner/`): it retrieves the chunks that best match the question
+   (`lc/retriever.py`: search, then a reranker keeps the best), builds the
+   prompt (rules, current time, those chunks), and asks the model gateway
+   (`spadesk/models/`) for the reply in a fixed shape, the `ChatReply` class,
+   with the `get_report` tool on offer.
+   If the model asks for the tool instead of answering, the graph runs it
+   (`reports/tools.py`), sends the figures back and asks again, until the
+   model answers. (The hand-built engine does the same in a plain loop in
+   `reports/routes.py`, calling Claude through `assistant/model.py`.)
 4. The window shows the answer and uses the other fields to add the source
    line or the "not covered" style.
 
@@ -207,9 +210,10 @@ spadesk/
     model.py                   the traced model call
     replies.py                 the question body and one reply list entry
     customer.py                the customer assistant: /api/chat, profile only, no tools
-    engine.py                  which pipeline answers both chats: hand-built or LangChain
+    engine.py                  which pipeline answers both chats: LangChain (default) or hand-built
   lc/                          the same pipeline with LangChain; each provider a setting
     owner/                     the owner chat as a LangGraph graph: state, nodes, graph
+  models/                      the model gateway: jobs -> models, providers, tools, fixed-shape replies, fallback, usage
   static/
     home/                      the customer site: index.html, css/ and js/, one file per area
     dashboard/

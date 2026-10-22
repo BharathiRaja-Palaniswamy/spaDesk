@@ -95,13 +95,6 @@
         <h2>Assistant</h2>
         <p>Answers from your profile and reports</p>
       </div>
-      <!-- Chooses how the assistant reads the business profile: RAG on sends only
-           the parts that match the question; off sends all of it. js/chat/rag-switch.js -->
-      <label class="chat-rag" title="RAG sends the model only the parts of the profile that match your question">
-        <input type="checkbox" id="chat-rag" role="switch">
-        <span class="chat-rag-track" aria-hidden="true"></span>
-        <span id="chat-rag-label">RAG off</span>
-      </label>
       <button class="chat-close" id="chat-close" type="button" aria-label="Close">×</button>
     </header>
     <div class="chat-messages" id="chat-messages" aria-live="polite"></div>

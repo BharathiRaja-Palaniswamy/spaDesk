@@ -10,6 +10,8 @@ langchain-core>=1.6
 langchain-text-splitters>=1.1
 langchain-chroma>=1.1
 langchain-anthropic>=1.7
+# The model gateway's OpenAI-compatible providers (Nebius):
+langchain-openai>=1.7
 langgraph>=1.2
 # Optional, only for SPADESK_VECTOR_STORE=pinecone in the LangChain pipeline:
 # langchain-pinecone>=0.2

@@ -16,9 +16,10 @@ class ChatQuestion(BaseModel):
     """The JSON body the chat sends: the question and how to answer it."""
 
     question: str
-    # How the model is given the business document. False: all of it. True:
-    # only the chunks retrieved for this question (RAG). Set by the chat's toggle.
-    rag: bool = False
+    # How the model is given the business document. True (the default, and
+    # what both chats send): only the chunks retrieved for this question (RAG).
+    # False: all of it, used by the evals to compare (evals/observe.py).
+    rag: bool = True
 
 
 # Part of the structured output (see ChatReply in reports/routes.py). The

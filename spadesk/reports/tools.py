@@ -17,6 +17,7 @@ from typing import Any
 
 from langsmith import traceable
 
+from ..models.tools import Tool
 from .dataset import Dataset
 from .report import build_report
 
@@ -27,9 +28,10 @@ TOOL_NAME = "get_report"
 MAX_TOOL_ROUNDS = 4
 
 
-def report_tool(dataset: Dataset) -> dict[str, Any]:
-    """The description of the tool that is sent to the model: its name, when
-    to use it, and its inputs as a JSON schema.
+def report_tool(dataset: Dataset) -> Tool:
+    """The tool, in the gateway's provider-neutral form (models/tools.py): its
+    name, when to use it, its inputs as a JSON schema, and the function that
+    runs it.
 
     The description is how the model decides whether to call the tool, so it
     says what the tool is for and what the data covers. The valid categories
@@ -37,9 +39,9 @@ def report_tool(dataset: Dataset) -> dict[str, Any]:
     for one that does not exist.
     """
     options = dataset.filter_options()
-    return {
-        "name": TOOL_NAME,
-        "description": (
+    return Tool(
+        name=TOOL_NAME,
+        description=(
             "Get the business's figures for a period: bookings, completed bookings, revenue, revenue "
             "lost to cancellations and no-shows, average rating and average ticket, each compared with "
             "the period just before; a trend over time; and breakdowns by service category, by service, "
@@ -47,7 +49,7 @@ def report_tool(dataset: Dataset) -> dict[str, Any]:
             "about how the business is doing or has done. Call it again with other dates or filters to "
             f"compare. The data covers {options['min_date']} to {options['max_date']} and nothing outside it."
         ),
-        "input_schema": {
+        parameters={
             "type": "object",
             "properties": {
                 "start": {"type": "string", "description": "First day of the period, as YYYY-MM-DD."},
@@ -59,7 +61,8 @@ def report_tool(dataset: Dataset) -> dict[str, Any]:
             },
             "required": ["start", "end"],
         },
-    }
+        run=lambda arguments: run_report(dataset, arguments),
+    )
 
 
 # Recorded as a step of the trace when tracing is on (see spadesk/tracing.py).

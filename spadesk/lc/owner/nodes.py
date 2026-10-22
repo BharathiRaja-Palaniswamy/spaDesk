@@ -5,19 +5,16 @@ changed. They do the same jobs as the hand-built loop in reports/routes.py,
 one job per node, so a trace shows each step on its own:
 
   prepare    retrieve (RAG on) and build the prompt, once per question
-  agent      call the model: it answers, or asks for the report tool
-  tools      run the report tool for each request and send the figures back
+  agent      ask the model gateway: the model answers, or asks for the report tool
+  tools      run the tools it asked for and send the results back
   next_step  not a node: after `agent`, decides between `tools` and the end
 """
 
-import json
-
-from langchain_core.messages import AIMessage, ToolMessage
-from langchain_core.runnables import Runnable
 from langgraph.graph import END
+from pydantic import BaseModel
 
-from ...reports.dataset import Dataset
-from ...reports.tools import MAX_TOOL_ROUNDS, TOOL_NAME, report_label, run_report
+from ...models import Tool, run_requests, structured
+from ...reports.tools import MAX_TOOL_ROUNDS, TOOL_NAME, report_label
 from ..prompt import PROMPT, prompt_values
 from ..retriever import get_retriever
 from .state import OwnerState
@@ -35,37 +32,28 @@ def prepare(state: OwnerState, instructions: str) -> dict:
     return {"messages": PROMPT.invoke(values).to_messages(),
             "headings": values["sections"].split("\n"),
             "chunks": len(documents) if documents else 0,
-            "rounds": 0}
+            "rounds": 0, "requests": [], "reply": None}
 
 
-def agent(state: OwnerState, model: Runnable) -> dict:
-    """One model call with the whole conversation so far. The reply is either
-    the structured answer, as JSON text, or a request to run a tool."""
-    return {"messages": [model.invoke(state["messages"])]}
+def agent(state: OwnerState, profile: str, shape: type[BaseModel], offered: list[Tool]) -> dict:
+    """One model call, through the gateway, with the whole conversation so far.
+    It ends in the reply (in `shape`) or in requests for the tools offered;
+    the gateway sorts out which, whatever provider answered."""
+    answer = structured(profile, state["messages"], shape, offered)
+    return {"messages": [answer.message], "requests": answer.tool_calls, "reply": answer.reply}
 
 
-def tools(state: OwnerState, dataset: Dataset) -> dict:
-    """Run every tool request in the model's last message.
-
-    Each result goes back as a ToolMessage tied to its request by id, which
-    is how the model knows which figures answer which request.
-    """
-    request = state["messages"][-1]
-    results, labels = [], []
-    for call in request.tool_calls:
-        if call["name"] == TOOL_NAME:
-            labels.append(report_label(call["args"]))
-            content = run_report(dataset, call["args"])
-        else:
-            # Every request needs a result, or the next model call is rejected.
-            content = {"error": f"There is no tool called {call['name']}."}
-        results.append(ToolMessage(json.dumps(content), tool_call_id=call["id"]))
-    return {"messages": results, "reports": labels, "rounds": state["rounds"] + 1}
+def tools(state: OwnerState, offered: list[Tool]) -> dict:
+    """Run every tool the model asked for. Each result goes back tied to its
+    request by id, which is how the model knows which result answers which
+    request."""
+    labels = [report_label(request["args"]) for request in state["requests"] if request["name"] == TOOL_NAME]
+    return {"messages": run_requests(state["requests"], offered), "reports": labels,
+            "rounds": state["rounds"] + 1}
 
 
 def next_step(state: OwnerState) -> str:
-    """Where to go after the model: to `tools` when it asked for one and has
-    rounds left, otherwise to the end of the graph."""
-    last = state["messages"][-1]
-    asked = isinstance(last, AIMessage) and bool(last.tool_calls)
+    """Where to go after the model: to `tools` when it asked for some, has not
+    answered yet, and has rounds left; otherwise to the end of the graph."""
+    asked = state["reply"] is None and bool(state["requests"])
     return "tools" if asked and state["rounds"] < MAX_TOOL_ROUNDS else END

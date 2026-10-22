@@ -13,7 +13,7 @@ Every other module imports from here, so nothing else reads `os.environ`.
 """
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -32,6 +32,9 @@ HOURS_BLOCK = "Business Hours"
 
 
 # ---- Per-machine settings --------------------------------------------------
+
+# Environment variables that pick a model for one profile (spadesk/models/profiles.py).
+PROFILE_PREFIX = "SPADESK_PROFILE_"
 
 @dataclass(frozen=True)  # frozen: settings cannot be changed after they are loaded
 class Settings:
@@ -52,8 +55,14 @@ class Settings:
     retrieval_top_k: int  # RAG: how many chunks are given to the model for a question
     reranker: str  # RAG: which reranker reorders the candidates, or "none"
     rerank_candidates: int  # RAG: how many chunks the first search fetches for the reranker to choose from
-    rag_engine: str  # which pipeline answers the customer chat: "handbuilt" (rag/) or "langchain" (lc/)
-    chat_provider: str  # LangChain pipeline: which chat model answers ("anthropic")
+    rag_engine: str  # which pipeline answers both chats: "langchain" (lc/) or the reference "handbuilt" (rag/)
+    # The model gateway (spadesk/models/). A model is named "provider:model", e.g.
+    # "nebius:Qwen/Qwen3-32B"; a bare model name uses model_provider.
+    model_provider: str  # the provider every profile uses unless it says otherwise ("anthropic")
+    model_fallback: str  # "provider:model" to try when a profile's own model fails; "" for none
+    profile_models: dict[str, str]  # profile -> "provider:model", from SPADESK_PROFILE_<NAME> variables
+    nebius_base_url: str  # the address of Nebius's OpenAI-compatible API
+    nebius_api_key: str = field(repr=False)  # repr=False: never shown when settings are printed
 
 
 def get_settings() -> Settings:
@@ -76,6 +85,12 @@ def get_settings() -> Settings:
         retrieval_top_k=int(os.getenv("SPADESK_RETRIEVAL_TOP_K", "3")),
         reranker=os.getenv("SPADESK_RERANKER", "cross-encoder"),
         rerank_candidates=int(os.getenv("SPADESK_RERANK_CANDIDATES", "20")),
-        rag_engine=os.getenv("SPADESK_RAG_ENGINE", "handbuilt"),
-        chat_provider=os.getenv("SPADESK_CHAT_PROVIDER", "anthropic"),
+        rag_engine=os.getenv("SPADESK_RAG_ENGINE", "langchain"),
+        model_provider=os.getenv("SPADESK_MODEL_PROVIDER", "anthropic"),
+        model_fallback=os.getenv("SPADESK_MODEL_FALLBACK", ""),
+        # SPADESK_PROFILE_CHEAP_ROUTER=nebius:... -> {"cheap-router": "nebius:..."}
+        profile_models={name.removeprefix(PROFILE_PREFIX).lower().replace("_", "-"): value
+                        for name, value in os.environ.items() if name.startswith(PROFILE_PREFIX) and value},
+        nebius_base_url=os.getenv("SPADESK_NEBIUS_BASE_URL", "https://api.studio.nebius.com/v1/"),
+        nebius_api_key=os.getenv("NEBIUS_API_KEY", ""),
     )

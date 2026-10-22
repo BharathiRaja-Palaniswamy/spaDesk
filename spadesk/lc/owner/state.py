@@ -15,6 +15,7 @@ from typing import Annotated, TypedDict
 
 from langchain_core.messages import AnyMessage
 from langgraph.graph.message import add_messages
+from pydantic import BaseModel
 
 
 class OwnerState(TypedDict):
@@ -28,4 +29,6 @@ class OwnerState(TypedDict):
     headings: list[str]  # the headings the model was shown: all a reply may cite
     chunks: int  # how many chunks were retrieved; 0 without RAG
     rounds: int  # how many times the tools node has run
+    requests: list[dict]  # the model's latest tool requests: {"name", "args", "id"}
+    reply: BaseModel | None  # the answer in the reply's shape, once the model gives it
     reports: Annotated[list[str], operator.add]  # the reports asked for, e.g. "2026-09-01 to 2026-09-30"

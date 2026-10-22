@@ -2,12 +2,11 @@
  * @file The conversation in the chat window: a message list and an input
  * box. Opening and closing the window is window.js. What the assistant says
  * comes from askAssistant() in assistant.js, how a reply is laid out from
- * reply.js, the greeting from welcome.js, and the RAG switch from rag-switch.js.
+ * reply.js, and the greeting from welcome.js.
  */
 
 import { $, el } from "../dom.js";
 import { askAssistant } from "./assistant.js";
-import { initRagSwitch, modeLabel } from "./rag-switch.js";
 import { showReply, sourceLine, suggestionChips } from "./reply.js";
 import { greeting, STARTER_QUESTIONS } from "./welcome.js";
 
@@ -19,8 +18,6 @@ export function initChat(business) {
   const messages = $("#chat-messages");
   const form = $("#chat-form");
   const input = $("#chat-input");
-  /** Says whether the RAG switch in the header is on. */
-  const ragIsOn = initRagSwitch();
   /** True while a reply is on its way, so two questions cannot overlap. */
   let busy = false;
 
@@ -66,11 +63,11 @@ export function initChat(business) {
 
     const bubble = addMessage("assistant pending", "Thinking…");
     try {
-      const reply = await askAssistant(question, ragIsOn());
+      const reply = await askAssistant(question);
       // Each field of the structured reply has its own place: the answer and
       // list in the bubble, the sources under it, then the follow-up questions.
       showReply(bubble, reply);
-      messages.append(sourceLine(modeLabel(reply), reply.sections));
+      if (reply.sections.length) messages.append(sourceLine(reply.sections));
       addSuggestions(reply.suggestions);
     } catch {
       bubble.textContent = "Sorry, something went wrong. Please try again.";

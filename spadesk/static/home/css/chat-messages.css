@@ -15,7 +15,6 @@
 
 /* The line under an answer: how it was produced, then "From: Facials". */
 .chat-sources { align-self: flex-start; margin-top: -0.3rem; font-size: 0.75rem; color: var(--ink-soft); }
-.chat-mode { font: 500 0.7rem var(--mono); text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent); }
 
 /* Suggested questions: outlined pills under a message. */
 .chat-suggestions { display: flex; flex-wrap: wrap; gap: 0.4rem; }

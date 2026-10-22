@@ -15,12 +15,12 @@ The judge is told it is a grader, never the spa's assistant, and is given
 only the question and the answer, not the business document: it checks
 behaviour against the criteria, not facts. It can be wrong too, so read its
 reasons on a few cases before trusting the scores. It costs one model call
-per judged case.
+per judged case, made through the model gateway's "judge" profile.
 """
 
 from pydantic import BaseModel, Field
 
-from spadesk.assistant.model import ask_model
+from spadesk.models import structured
 
 SYSTEM = """You grade answers written by a spa's chat assistant. You are not \
 the assistant and you do not answer the customer.
@@ -52,5 +52,5 @@ def judge_answer(question: str, answer: str, criteria: list[str]) -> list[Criter
     numbered = "\n".join(f"{n}. {criterion}" for n, criterion in enumerate(criteria, start=1))
     content = (f"<question>\n{question}\n</question>\n\n<answer>\n{answer}\n</answer>\n\n"
                f"<criteria>\n{numbered}\n</criteria>")
-    response = ask_model(SYSTEM, [{"role": "user", "content": content}], [], Verdict)
-    return response.parsed_output.verdicts
+    # The "judge" profile stays on Claude whatever model the app uses, so scores stay comparable.
+    return structured("judge", [("system", SYSTEM), ("human", content)], Verdict).reply.verdicts

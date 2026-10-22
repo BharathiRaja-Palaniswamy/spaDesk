@@ -2,8 +2,9 @@
 
 RAG (retrieval-augmented generation) means giving the model only the parts of
 a document that match the question, rather than the whole document. In
-spaDesk it is an option: the switch in the assistant's chat header turns it
-on and off, so both ways can be compared on the same question.
+spaDesk both chats always answer with RAG. Sending the whole document is kept
+only for the evals (`"rag": false`), so both ways can be compared on the
+same questions.
 
 ## The pipeline
 
@@ -30,7 +31,7 @@ question -> its vector -> closest 20 chunks -> reranker keeps the best 7 -> prom
 | 4b. Reranking | `spadesk/rag/rerankers/` | A small local model reads the question and each of the 20 closest chunks together, scores how well each answers it, and the best 7 are kept (`SPADESK_RERANKER`, `SPADESK_RERANK_CANDIDATES`; "none" switches it off) |
 | 5. Context | `spadesk/rag/context.py` | Lays the chunks out between `<excerpt>` tags for the prompt |
 | 5. Prompt | `spadesk/assistant/prompt.py` | Puts the excerpts, or the whole document, into the system prompt, depending on `rag` in the request. Both chat routes use it: `assistant/customer.py` (customer site) and `reports/routes.py` (owner) |
-| 5. Switch | `static/home/js/chat/rag-switch.js`, `static/dashboard/js/chat/rag-switch.js` | The "RAG on / RAG off" switch on each page and the label under each answer |
+| 5. Always on | `spadesk/assistant/replies.py` (`rag`, default true) | Both chats always answer with RAG. Sending the whole document (`"rag": false`) is kept for the evals, to compare |
 
 To try a step alone:
 

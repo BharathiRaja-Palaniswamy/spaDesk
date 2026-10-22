@@ -14,7 +14,6 @@
  * this throws, the window shows an error message instead.
  *
  * @param {string} question what the visitor typed
- * @param {boolean} rag true to answer from retrieved chunks, false from the whole profile
  * @returns {Promise<{answer: string, items: {name: string, detail: string}[], insights: string[],
  *   covered: boolean, sections: string[], suggestions: string[], rag: boolean, chunks: number,
  *   reports: string[]}>}
@@ -26,11 +25,12 @@
  *   `rag` and `chunks` say how the answer was produced; `reports` lists the
  *   report periods the assistant looked up, when the answer uses figures
  */
-export async function askAssistant(question, rag) {
+export async function askAssistant(question) {
   const response = await fetch("/api/report/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, rag }),
+    // The server answers from the chunks retrieved for the question (RAG).
+    body: JSON.stringify({ question }),
   });
   const body = await response.json();
   // On an error the server sends { detail } and no reply; throwing makes the

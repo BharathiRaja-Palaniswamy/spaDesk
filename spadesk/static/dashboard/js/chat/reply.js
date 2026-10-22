@@ -29,17 +29,14 @@ export function showReply(bubble, reply) {
 }
 
 /**
- * The small line that goes under an answer: how it was produced, then where
- * it came from. E.g. "RAG · 3 chunks · From: Cancellation Policy", or
- * "Full profile · Report: 2026-09-01 to 2026-09-30" for an answer made from
- * report figures.
- * @param {string} mode how the answer was produced, from modeLabel() in rag-switch.js
+ * The small line that goes under an answer: where it came from. E.g.
+ * "From: Cancellation Policy", or "Report: 2026-09-01 to 2026-09-30" for an
+ * answer made from report figures, or both.
  * @param {string[]} sections the profile headings the answer came from; may be empty
  * @param {string[]} reports the reports the assistant asked for; may be empty
  * @returns {HTMLElement}
  */
-export function sourceLine(mode, sections, reports) {
-  const from = sections.length ? ` · From: ${sections.join(", ")}` : "";
-  const figures = reports.length ? ` · Report: ${reports.join("; ")}` : "";
-  return el("div", { className: "chat-sources" }, el("span", { className: "chat-mode", textContent: mode }), from, figures);
+export function sourceLine(sections, reports) {
+  const parts = [sections.length && `From: ${sections.join(", ")}`, reports.length && `Report: ${reports.join("; ")}`];
+  return el("div", { className: "chat-sources", textContent: parts.filter(Boolean).join(" · ") });
 }

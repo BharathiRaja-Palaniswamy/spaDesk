@@ -25,7 +25,7 @@ import anthropic
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from langsmith import traceable
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 
 from ..assistant.engine import rag_engine
 from ..assistant.model import ask_model
@@ -34,6 +34,7 @@ from ..assistant.replies import MAX_SUGGESTIONS, ChatQuestion, ReplyItem
 from ..business.store import get_knowledge
 from ..config import get_settings
 from ..lc.owner import answer as graph_answer
+from ..models import ModelError
 from .dataset import Dataset, load
 from .report import build_report
 from .tools import MAX_TOOL_ROUNDS, TOOL_NAME, report_label, report_tool, run_report
@@ -157,7 +158,8 @@ def _loop_reply(question: str, rag: bool, dataset: Dataset) -> tuple[ChatReply |
     how many chunks it was given, and the reports it asked for.
     """
     prompt = profile_prompt(SYSTEM, question, rag)
-    tools = [report_tool(dataset)]
+    # This loop calls the Anthropic library directly, so the tool goes in that library's format.
+    tools = [report_tool(dataset).for_anthropic_sdk()]
     # The conversation with the model. It starts as the one question and grows
     # by two messages each time the model asks for a tool: its request, then
     # the result. The model has no memory between calls, so all of it is sent
@@ -194,9 +196,10 @@ def chat(body: ChatQuestion) -> ChatAnswer:
             reply, headings, chunks, reports = result.reply, result.headings, result.chunks, result.reports
         else:
             reply, headings, chunks, reports = _loop_reply(body.question, body.rag, dataset)
-    except (anthropic.AnthropicError, TypeError, ValidationError):
-        # TypeError is what the SDK raises when no API key is set; LangChain's
-        # chat model reports a missing key as a ValidationError.
+    except (ModelError, anthropic.AnthropicError, TypeError):
+        # ModelError: the gateway's error, whichever provider failed (LangChain engine).
+        # The others: the hand-built engine calls the Anthropic library itself,
+        # which raises TypeError when no API key is set.
         raise HTTPException(status_code=503, detail="The assistant is unavailable right now.")
 
     if reply is None:

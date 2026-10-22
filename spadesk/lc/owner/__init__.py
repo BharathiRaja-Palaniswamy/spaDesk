@@ -7,17 +7,17 @@ differs:
 
   state.py   what the graph carries from step to step
   nodes.py   the steps: prepare, agent, tools, and the choice after agent
-  graph.py   the model with its tool, and how the steps are joined
+  graph.py   how the steps are joined; the model is reached through spadesk/models/
 
 Each node is a step of its own in a LangSmith trace when tracing is on.
 """
 
 from dataclasses import dataclass
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 from ...reports.dataset import Dataset
-from .graph import build_graph, owner_model
+from .graph import build_graph
 
 
 @dataclass(frozen=True)
@@ -33,16 +33,9 @@ class OwnerAnswer:
 def answer(instructions: str, question: str, rag: bool, schema: type[BaseModel],
            dataset: Dataset) -> OwnerAnswer:
     """Answer one owner question by running the graph."""
-    graph = build_graph(instructions, owner_model(dataset, schema), dataset)
-    state = graph.invoke({"question": question, "rag": rag, "messages": [], "reports": []})
-    last = state["messages"][-1]
-    reply = None
-    # The last message is the answer unless the graph stopped while the model
-    # was still asking for tools (it ran out of rounds).
-    if not last.tool_calls:
-        try:
-            reply = schema.model_validate_json(last.text)
-        except ValidationError:
-            pass  # not a reply in the expected shape; the route reports it
-    return OwnerAnswer(reply=reply, headings=state["headings"], chunks=state["chunks"],
+    state = build_graph(instructions, schema, dataset).invoke(
+        {"question": question, "rag": rag, "messages": [], "reports": []})
+    # No reply when the graph stopped while the model was still asking for
+    # tools (it ran out of rounds); the route reports that.
+    return OwnerAnswer(reply=state["reply"], headings=state["headings"], chunks=state["chunks"],
                        reports=state["reports"])

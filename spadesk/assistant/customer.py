@@ -11,9 +11,10 @@ it is told.
 import anthropic
 from fastapi import APIRouter, HTTPException
 from langsmith import traceable
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 
 from ..lc.chat import answer as lc_answer
+from ..models import ModelError
 from .engine import rag_engine
 from .model import ask_model
 from .prompt import checked_sections, profile_prompt
@@ -90,9 +91,10 @@ def chat(body: ChatQuestion) -> CustomerAnswer:
     """Answer one customer question from the business profile."""
     try:
         reply, headings, chunks = _reply(body.question, body.rag)
-    except (anthropic.AnthropicError, TypeError, ValidationError):
-        # TypeError is what the SDK raises when no API key is set; LangChain's
-        # chat model reports a missing key as a ValidationError.
+    except (ModelError, anthropic.AnthropicError, TypeError):
+        # ModelError: the gateway's error, whichever provider failed (LangChain engine).
+        # The others: the hand-built engine calls the Anthropic library itself,
+        # which raises TypeError when no API key is set.
         raise HTTPException(status_code=503, detail="The assistant is unavailable right now.")
 
     if reply is None:

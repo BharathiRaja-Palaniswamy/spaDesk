@@ -44,7 +44,7 @@ class FakeAnthropic:
 
 def test_chat_answers_from_the_profile_with_no_tools(client, monkeypatch):
     monkeypatch.setattr(anthropic, "Anthropic", FakeAnthropic)
-    reply = client.post("/api/chat", json={"question": "Which massages do you offer?"})
+    reply = client.post("/api/chat", json={"question": "Which massages do you offer?", "rag": False})
     # The made-up section is dropped and at most three suggestions are passed on.
     assert reply.json() == {"answer": "We have three massages.", "covered": True,
                             "items": [{"name": "Swedish Massage", "detail": "60 minutes, $115"}],

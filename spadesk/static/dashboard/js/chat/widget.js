@@ -3,13 +3,11 @@
  * a message list and an input box. This file is only the window. What the
  * assistant says comes from askAssistant() in assistant.js, how a reply is
  * laid out from reply.js, the opening message from welcome.js, the
- * suggested-question buttons from suggestions.js, and the RAG switch from
- * rag-switch.js.
+ * and the suggested-question buttons from suggestions.js.
  */
 
 import { $, el } from "../dom.js";
 import { askAssistant } from "./assistant.js";
-import { initRagSwitch, modeLabel } from "./rag-switch.js";
 import { showReply, sourceLine } from "./reply.js";
 import { suggestionChips } from "./suggestions.js";
 import { introduction, STARTER_QUESTIONS } from "./welcome.js";
@@ -23,8 +21,6 @@ export function initChat() {
   const messages = $("#chat-messages");
   const form = $("#chat-form");
   const input = $("#chat-input");
-  /** Says whether the RAG switch in the header is on. */
-  const ragIsOn = initRagSwitch();
   /** True while a reply is on its way, so two questions cannot overlap. */
   let busy = false;
 
@@ -86,11 +82,11 @@ export function initChat() {
 
     const bubble = addMessage("assistant pending", "Thinking…");
     try {
-      const reply = await askAssistant(question, ragIsOn());
+      const reply = await askAssistant(question);
       // Each field of the structured reply has its own place: the answer and
       // list in the bubble, the sources under it, then the follow-up questions.
       showReply(bubble, reply);
-      messages.append(sourceLine(modeLabel(reply), reply.sections, reply.reports));
+      if (reply.sections.length || reply.reports.length) messages.append(sourceLine(reply.sections, reply.reports));
       addSuggestions(reply.suggestions);
     } catch {
       bubble.textContent = "Sorry, something went wrong. Please try again.";

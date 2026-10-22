@@ -1,9 +1,11 @@
 """Which pipeline answers the assistants' questions, from SPADESK_RAG_ENGINE.
 
-  handbuilt  the original code: rag/ for retrieval, assistant/model.py for the
-             model call, and a plain loop for the owner's report tool
-  langchain  the same steps with LangChain (lc/): a chain for the customer
-             chat, a LangGraph graph for the owner chat
+  langchain  the default: LangChain (lc/), a chain for the customer chat and
+             a LangGraph graph for the owner chat, calling models through
+             the model gateway (spadesk/models/)
+  handbuilt  the reference: the original code, rag/ for retrieval,
+             assistant/model.py calling Claude directly, and a plain loop
+             for the owner's report tool
 
 Both assistants read it here, so a typo in the setting fails the same way for both.
 """
