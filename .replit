@@ -1,0 +1,17 @@
+# How Replit runs spaDesk. Replit sets PORT for a deployment; the app must
+# listen on 0.0.0.0 (every address), not only on this machine.
+# Secrets (ANTHROPIC_API_KEY, LANGSMITH_*) go in Replit's Secrets panel, never here.
+
+modules = ["python-3.12"]
+
+# The Run button in the workspace: install what is missing, then start the server.
+run = "pip install -q -r requirements.txt && uvicorn spadesk.app:app --host 0.0.0.0 --port 8000"
+
+[deployment]
+deploymentTarget = "autoscale"
+build = ["sh", "-c", "pip install -r requirements.txt"]
+run = ["sh", "-c", "uvicorn spadesk.app:app --host 0.0.0.0 --port ${PORT:-8000}"]
+
+[[ports]]
+localPort = 8000
+externalPort = 80
