@@ -29,8 +29,8 @@
 .pill-button:hover { background: var(--surface); }
 .pill-button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
 
-/* "Request" on a card or price row: opens the booking pop-up with that service picked. */
-.request-link {
+/* "Book" on a card or price row: opens the booking pop-up with that service picked. */
+.book-link {
   border: 0; background: none; padding: 0; font: 600 0.85rem var(--sans); color: var(--accent);
   cursor: pointer; text-decoration: underline; text-underline-offset: 3px; align-self: flex-start;
 }

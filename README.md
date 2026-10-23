@@ -4,7 +4,7 @@ spaDesk is a small web app for a spa, built around a fictional business called
 Pebble Spa. It has two sides:
 
 - **A customer site** where visitors browse services, prices, opening hours
-  and policies, and send a booking request.
+  and policies, and book an appointment in a free time.
 - **A manage page** for the owner, with two tabs: the business profile and a
   reports dashboard covering a year of bookings (revenue, traffic, channels
   and customer feedback, filtered by date range, category and channel). An
@@ -20,8 +20,12 @@ CSS and JavaScript in the browser, no build step.
 - **Landing page**: services, prices, opening hours, policies and contact
   details, all read from the business document. The page itself is static; a
   script fills it in from `/api/spa`.
-- **Booking request**: a form that saves a request with status `requested`.
-  Nothing checks availability or confirms an appointment, and the page says so.
+- **Booking**: a form that asks for the customer's name and phone, a service
+  and a date, shows the free times by therapist, and books the chosen one,
+  with a reference to keep. The free times come from the business document
+  (who offers what, on which days, opening hours, classes taught) and the
+  therapists' calendars (in memory, or Google Calendar: see
+  [docs/google-calendar.md](docs/google-calendar.md)).
 
 ### Manage page (`/manage`)
 
@@ -115,7 +119,6 @@ settings with the key left blank.
 |---|---|---|
 | `data/business_doc.md` | What the business is: name, services, prices, hours, policies, FAQs, offers | Customer site, business profile tab, assistant, and the reports (for service names, categories and prices) |
 | `data/spadesk_bookings.json` | What happened: one year of mock bookings, the customers who made them, and the channels they came through | Reports |
-| `storage/booking_requests.jsonl` | Booking requests sent from the site (created on first use) | Nothing yet |
 
 Each fact is stored once. The bookings file holds no business details: a
 booking names its service by id, and the service's name, category and price
@@ -195,7 +198,7 @@ spadesk/
     calendars/                 where bookings are kept, one calendar per therapist: in memory or Google Calendar
     appointments.py            the booking rules: free times, book, cancel, the day's bookings
     tools.py                   those rules as tools a model can ask for (not yet used by a chat)
-    service.py                 mock booking requests
+    routes.py                  those rules as the booking form's routes
   rag/
     chunking.py                cuts the document into fixed-size chunks with overlap
     headers.py                 writes each chunk's place in the document above it, for search only
@@ -267,7 +270,10 @@ route in `spadesk/app.py`, then `spadesk/business/knowledge.py`.
 
 ## Limits
 
-- Booking is a mock: requests are stored, never confirmed.
+- Booking is for one person and one service at a time. Group classes,
+  packages and cancelling from the site are not bookable yet (cancelling is
+  a tool, for the chat). Phone numbers are not verified.
+- With the in-memory calendar, bookings are lost when the server restarts.
 - The bookings data is generated, not real, and ends on a fixed date, so the
   dashboard's "last 30 days" means the last 30 days of the data.
 - Nothing has a login. Put the dashboard behind authentication before using it
@@ -284,4 +290,4 @@ route in `spadesk/app.py`, then `spadesk/business/knowledge.py`.
 | Follow-up questions (memory) | the same route, keeping earlier messages per session |
 | Another embedding provider, vector store or reranker | a file in `rag/embeddings/`, `rag/stores/` or `rag/rerankers/`, and one line in its `__init__.py` |
 | A new dashboard chart | a metric in `reports/metrics/`, a line in `report.py`, a file in `js/sections/` |
-| Real calendar booking | `BookingDesk.submit` in `booking/service.py` |
+| Another calendar (e.g. Outlook) | a file in `booking/calendars/` with the methods in `base.py`, and one line in its `__init__.py` |

@@ -4,18 +4,18 @@
  * chat panel and the "Ask Pebby!" bubble, and starts the chat.
  */
 
-import { initBooking } from "./booking.js";
+import { initBooking, loadBookingOptions } from "./booking.js";
 import { initChat } from "./chat/chat.js";
 import { initChatNudge } from "./chat/nudge.js";
 import { initChatWindow } from "./chat/window.js";
 import { loadProfile, renderSections } from "./sections/sections.js";
 import { loadSpa, renderSpa } from "./spa.js";
 
-// The two requests do not depend on each other, so they are sent together.
-const [spa, profile] = await Promise.all([loadSpa(), loadProfile()]);
+// The three requests do not depend on each other, so they are sent together.
+const [spa, profile, bookable] = await Promise.all([loadSpa(), loadProfile(), loadBookingOptions()]);
 renderSpa(spa);
-renderSections(profile, spa.services);
-initBooking(spa.services);
+renderSections(profile, bookable);
+initBooking(bookable);
 initChatWindow();
 initChatNudge();
 initChat(spa.name);

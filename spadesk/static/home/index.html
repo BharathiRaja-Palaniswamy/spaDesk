@@ -36,7 +36,7 @@
     <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span><span data-spa-name>&nbsp;</span></a>
     <!-- Links to the sections below the hero, one per band: js/sections/sections.js. -->
     <nav class="site-nav" id="site-nav" aria-label="Sections"></nav>
-    <button class="btn" type="button" data-open-booking>Request a booking</button>
+    <button class="btn" type="button" data-open-booking>Book now</button>
   </header>
 
   <!-- The hero. Its illustration is drawn by CSS (css/hero.css); all the
@@ -78,7 +78,7 @@
   <footer class="site-footer">
     <!-- Address, phone and email, filled in by js/spa.js. -->
     <dl class="contact" id="contact"></dl>
-    <p class="fine">spaDesk preview. Booking requests sent here are not confirmed appointments.</p>
+    <p class="fine">spaDesk preview. Bookings made here are kept on the spa's calendar.</p>
   </footer>
 
   <!-- The avatar button in the corner: opens the chat from anywhere on the page. -->
@@ -116,33 +116,16 @@
       <input id="chat-input" autocomplete="off" maxlength="2000" placeholder="Ask a question…">
       <button class="btn" type="submit">Send</button>
     </form>
-    <p class="chat-footnote">Ready to visit? <button class="chat-link" type="button" data-open-booking>Request a booking</button></p>
+    <p class="chat-footnote">Ready to visit? <button class="chat-link" type="button" data-open-booking>Book an appointment</button></p>
   </section>
 
-  <!-- Booking request pop-up: the form, then a "request received" view after sending. -->
+  <!-- Booking pop-up: your details, the service, a free time, then the confirmed booking. -->
   <dialog id="booking" aria-labelledby="booking-title">
     <form id="booking-form" novalidate>
       <header>
-        <h2 id="booking-title">Request a booking</h2>
+        <h2 id="booking-title">Book an appointment</h2>
         <button type="button" class="close" data-close-booking aria-label="Close">×</button>
       </header>
-      <p class="notice">This sends a request only. We'll contact you to confirm a time.</p>
-      <label>Service
-        <select name="service" required></select>
-      </label>
-      <div class="row">
-        <label>Preferred date
-          <input type="date" name="preferred_date" required>
-        </label>
-        <label>Preferred time
-          <select name="preferred_time">
-            <option value="any">Any time</option>
-            <option value="morning">Morning</option>
-            <option value="afternoon">Afternoon</option>
-            <option value="evening">Evening</option>
-          </select>
-        </label>
-      </div>
       <div class="row">
         <label>Your name
           <input name="name" maxlength="80" autocomplete="name" required>
@@ -151,25 +134,35 @@
           <input name="phone" type="tel" minlength="6" maxlength="30" autocomplete="tel" required>
         </label>
       </div>
+      <label>Service
+        <select name="service" required></select>
+      </label>
       <div class="row">
-        <label>Guests
-          <input name="party_size" type="number" min="1" max="6" value="1" required>
+        <label id="booking-length">Length
+          <select name="minutes"></select>
         </label>
-        <label>Anything we should know? <span class="optional">(optional)</span>
-          <input name="notes" maxlength="500">
+        <label>With
+          <select name="therapist"></select>
         </label>
       </div>
+      <label>Date
+        <input type="date" name="day" required>
+      </label>
+      <fieldset class="times" id="booking-times">
+        <legend>Free times</legend>
+        <p class="hint" id="booking-times-hint">Choose a service and a date to see the free times.</p>
+      </fieldset>
       <p class="error" id="booking-error" role="alert" hidden></p>
-      <button class="btn" type="submit">Send request</button>
+      <button class="btn" type="submit">Book</button>
     </form>
     <div id="booking-done" hidden>
       <header>
-        <h2>Request received</h2>
+        <h2>You're booked</h2>
         <button type="button" class="close" data-close-booking aria-label="Close">×</button>
       </header>
-      <p class="pill">Not yet confirmed</p>
-      <p id="booking-message"></p>
-      <p class="reference">Reference <strong id="booking-reference"></strong></p>
+      <p class="pill">Confirmed</p>
+      <p id="booking-summary"></p>
+      <p class="reference">Reference <strong id="booking-reference"></strong>. Keep it, with your phone number, to cancel.</p>
       <button class="btn" type="button" data-close-booking>Done</button>
     </div>
   </dialog>

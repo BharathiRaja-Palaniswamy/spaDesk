@@ -1,8 +1,8 @@
-"""Booking: appointments with the team, and the mock request form.
+"""Booking: appointments with the team.
 
     schedule.py      what can be booked, with whom, when (from the business document)
     calendars/       where bookings are kept, one calendar per therapist (in memory or Google Calendar)
-    appointments.py  the booking rules: free times, book, cancel, the day's schedule
+    appointments.py  the booking rules: free times, book, cancel, the day's bookings
     tools.py         those rules as tools a model can ask for
-    service.py       the mock booking request form (until the chat books)
+    routes.py        those rules as the booking form's routes
 """

@@ -23,15 +23,15 @@ const PRICED_LINE = /^(.+?)\s+[—–-]\s+(\$.+)$/;
 const LABELLED_LINE = /^([^:]{1,24}):\s+(.+)$/;
 
 /**
- * A "Request" link that opens the booking pop-up with this service picked,
+ * A "Book" link that opens the booking pop-up with this service picked,
  * or nothing when the service cannot be booked.
  * @param {string} name
  * @param {Set<string>} bookable the services the booking form offers
  * @returns {?HTMLElement}
  */
-function requestLink(name, bookable) {
+function bookLink(name, bookable) {
   if (!bookable.has(name)) return null;
-  return el("button", { type: "button", className: "request-link", textContent: "Request", onclick: () => openBooking(name) });
+  return el("button", { type: "button", className: "book-link", textContent: "Book", onclick: () => openBooking(name) });
 }
 
 /**
@@ -47,7 +47,7 @@ function pricedCard(item, bookable) {
     el("div", { className: "card-meta" },
       el("span", { textContent: item.duration }),
       el("strong", { textContent: item.price })),
-    requestLink(item.name, bookable));
+    bookLink(item.name, bookable));
 }
 
 /**
@@ -85,7 +85,7 @@ function linesBlock(lines, bulleted, bookable) {
   if (lines.every((line) => PRICED_LINE.test(line))) {
     return el("ul", { className: "price-list" }, ...lines.map((line) => {
       const [, name, price] = line.match(PRICED_LINE);
-      return el("li", {}, el("span", { textContent: name }), requestLink(name, bookable), el("strong", { textContent: price }));
+      return el("li", {}, el("span", { textContent: name }), bookLink(name, bookable), el("strong", { textContent: price }));
     }));
   }
   if (lines.every((line) => LABELLED_LINE.test(line))) {

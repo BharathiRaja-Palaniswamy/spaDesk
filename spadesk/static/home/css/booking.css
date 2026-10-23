@@ -1,4 +1,4 @@
-/* The booking request pop-up: the form, then the "request received" view. */
+/* The booking pop-up: the form with its free times, then the confirmed booking. */
 
 dialog {
   border: 0; border-radius: var(--radius); padding: 0; width: min(560px, calc(100vw - 2rem));
@@ -16,6 +16,22 @@ dialog label { display: grid; gap: 0.3rem; font-size: 0.86rem; font-weight: 600;
 .error { color: var(--error); font-size: 0.9rem; }
 .pill { width: fit-content; background: var(--wash); color: var(--accent-dark); border-radius: var(--pill); padding: 0.25rem 0.8rem; font-size: 0.8rem; font-weight: 600; }
 .reference { color: var(--ink-soft); }
+.hint { color: var(--ink-soft); font-size: 0.9rem; }
+
+/* The free times: one row per therapist, each time a choice shaped like a pill.
+   The radio button itself is hidden; the pill shows whether it is chosen. */
+.times { border: 1px solid var(--line); border-radius: 12px; padding: 0.8rem 0.9rem; display: grid; gap: 0.8rem;
+         max-height: 15rem; overflow-y: auto; }
+.times legend { font-size: 0.86rem; font-weight: 600; padding: 0 0.3rem; }
+.times-row { display: grid; gap: 0.4rem; }
+.times-who { font-size: 0.82rem; color: var(--ink-soft); }
+.times-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.time input { position: absolute; opacity: 0; pointer-events: none; }
+.time span { display: inline-block; border: 1px solid var(--line); border-radius: var(--pill); padding: 0.3rem 0.75rem;
+             font: 500 0.85rem var(--sans); cursor: pointer; }
+.time span:hover { background: var(--wash); }
+.time input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.time input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 @media (max-width: 600px) {
   .row { grid-template-columns: 1fr; }

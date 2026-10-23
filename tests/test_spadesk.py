@@ -1,15 +1,12 @@
-"""Tests for the customer site: the business document, booking requests and routes.
+"""Tests for the customer site: the business document and its routes.
 
 Run with:  .venv/bin/pytest tests/test_spadesk.py
 """
-
-from datetime import date, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 
 from spadesk import app as app_module
-from spadesk.booking.service import BookingDesk, BookingError, BookingRequest
 from spadesk.config import HOURS_BLOCK, ROOT
 from spadesk.business.knowledge import KnowledgeBase
 from spadesk.business.profile import build_profile
@@ -29,7 +26,8 @@ def test_document_is_read_into_services_and_facts(kb):
     swedish = next(i for i in kb.items if i.name == "Swedish Massage")
     assert (swedish.category, swedish.get("price"), swedish.get("duration")) == (
         "Massage Therapy", "$115 / $160", "60 minutes / 90 minutes")
-    assert "Lip Wax" in kb.service_names  # a one-line "**Name** — $price" entry
+    lip_wax = next(i for i in kb.items if i.name == "Lip Wax")
+    assert (lip_wax.category, lip_wax.get("price")) == ("Hair Removal", "$18")
 
 
 def test_pieces_can_be_found_by_title(kb):
@@ -73,34 +71,8 @@ def test_profile_follows_the_document(kb):
     assert hours["items"][0]["name"] == "Business Hours" and len(hours["items"][0]["lines"]) == 4
 
 
-# ---- Booking ----
-def booking(**changes):
-    """A valid booking request, with any fields overridden."""
-    fields = dict(service="Signature Radiance Facial", preferred_date=date.today() + timedelta(days=3),
-                  name="Asha", phone="555 010 0100")
-    return BookingRequest(**{**fields, **changes})
-
-
-def test_booking_is_a_request_not_a_confirmation(tmp_path, kb):
-    desk = BookingDesk(tmp_path / "requests.jsonl", kb.service_names)
-    result = desk.submit(booking())
-    assert result["status"] == "requested"
-    assert "not a confirmed appointment" in result["message"]
-    assert result["reference"] in (tmp_path / "requests.jsonl").read_text()
-
-
-def test_booking_rejects_unknown_service_and_past_date(tmp_path, kb):
-    desk = BookingDesk(tmp_path / "requests.jsonl", kb.service_names)
-    with pytest.raises(BookingError):
-        desk.submit(booking(service="Hot Stone Massage"))
-    with pytest.raises(BookingError):
-        desk.submit(booking(preferred_date=date.today() - timedelta(days=1)))
-
-
 # ---- HTTP routes ----
-def test_api(tmp_path, kb, monkeypatch):
-    monkeypatch.setattr(app_module, "get_booking_desk",
-                        lambda: BookingDesk(tmp_path / "requests.jsonl", kb.service_names))
+def test_api():
     client = TestClient(app_module.app)
 
     assert client.get("/").status_code == 200
@@ -111,8 +83,3 @@ def test_api(tmp_path, kb, monkeypatch):
     assert {"name": "Lip Wax", "category": "Hair Removal", "description": "", "duration": "45 minutes", "price": "$18"} in spa["services"]
 
     assert client.get("/api/profile").json()["name"] == "Pebble Spa"
-
-    ok = client.post("/api/booking-requests", json=booking().model_dump(mode="json"))
-    assert ok.json()["status"] == "requested"
-    bad = client.post("/api/booking-requests", json=booking(service="Nope").model_dump(mode="json"))
-    assert bad.status_code == 422

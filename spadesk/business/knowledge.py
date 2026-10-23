@@ -95,11 +95,6 @@ class KnowledgeBase:
         self._parse(Path(path).read_text(encoding="utf-8"))
         self._by_title = {c.title: c for c in self.chunks}
 
-    @property
-    def service_names(self) -> list[str]:
-        """Everything with a price: what the booking form lets a customer pick."""
-        return [i.name for i in self.items if i.priced]
-
     def find(self, title: str) -> Chunk | None:
         """The piece of the document with exactly this title, or None."""
         return self._by_title.get(title)

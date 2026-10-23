@@ -62,7 +62,7 @@ function sectionContent(section, layout, bookable) {
 /**
  * Draws every band into #sections and its link into the header menu.
  * @param {{sections: {title: string, groups: object[]}[]}} profile from loadProfile()
- * @param {{name: string}[]} services the services the booking form offers, from /api/spa
+ * @param {{name: string}[]} services the services the booking form offers, from /api/booking/options
  */
 export function renderSections(profile, services) {
   const bookable = new Set(services.map((service) => service.name));

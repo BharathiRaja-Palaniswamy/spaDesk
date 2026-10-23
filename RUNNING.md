@@ -44,8 +44,9 @@ http://127.0.0.1:8000/manage for the owner's manage page.
 
 ## 4. Try it
 
-- On the customer site, click **Request a booking**, fill in the form and send it. The request is
-  appended to `storage/booking_requests.jsonl`.
+- On the customer site, click **Book now**: give a name and phone, pick a service and a date, choose
+  one of the free times and book it. Ask for the same day again and that time is gone. With
+  `SPADESK_CALENDAR=google`, the booking appears on the therapist's Google calendar.
 - Open the manage page, go to the **Reports** tab, switch between the date presets, pick a category or
   channel, and use **Show table** on a chart.
 - On the manage page, click **Ask assistant** and ask about the business, for
