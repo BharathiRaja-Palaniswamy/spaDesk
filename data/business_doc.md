@@ -94,12 +94,29 @@ A restorative body treatment intended to leave skin soft and refreshed. The body
 
 ### Hair Removal
 
-**Eyebrow Wax** — $22  
-**Lip Wax** — $18  
-**Full Face Wax** — $55  
-**Underarm Wax** — $30  
-**Half Leg Wax** — $48  
-**Full Leg Wax** — $78
+**Eyebrow Wax**  
+**Duration:** 45 minutes  
+**Price:** $22
+
+**Lip Wax**  
+**Duration:** 45 minutes  
+**Price:** $18
+
+**Full Face Wax**  
+**Duration:** 45 minutes  
+**Price:** $55
+
+**Underarm Wax**  
+**Duration:** 45 minutes  
+**Price:** $30
+
+**Half Leg Wax**  
+**Duration:** 45 minutes  
+**Price:** $48
+
+**Full Leg Wax**  
+**Duration:** 45 minutes  
+**Price:** $78
 
 ### Kids Services
 
@@ -306,7 +323,7 @@ Lead esthetician with a focus on results-driven facials and skin renewal.
 
 **Hannah Lee**  
 Esthetician who specializes in sensitive skin, waxing, and kids services.  
-**Specialties:** Calming Sensitive Skin Facial, Glow Express Facial, waxing, Kids Mini Facial, Kids Hand & Foot Treat  
+**Specialties:** Calming Sensitive Skin Facial, Glow Express Facial, hair removal (waxing), Kids Mini Facial, Kids Hand & Foot Treat  
 **Works:** Sunday, Monday, Wednesday, Thursday
 
 ## Service Suitability

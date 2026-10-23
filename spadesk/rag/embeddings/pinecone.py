@@ -34,7 +34,8 @@ class PineconeEmbedder:
         vectors = []
         for start in range(0, len(texts), BATCH):
             batch = texts[start:start + BATCH]
-            result = hosted.call(MODEL, lambda pc: pc.inference.embed(model=MODEL, inputs=batch,
-                                                                       parameters=parameters))
+            # batch=batch fixes this batch inside the function, whatever the loop does next.
+            result = hosted.call(MODEL, lambda pc, batch=batch: pc.inference.embed(
+                model=MODEL, inputs=batch, parameters=parameters))
             vectors += [list(item["values"]) for item in result]
         return vectors

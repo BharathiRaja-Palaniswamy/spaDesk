@@ -15,14 +15,12 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from .errors import BookingError
+
 REQUESTED = "requested"
 # Returned with every request, so the customer always reads that nothing is confirmed.
 NEXT_STEP = ("This is a booking request, not a confirmed appointment. "
              "The spa will contact you to confirm a time.")
-
-
-class BookingError(ValueError):
-    """A request that is well-formed but breaks a booking rule. The message is shown to the customer."""
 
 
 class BookingRequest(BaseModel):

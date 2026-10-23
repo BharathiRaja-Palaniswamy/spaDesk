@@ -29,6 +29,9 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # The bold block that lists opening hours, shown in the customer site's welcome panel.
 HOURS_BLOCK = "Business Hours"
+# Booking (spadesk/booking/schedule.py): the section listing the team, with the
+# days each member works and their specialties.
+TEAM_SECTION = "Our Team"
 
 
 # ---- Per-machine settings --------------------------------------------------
@@ -56,6 +59,8 @@ class Settings:
     retrieval_top_k: int  # RAG: how many chunks are given to the model for a question
     reranker: str  # RAG: which reranker reorders the candidates, or "none"
     rerank_candidates: int  # RAG: how many chunks the first search fetches for the reranker to choose from
+    calendar: str  # booking: where bookings are kept: "memory" (Google Calendar comes next)
+    slot_minutes: int  # booking: appointments start on this grid, e.g. every 30 minutes from opening
     rag_engine: str  # which pipeline answers both chats: "langchain" (lc/) or the reference "handbuilt" (rag/)
     # The model gateway (spadesk/models/). A model is named "provider:model", e.g.
     # "nebius:Qwen/Qwen3-32B"; a bare model name uses model_provider.
@@ -88,6 +93,8 @@ def get_settings() -> Settings:
         retrieval_top_k=int(os.getenv("SPADESK_RETRIEVAL_TOP_K", "3")),
         reranker=os.getenv("SPADESK_RERANKER", "pinecone"),
         rerank_candidates=int(os.getenv("SPADESK_RERANK_CANDIDATES", "20")),
+        calendar=os.getenv("SPADESK_CALENDAR", "memory"),
+        slot_minutes=int(os.getenv("SPADESK_SLOT_MINUTES", "30")),
         rag_engine=os.getenv("SPADESK_RAG_ENGINE", "langchain"),
         model_provider=os.getenv("SPADESK_MODEL_PROVIDER", "anthropic"),
         model_fallback=os.getenv("SPADESK_MODEL_FALLBACK", ""),

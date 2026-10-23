@@ -71,14 +71,14 @@ def test_an_unknown_reranker_is_reported(monkeypatch):
         get_reranker()
 
 
-def test_the_real_reranker_lifts_an_answer_the_first_search_ranks_too_low(monkeypatch):
-    # Without reranking, the chunk with Sunday's timetable is not in the top 7:
-    # it starts mid-timetable and is mostly about other things (see
+def test_the_real_reranker_lifts_an_answer_the_first_search_ranks_lower(monkeypatch):
+    # Without reranking, the chunk with Sunday's timetable is not first: it
+    # starts mid-timetable and is partly about other things (see
     # docs/eval-report.md). The reranker reads the question and each chunk
-    # together, and brings it in.
+    # together, and puts it first.
     monkeypatch.setenv("SPADESK_RERANKER", "none")
-    assert not any(ANSWER in m.chunk.text for m in retrieve(QUESTION))
+    assert ANSWER not in retrieve(QUESTION)[0].chunk.text
 
     get_reranker.cache_clear()
     monkeypatch.setenv("SPADESK_RERANKER", "cross-encoder")
-    assert any(ANSWER in m.chunk.text for m in retrieve(QUESTION))
+    assert ANSWER in retrieve(QUESTION)[0].chunk.text

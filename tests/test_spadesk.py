@@ -57,8 +57,8 @@ def test_profile_follows_the_document(kb):
     assert [g["title"] for g in services] == ["Facials", "Massage Therapy", "Body Treatments", "Hair Removal", "Kids Services"]
     swedish = next(i for i in services[1]["items"] if i["name"] == "Swedish Massage")
     assert (swedish["duration"], swedish["price"]) == ("60 minutes / 90 minutes", "$115 / $160")
-    # One-line entries stay as lines and are not repeated as items.
-    assert "Eyebrow Wax — $22" in services[3]["lines"] and services[3]["items"] == []
+    wax = next(i for i in services[3]["items"] if i["name"] == "Eyebrow Wax")
+    assert (wax["duration"], wax["price"]) == ("45 minutes", "$22")
 
     # Plain text keeps whether it was a bullet list.
     policies = {g["title"]: g for g in section["Policies"]["groups"]}
@@ -108,7 +108,7 @@ def test_api(tmp_path, kb, monkeypatch):
     assert spa["name"] == "Pebble Spa"
     assert spa["contact"]["Phone"] == "(408) 555-0188"
     assert len(spa["hours"]) == 4
-    assert {"name": "Lip Wax", "category": "Hair Removal", "description": "", "duration": "", "price": "$18"} in spa["services"]
+    assert {"name": "Lip Wax", "category": "Hair Removal", "description": "", "duration": "45 minutes", "price": "$18"} in spa["services"]
 
     assert client.get("/api/profile").json()["name"] == "Pebble Spa"
 

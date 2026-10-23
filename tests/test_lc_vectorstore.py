@@ -43,7 +43,7 @@ def test_the_embeddings_match_the_hand_built_model():
 
 def test_the_index_is_built_once_and_then_reused():
     store = get_vectorstore()
-    assert len(store.store) == 33  # one entry per chunk
+    assert len(store.store) == 34  # one entry per chunk
     assert get_vectorstore() is store  # nothing changed: the same filled store, not rebuilt
 
 
@@ -70,13 +70,13 @@ def test_any_langchain_store_can_be_plugged_in(monkeypatch):
     monkeypatch.setitem(vectorstores.PROVIDERS, "plugged", plugged)
     monkeypatch.setenv("SPADESK_VECTOR_STORE", "plugged")
     store = get_vectorstore()
-    assert len(store.store) == 33
+    assert len(store.store) == 34
     best = store.similarity_search("How much is a Swedish massage?", k=1)[0]
     assert "Massage Therapy" in best.metadata["sections"]
 
     # The store lost its chunks (say it was wiped): the next call fills it again.
     store.delete(ids=list(store.store))
-    assert len(get_vectorstore().store) == 33
+    assert len(get_vectorstore().store) == 34
 
 
 def test_an_unknown_store_is_reported(monkeypatch):
