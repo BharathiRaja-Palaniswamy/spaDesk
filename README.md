@@ -179,6 +179,8 @@ The model is called from the server so the API key never reaches the browser.
 data/                          business document and bookings JSON
 scripts/
   generate_bookings.py         writes the bookings JSON
+  setup_calendars.py           creates the therapists' Google calendars and shares them
+  check_calendar.py            books, reads back and cancels a test appointment
 spadesk/
   config.py                    settings; which parts of the document the site features
   tracing.py                   what each step of an assistant question records in LangSmith
@@ -189,6 +191,10 @@ spadesk/
     catalog.py                 the bookable services, as a catalogue with ids
     profile.py                 lays it out as the manage page's business profile
   booking/
+    schedule.py                what can be booked, with whom, when: read from the business document
+    calendars/                 where bookings are kept, one calendar per therapist: in memory or Google Calendar
+    appointments.py            the booking rules: free times, book, cancel, the day's bookings
+    tools.py                   those rules as tools a model can ask for (not yet used by a chat)
     service.py                 mock booking requests
   rag/
     chunking.py                cuts the document into fixed-size chunks with overlap

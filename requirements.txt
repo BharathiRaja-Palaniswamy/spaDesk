@@ -21,5 +21,8 @@ langgraph>=1.2
 pinecone>=7.3
 langchain-pinecone>=0.2
 langsmith>=0.4
+# Booking calendars: the Google Calendar API, with a service account (spadesk/booking/calendars/google.py).
+google-api-python-client>=2.150
+google-auth>=2.35
 pytest>=8.0
 httpx>=0.27

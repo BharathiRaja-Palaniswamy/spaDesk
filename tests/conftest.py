@@ -13,6 +13,8 @@ developer's `.env` says (load_dotenv never replaces a variable already set):
   test never reaches another provider.
 - The vector store is the in-memory one, and the embedder and reranker are
   the local models, so a test never touches Pinecone.
+- Bookings go to the in-memory calendar, with no Google key, so a test never
+  touches Google Calendar.
 """
 
 import os
@@ -26,3 +28,5 @@ os.environ["SPADESK_MODEL_FALLBACK"] = ""
 os.environ["SPADESK_VECTOR_STORE"] = "memory"
 os.environ["SPADESK_EMBEDDING_PROVIDER"] = "minilm"
 os.environ["SPADESK_RERANKER"] = "cross-encoder"
+os.environ["SPADESK_CALENDAR"] = "memory"
+os.environ["GOOGLE_SERVICE_ACCOUNT"] = ""

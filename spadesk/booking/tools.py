@@ -19,6 +19,7 @@ The lists of services and team members in the tools' descriptions are read
 from the document each time the tools are made, so they never go stale.
 """
 
+import logging
 from collections.abc import Callable
 from datetime import date, datetime
 from typing import Any
@@ -27,17 +28,24 @@ from ..business.store import get_knowledge
 from ..models.tools import Tool
 from .appointments import get_appointments
 from .calendars import Booking
-from .errors import BookingError
+from .errors import BookingError, CalendarUnavailable
 from .schedule import read_schedule
+
+log = logging.getLogger("spadesk.booking")
+UNAVAILABLE = "Booking is unavailable right now. Please call the spa to book or cancel."
 
 
 def _guarded(run: Callable[[dict[str, Any]], Any]) -> Callable[[dict[str, Any]], Any]:
-    """`run`, with a broken booking rule returned as {"error": ...} instead of raised."""
+    """`run`, with a broken booking rule, or a calendar that cannot be
+    reached, returned as {"error": ...} instead of raised."""
     def guarded(args: dict[str, Any]) -> Any:
         try:
             return run(args)
         except BookingError as error:
             return {"error": str(error)}
+        except CalendarUnavailable as error:
+            log.warning("calendar unavailable: %s", error)  # the reason, for whoever reads the server log
+            return {"error": UNAVAILABLE}
         except ValueError:  # a date or time the model wrote in the wrong format
             return {"error": "Dates are YYYY-MM-DD and times YYYY-MM-DDTHH:MM, in the spa's time zone."}
     return guarded

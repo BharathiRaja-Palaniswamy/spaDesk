@@ -59,7 +59,7 @@ class Settings:
     retrieval_top_k: int  # RAG: how many chunks are given to the model for a question
     reranker: str  # RAG: which reranker reorders the candidates, or "none"
     rerank_candidates: int  # RAG: how many chunks the first search fetches for the reranker to choose from
-    calendar: str  # booking: where bookings are kept: "memory" (Google Calendar comes next)
+    calendar: str  # booking: where bookings are kept: "memory", or "google" (Google Calendar)
     slot_minutes: int  # booking: appointments start on this grid, e.g. every 30 minutes from opening
     rag_engine: str  # which pipeline answers both chats: "langchain" (lc/) or the reference "handbuilt" (rag/)
     # The model gateway (spadesk/models/). A model is named "provider:model", e.g.
@@ -70,6 +70,8 @@ class Settings:
     nebius_base_url: str  # the address of Nebius's OpenAI-compatible API
     nebius_api_key: str = field(repr=False)  # repr=False: never shown when settings are printed
     pinecone_api_key: str = field(repr=False)  # Pinecone's key: the vector store, and its hosted models
+    google_service_account: str = field(repr=False)  # booking: the service account's key, as JSON text or a file path
+    calendar_owner: str  # booking: a Google account the calendars are shared with, to see them; "" for none
 
 
 def get_settings() -> Settings:
@@ -104,4 +106,6 @@ def get_settings() -> Settings:
         nebius_base_url=os.getenv("SPADESK_NEBIUS_BASE_URL", "https://api.studio.nebius.com/v1/"),
         nebius_api_key=os.getenv("NEBIUS_API_KEY", ""),
         pinecone_api_key=os.getenv("PINECONE_API_KEY", ""),
+        google_service_account=os.getenv("GOOGLE_SERVICE_ACCOUNT", ""),
+        calendar_owner=os.getenv("SPADESK_CALENDAR_OWNER", ""),
     )

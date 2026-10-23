@@ -111,6 +111,10 @@ files, so after changing `.env`, stop the server and start it again.
 | `SPADESK_VECTOR_STORE` | `pinecone` | RAG: which vector store keeps the chunks and their vectors: `pinecone` (needs `PINECONE_API_KEY`) or `memory` (offline). |
 | `SPADESK_VECTOR_STORE_PATH` | `storage/vectors` | RAG: names a local index (tests give each its own). |
 | `SPADESK_RETRIEVAL_TOP_K` | `3` | RAG: how many chunks are fetched for a question. |
+| `SPADESK_CALENDAR` | `memory` | Booking: where bookings are kept: `memory` (lost on restart) or `google` (one Google calendar per therapist; see [docs/google-calendar.md](docs/google-calendar.md)). |
+| `GOOGLE_SERVICE_ACCOUNT` | none | Booking with `google`: the service account's key file, as a path or its JSON text. |
+| `SPADESK_CALENDAR_OWNER` | none | Booking with `google`: a Google account the calendars are shared with, to see the bookings. Optional. |
+| `SPADESK_SLOT_MINUTES` | `30` | Booking: appointments start every this many minutes from opening. |
 
 ## If something goes wrong
 

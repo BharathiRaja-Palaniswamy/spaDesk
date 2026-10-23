@@ -4,6 +4,7 @@
 Which one it returns is a setting, SPADESK_CALENDAR:
 
   memory  in this process (memory.py); lost on restart. For tests and offline work.
+  google  one Google calendar per therapist (google.py); needs GOOGLE_SERVICE_ACCOUNT
 
 To add a calendar: write a class with the methods in base.py in its own file
 here, and add one line to PROVIDERS below.
@@ -14,6 +15,7 @@ from functools import lru_cache
 
 from ...config import get_settings
 from .base import Booking, Calendar
+from .google import make_google
 from .memory import MemoryCalendar
 
 __all__ = ["Booking", "Calendar", "get_calendar"]
@@ -21,6 +23,7 @@ __all__ = ["Booking", "Calendar", "get_calendar"]
 # Setting value -> how to make that calendar.
 PROVIDERS: dict[str, Callable[[], Calendar]] = {
     "memory": MemoryCalendar,
+    "google": make_google,
 }
 
 
