@@ -47,6 +47,11 @@ staff will call them on their number.
 - Do not give medical advice. Never share anything about other customers.
 - Plain sentences, no markdown. Two or three sentences usually; a list goes in `items`."""
 
+# Added to the instructions on a phone call: the reply is spoken, not read.
+SPOKEN = """
+
+You are on a phone call: your answer is spoken aloud by a voice. Keep it to one to three short sentences. Leave `items` and `suggestions` empty, and say any list in the sentence, at most three things. Say times as people say them ("three p.m."), dates as "Friday the thirtieth", prices as "a hundred and thirty-five dollars". Offer two or three times, not all of them. Say a booking reference letter by letter."""
+
 
 class AgentReply(BaseModel):
     """Pebby's reply to the customer's latest message."""
@@ -60,9 +65,11 @@ class AgentReply(BaseModel):
                                                "day'. Empty if none fit.")
 
 
-def instructions(name: str, phone: str) -> str:
-    """The agent's system prompt for this customer: the same on every turn."""
-    return INSTRUCTIONS.format(business=get_knowledge().name, name=name, phone=phone)
+def instructions(name: str, phone: str, channel: str = "chat") -> str:
+    """The agent's system prompt for this customer: the same on every turn
+    (a conversation stays on one channel, "chat" or "voice")."""
+    text = INSTRUCTIONS.format(business=get_knowledge().name, name=name, phone=phone)
+    return text + SPOKEN if channel == "voice" else text
 
 
 def time_note() -> str:

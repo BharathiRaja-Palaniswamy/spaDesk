@@ -16,6 +16,7 @@ Routes:
   GET  /api/booking/free      the free times for a service on a day
   POST /api/bookings          book one of them
   POST /api/assistant         the customer chat: the booking agent (route in agent/routes.py)
+  POST /v1/chat/completions   the phone line: the same agent, called by ElevenLabs (voice/routes.py)
   POST /api/chat              the question-and-answer assistant, kept for the evals (assistant/customer.py)
   GET  /manage                the owner's manage page (routes in reports/routes.py)
   GET  /api/report...         the reports' data       (routes in reports/routes.py)
@@ -34,6 +35,7 @@ from .business.profile import build_profile
 from .business.store import get_knowledge
 from .config import HOURS_BLOCK
 from .models.profiles import get_profile
+from .voice.routes import router as phone_line
 from .models.providers import NAMES
 from .reports.routes import page_router as manage_page, router as report_router
 
@@ -45,6 +47,7 @@ app.include_router(manage_page)
 # So do the customer site's chats (agent/routes.py, assistant/customer.py) and booking (booking/routes.py).
 app.include_router(customer_chat)
 app.include_router(booking_agent)
+app.include_router(phone_line)
 app.include_router(booking)
 
 

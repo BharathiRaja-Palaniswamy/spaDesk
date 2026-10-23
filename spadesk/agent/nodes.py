@@ -57,13 +57,16 @@ def identify(state: AgentState) -> dict:
     for whatever is still missing. Once both are known, an earlier question
     goes on to the agent; otherwise the customer is thanked."""
     details = read_details(_latest(state).text)
+    caller = state.get("caller", "")
     name = state.get("name") or details.name.strip()
-    phone = state.get("phone") or (details.phone.strip() if valid_phone(details.phone) else "")
+    # A number they give wins; on a call, the number calling is used until they do.
+    given = details.phone.strip() if valid_phone(details.phone) else ""
+    phone = given or state.get("phone") or caller
     held = state.get("held", False) or details.asks
     known = {"name": name, "phone": phone}
     if name and phone and held:
         return {**known, "held": False}  # on to the agent, which answers what they asked
-    say = f"Thank you, {name}! How can I help you today?" if name and phone else ask_for(name, phone)
+    say = f"Thank you, {name}! How can I help you today?" if name and phone else ask_for(name, phone, caller)
     return {**known, "held": held, "say": say, "messages": [AIMessage(say)]}
 
 
@@ -77,7 +80,8 @@ def after_identify(state: AgentState) -> str:
 def agent(state: AgentState) -> dict:
     """One model call with the whole conversation: it ends in a reply or in tool requests."""
     offered = agent_tools(state["name"], state["phone"])
-    messages = [SystemMessage(instructions(state["name"], state["phone"])), *state["messages"]]
+    rules = instructions(state["name"], state["phone"], state.get("channel", "chat"))
+    messages = [SystemMessage(rules), *state["messages"]]
     answer = structured(PROFILE, messages, AgentReply, offered)
     return {"messages": [answer.message], "requests": answer.tool_calls, "reply": answer.reply}
 
@@ -102,7 +106,7 @@ def tools(state: AgentState) -> dict:
         held, *extra = later
         results += [ToolMessage(json.dumps({"error": "One change at a time. Ask again after this one."}),
                                 tool_call_id=r["id"]) for r in extra]
-        question, problem = problem_with(held, state["name"], state["phone"])
+        question, problem = problem_with(held, state["name"], state["phone"], state.get("channel") == "voice")
         if problem:
             results.append(ToolMessage(json.dumps({"error": problem}), tool_call_id=held["id"]))
         else:

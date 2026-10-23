@@ -81,6 +81,7 @@ class Settings:
     pinecone_api_key: str = field(repr=False)  # Pinecone's key: the vector store, and its hosted models
     google_service_account: str = field(repr=False)  # booking: the service account's key, as JSON text or a file path
     calendar_owner: str  # booking: a Google account the calendars are shared with, to see them; "" for none
+    voice_secret: str = field(repr=False)  # phone line: the secret ElevenLabs sends; "" switches the line off
 
 
 def get_settings() -> Settings:
@@ -119,4 +120,5 @@ def get_settings() -> Settings:
         pinecone_api_key=os.getenv("PINECONE_API_KEY", ""),
         google_service_account=os.getenv("GOOGLE_SERVICE_ACCOUNT", ""),
         calendar_owner=os.getenv("SPADESK_CALENDAR_OWNER", ""),
+        voice_secret=os.getenv("SPADESK_VOICE_SECRET", ""),
     )

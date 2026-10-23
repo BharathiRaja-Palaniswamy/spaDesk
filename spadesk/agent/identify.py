@@ -4,7 +4,11 @@ Until both are known, every message goes through this step, not to the
 agent: it is a fixed step of the graph, so the model cannot skip it. A
 small, fast model reads the message for a name, a phone number, and whether
 the customer also asked for something (so that question can be answered
-once they have given their details). The phone number is taken as given;
+once they have given their details).
+
+On a phone call the number calling (caller ID) is taken as the phone
+number, so only the name is asked for, and the caller is told which number
+will be kept; a number they give instead wins. The phone number is taken as given;
 it only has to have at least 7 digits.
 """
 
@@ -41,8 +45,12 @@ def valid_phone(phone: str) -> bool:
     return len(re.sub(r"\D", "", phone)) >= 7
 
 
-def ask_for(name: str, phone: str) -> str:
-    """What to ask for, given what is known so far."""
+def ask_for(name: str, phone: str, caller: str = "") -> str:
+    """What to ask for, given what is known so far. `caller` is the number
+    calling, on a phone call."""
+    if not name and caller and phone == caller:
+        return (f"May I have your name, please? I'll keep the number you're calling from, ending in "
+                f"{re.sub(r'\D', '', caller)[-4:]}, unless you'd like to give another.")
     if not name and not phone:
         return "Before we start, may I have your name and phone number?"
     if not phone:

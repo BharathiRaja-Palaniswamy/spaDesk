@@ -119,6 +119,7 @@ files, so after changing `.env`, stop the server and start it again.
 | `SPADESK_CALENDAR_OWNER` | none | Booking with `google`: a Google account the calendars are shared with, to see the bookings. Optional. |
 | `SPADESK_SLOT_MINUTES` | `30` | Booking: appointments start every this many minutes from opening. |
 | `SPADESK_MIN_NOTICE_MINUTES` | `30` | Booking: the fewest minutes ahead a customer can book, change or cancel. |
+| `SPADESK_VOICE_SECRET` | none (line off) | The phone line: the secret ElevenLabs sends when it calls `/v1/chat/completions`. |
 | `SPADESK_HANDOFFS` | `storage/handoffs.jsonl` | The chat: where customers handed to the staff are written down, with why. |
 
 ## If something goes wrong

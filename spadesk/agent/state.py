@@ -24,6 +24,8 @@ class AgentState(TypedDict, total=False):
     # agent's replies, and each tool request with its result. add_messages
     # appends new messages (and removes one when given a RemoveMessage).
     messages: Annotated[list[AnyMessage], add_messages]
+    channel: str  # "chat" (the website) or "voice" (a phone call): how Pebby phrases its replies
+    caller: str  # on a phone call, the number calling (caller ID); "" in the chat
     name: str  # the customer's name, once given
     phone: str  # their phone number, once given (not verified)
     held: bool  # they asked something before giving their details: answer it once they have

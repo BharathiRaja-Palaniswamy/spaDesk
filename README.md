@@ -231,6 +231,7 @@ spadesk/
     replies.py                 the question body and one reply list entry
     customer.py                the question-and-answer assistant: /api/chat, no tools or memory (kept for the evals)
     engine.py                  which pipeline answers both chats: LangChain (default) or hand-built
+  voice/                       the phone line: Pebby behind /v1/chat/completions, which ElevenLabs calls
   agent/                       Pebby, the booking agent: /api/assistant
     identify.py                name and phone first
     tools.py                   search the guide, find times, book, cancel, list, hand off
