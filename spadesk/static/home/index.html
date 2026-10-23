@@ -106,17 +106,19 @@
       <img class="avatar" src="/static/home/img/pebble-agent-avatar-named.svg" alt="" width="36" height="36">
       <div>
         <h2 id="chat-title">Ask Pebby</h2>
-        <p>Services, prices, hours and policies</p>
+        <p>Questions and bookings</p>
       </div>
       <button class="chat-close" id="chat-close" type="button" aria-label="Close the chat">×</button>
     </header>
     <div class="chat-messages" id="chat-messages" aria-live="polite"></div>
     <form class="chat-form" id="chat-form">
-      <label class="visually-hidden" for="chat-input">Your question</label>
-      <input id="chat-input" autocomplete="off" maxlength="2000" placeholder="Ask a question…">
+      <label class="visually-hidden" for="chat-input">Your message</label>
+      <input id="chat-input" autocomplete="off" maxlength="2000" placeholder="Type a message…">
       <button class="btn" type="submit">Send</button>
     </form>
     <p class="chat-footnote">Ready to visit? <button class="chat-link" type="button" data-open-booking>Book an appointment</button></p>
+    <!-- Which provider answers, filled in by js/chat/powered.js. -->
+    <p class="chat-powered" id="chat-powered" hidden></p>
   </section>
 
   <!-- Booking pop-up: your details, the service, a free time, then the confirmed booking. -->

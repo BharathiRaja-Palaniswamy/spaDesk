@@ -4,13 +4,14 @@
               - (therapist not working that day)
               - the classes they teach (an instructor's timetable)
               - whatever is on their calendar (bookings, time off)
-              - times already past
+              - times less than SPADESK_MIN_NOTICE_MINUTES from now (or past)
 
 These rules are ours, which is why the app talks to the calendar through its
 own interface (calendars/) rather than handing a model the calendar itself:
 a booking can only be made in a free time, with a therapist who offers the
 service, and a customer can only cancel a booking whose phone number they
-know. The model (and later a voice assistant) asks through tools.py, and
+know, and not once it is less than SPADESK_MIN_NOTICE_MINUTES away (they
+call the spa instead). The model (and later a voice assistant) asks through tools.py, and
 every request is checked here.
 
 Times are in the spa's time zone (SPADESK_TIMEZONE). Appointments start on a
@@ -48,12 +49,13 @@ def _digits(phone: str) -> str:
 class Appointments:
     """Books appointments on a calendar, following the schedule in the document."""
 
-    def __init__(self, schedule: Schedule, calendar: Calendar, zone: ZoneInfo, step: int,
+    def __init__(self, schedule: Schedule, calendar: Calendar, zone: ZoneInfo, step: int, notice: int = 0,
                  now: Callable[[], datetime] | None = None) -> None:
-        """`step`: minutes between possible start times. `now` gives the
-        current time; tests pass a fixed one."""
+        """`step`: minutes between possible start times. `notice`: the fewest
+        minutes ahead a booking can be made, changed or cancelled. `now` gives
+        the current time; tests pass a fixed one."""
         self.schedule, self.calendar, self.zone = schedule, calendar, zone
-        self.step = timedelta(minutes=step)
+        self.step, self.notice = timedelta(minutes=step), timedelta(minutes=notice)
         self._now = now or (lambda: datetime.now(zone))
 
     # ---- what the customer can ask -----------------------------------------
@@ -92,15 +94,31 @@ class Appointments:
 
     def cancel(self, booking_id: str, phone: str) -> Booking:
         """Cancel a booking, given its reference and the phone number it was
-        booked with. No other condition for now: the cancellation policy
-        (notice, fees) is left to the spa."""
+        booked with, if it is at least `notice` away. The rest of the
+        cancellation policy (fees) is left to the spa."""
+        booking = self.check_cancel(booking_id, phone)
+        self.calendar.remove(booking.id)
+        return booking
+
+    def check_cancel(self, booking_id: str, phone: str) -> Booking:
+        """The booking `cancel` would cancel, without cancelling it: raises
+        BookingError if it may not be cancelled. Lets a caller show the
+        booking and ask "are you sure?" first."""
         booking = self.calendar.find(booking_id.strip().upper())
         # The same answer whether the reference or the phone number is wrong,
         # so nobody can find out which bookings exist by guessing.
         if booking is None or _digits(booking.phone) != _digits(phone):
             raise BookingError("No booking matches that reference and phone number.")
-        self.calendar.remove(booking.id)
+        if booking.start - self._now() < self.notice:
+            minutes = int(self.notice.total_seconds() // 60)
+            raise BookingError(f"That appointment is less than {minutes} minutes away, so it can't be changed "
+                               "or cancelled here. Please call the spa.")
         return booking
+
+    def upcoming(self, phone: str, days: int = 60) -> list[Booking]:
+        """The bookings made with this phone number in the next `days` days, earliest first."""
+        now = self._now()
+        return [b for b in self.calendar.bookings(now, now + timedelta(days=days)) if _digits(b.phone) == _digits(phone)]
 
     # ---- for the owner only ------------------------------------------------
 
@@ -154,10 +172,10 @@ class Appointments:
             return []
         opens, closes = (datetime.combine(day, t, self.zone) for t in hours)
         busy = self.calendar.busy(person.name, opens, closes) + self._teaching(person, day)
-        now, slots, start = self._now(), [], opens
+        earliest, slots, start = self._now() + self.notice, [], opens
         while start + length <= closes:
             end = start + length
-            if start > now and all(end <= b_start or start >= b_end for b_start, b_end in busy):
+            if start >= earliest and all(end <= b_start or start >= b_end for b_start, b_end in busy):
                 slots.append(Slot(person.name, start, end))
             start += self.step
         return slots
@@ -176,4 +194,4 @@ def get_appointments() -> Appointments:
     """The booking rules over the current document and the configured calendar."""
     settings = get_settings()
     return Appointments(read_schedule(get_knowledge()), get_calendar(), ZoneInfo(settings.timezone),
-                        settings.slot_minutes)
+                        settings.slot_minutes, settings.min_notice_minutes)

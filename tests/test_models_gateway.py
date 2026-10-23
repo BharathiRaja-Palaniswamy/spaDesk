@@ -14,6 +14,7 @@ import pytest
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
+from langchain_core.tracers.context import collect_runs
 from langchain_openai import ChatOpenAI
 
 from spadesk.models import ModelError, chat, stream
@@ -55,9 +56,7 @@ def models(monkeypatch):
         messages=iter([]), error=anthropic_error(anthropic.RateLimitError, 429)))
 
     def use(main: str, fallback: str = "") -> None:
-        provider, _, model = main.partition(":")
-        monkeypatch.setenv("SPADESK_MODEL_PROVIDER", provider)
-        monkeypatch.setenv("SPADESK_MODEL", model)
+        monkeypatch.setenv("SPADESK_CLAUDE_HIGH", main)
         monkeypatch.setenv("SPADESK_MODEL_FALLBACK", fallback)
     return use
 
@@ -65,15 +64,31 @@ def models(monkeypatch):
 # ---- Choosing a model ----
 
 def test_a_model_is_written_provider_colon_model():
-    assert parse_spec("nebius:Qwen/Qwen3-32B", "anthropic") == ModelSpec("nebius", "Qwen/Qwen3-32B")
-    assert parse_spec("claude-opus-5-5", "anthropic") == ModelSpec("anthropic", "claude-opus-5-5")
+    assert parse_spec("nebius:Qwen/Qwen3-32B") == ModelSpec("nebius", "Qwen/Qwen3-32B")
+    assert parse_spec("claude-opus-5-5") == ModelSpec("anthropic", "claude-opus-5-5")  # a bare name is Claude
 
 
 def test_claude_is_the_default(monkeypatch):
-    for name in ("SPADESK_MODEL_PROVIDER", "SPADESK_MODEL", "SPADESK_MODEL_FALLBACK"):
+    for name in ("SPADESK_MODELS", "SPADESK_CLAUDE_HIGH", "SPADESK_CLAUDE_LOW", "SPADESK_MODEL_FALLBACK"):
         monkeypatch.delenv(name, raising=False)
     profile = get_profile("chat-default")
     assert str(profile.primary) == "anthropic:claude-opus-5-5" and profile.fallback is None
+    assert str(get_profile("cheap-router").primary) == "anthropic:claude-haiku-4-5-20251001"
+
+
+def test_one_setting_moves_every_job_to_the_open_set_each_keeping_its_tier(monkeypatch):
+    for name in ("SPADESK_OPENSOURCE_HIGH", "SPADESK_OPENSOURCE_LOW"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("SPADESK_MODELS", "opensource")
+    high = "nebius:Qwen/Qwen3-235B-A22B-Instruct-2507"
+    assert str(get_profile("booking-agent").primary) == str(get_profile("chat-default").primary) == high
+    assert str(get_profile("cheap-router").primary) == "nebius:Qwen/Qwen3-30B-A3B-Instruct-2507"
+
+
+def test_an_unknown_model_set_is_named(monkeypatch):
+    monkeypatch.setenv("SPADESK_MODELS", "gpt")
+    with pytest.raises(ValueError, match="Unknown model set"):
+        get_profile("chat-default")
 
 
 def test_one_profile_can_be_moved_to_another_provider(monkeypatch):
@@ -83,8 +98,7 @@ def test_one_profile_can_be_moved_to_another_provider(monkeypatch):
 
 
 def test_the_judge_stays_on_claude_whatever_the_app_uses(monkeypatch):
-    monkeypatch.setenv("SPADESK_MODEL_PROVIDER", "nebius")
-    monkeypatch.setenv("SPADESK_MODEL", "Qwen/Qwen3-32B")
+    monkeypatch.setenv("SPADESK_MODELS", "opensource")
     assert get_profile("judge").primary.provider == "anthropic"
 
 
@@ -166,3 +180,19 @@ def test_a_bug_is_not_hidden_behind_the_fallback(models, monkeypatch):
     models("broken:any", fallback="good:small-model")
     with pytest.raises(KeyError):
         chat("chat-default", "hi")
+
+
+# ---- Labels for LangSmith ----
+
+def test_every_call_is_labelled_with_its_job_and_model(models, monkeypatch):
+    # collect_runs records each step as LangSmith would see it, without sending anything.
+    monkeypatch.setenv("SPADESK_CLAUDE_LOW", "good:x")
+    models("busy:y")  # the high tier, not used here
+    with collect_runs() as runs:
+        chat("cheap-router", [("human", "Hi")])
+    [run] = [r for r in runs.traced_runs if r.run_type == "llm"]
+    assert run.name == "cheap-router"
+    assert {"profile:cheap-router", "provider:good", "model:x", "tier:low", "set:claude"} <= set(run.tags)
+    labels = {"profile": "cheap-router", "tier": "low", "model_set": "claude", "provider": "good", "model": "x",
+              "fallback": False}
+    assert labels.items() <= run.extra["metadata"].items()

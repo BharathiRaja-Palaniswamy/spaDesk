@@ -11,10 +11,12 @@ Routes:
   GET  /static/...            CSS and JavaScript for both pages
   GET  /api/spa               spa facts for the customer site, read from the document
   GET  /api/profile           the whole business profile, for both pages
+  GET  /api/powered-by        which provider answers each chat, for the "Powered by" line
   GET  /api/booking/options   what can be booked         (routes in booking/routes.py)
   GET  /api/booking/free      the free times for a service on a day
   POST /api/bookings          book one of them
-  POST /api/chat              the customer assistant      (route in assistant/customer.py)
+  POST /api/assistant         the customer chat: the booking agent (route in agent/routes.py)
+  POST /api/chat              the question-and-answer assistant, kept for the evals (assistant/customer.py)
   GET  /manage                the owner's manage page (routes in reports/routes.py)
   GET  /api/report...         the reports' data       (routes in reports/routes.py)
 """
@@ -25,11 +27,14 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from .agent.routes import router as booking_agent
 from .assistant.customer import router as customer_chat
 from .booking.routes import router as booking
 from .business.profile import build_profile
 from .business.store import get_knowledge
 from .config import HOURS_BLOCK
+from .models.profiles import get_profile
+from .models.providers import NAMES
 from .reports.routes import page_router as manage_page, router as report_router
 
 STATIC = Path(__file__).parent / "static"
@@ -37,8 +42,9 @@ app = FastAPI(title="spaDesk")
 # The manage page brings its own routes (see reports/routes.py).
 app.include_router(report_router)
 app.include_router(manage_page)
-# So do the customer site's chat (see assistant/customer.py) and booking (booking/routes.py).
+# So do the customer site's chats (agent/routes.py, assistant/customer.py) and booking (booking/routes.py).
 app.include_router(customer_chat)
+app.include_router(booking_agent)
 app.include_router(booking)
 
 
@@ -55,6 +61,16 @@ def profile():
     """The whole business document, section by section: the manage page's
     profile tab and the customer site's sections both draw from it."""
     return build_profile(get_knowledge())
+
+
+@app.get("/api/powered-by")
+def powered_by():
+    """The provider behind each chat, as people know it ("Claude", "Nebius"),
+    read from the settings now, so it follows SPADESK_MODELS."""
+    def name(profile: str) -> str:
+        provider = get_profile(profile).primary.provider
+        return NAMES.get(provider, provider)
+    return {"customer": name("booking-agent"), "owner": name("chat-default")}
 
 
 @app.get("/")

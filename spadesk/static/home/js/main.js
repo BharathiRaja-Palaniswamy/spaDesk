@@ -1,12 +1,14 @@
 /**
  * @file Starts the customer site: loads the spa's facts and the whole
  * business document, fills the page, wires up the booking pop-up, the
- * chat panel and the "Ask Pebby!" bubble, and starts the chat.
+ * chat panel and the "Ask Pebby!" bubble, starts the chat, and says which
+ * provider powers it.
  */
 
 import { initBooking, loadBookingOptions } from "./booking.js";
 import { initChat } from "./chat/chat.js";
 import { initChatNudge } from "./chat/nudge.js";
+import { showPoweredBy } from "./chat/powered.js";
 import { initChatWindow } from "./chat/window.js";
 import { loadProfile, renderSections } from "./sections/sections.js";
 import { loadSpa, renderSpa } from "./spa.js";
@@ -19,3 +21,4 @@ initBooking(bookable);
 initChatWindow();
 initChatNudge();
 initChat(spa.name);
+showPoweredBy();

@@ -98,7 +98,9 @@ files, so after changing `.env`, stop the server and start it again.
 | Name | Default | Meaning |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | none | Your API key. Required for the dashboard assistant. |
-| `SPADESK_MODEL` | `claude-opus-5-5` | Which Claude model the assistant uses. |
+| `SPADESK_MODELS` | `claude` | Which models the app uses: `claude` or `opensource` (Nebius). Each set has a high-end model (chats, booking agent) and a low-end one (quick jobs). The evals always use `opensource`; the judge stays on Claude. |
+| `SPADESK_CLAUDE_HIGH`, `SPADESK_CLAUDE_LOW` | Claude Opus 5.5, Claude Haiku 4.5 | The two models of the `claude` set, as `provider:model`. |
+| `SPADESK_OPENSOURCE_HIGH`, `SPADESK_OPENSOURCE_LOW` | Qwen3 235B, Qwen3 30B (Nebius) | The two models of the `opensource` set. Needs `NEBIUS_API_KEY`. |
 | `LANGSMITH_TRACING` | off | Set to `true` to record each assistant question in LangSmith. |
 | `LANGSMITH_API_KEY` | none | Your LangSmith key. Needed only when tracing is on. |
 | `LANGSMITH_PROJECT` | `default` | The LangSmith project the traces are filed under, e.g. `spadesk`. |
@@ -116,6 +118,8 @@ files, so after changing `.env`, stop the server and start it again.
 | `GOOGLE_SERVICE_ACCOUNT` | none | Booking with `google`: the service account's key file, as a path or its JSON text. |
 | `SPADESK_CALENDAR_OWNER` | none | Booking with `google`: a Google account the calendars are shared with, to see the bookings. Optional. |
 | `SPADESK_SLOT_MINUTES` | `30` | Booking: appointments start every this many minutes from opening. |
+| `SPADESK_MIN_NOTICE_MINUTES` | `30` | Booking: the fewest minutes ahead a customer can book, change or cancel. |
+| `SPADESK_HANDOFFS` | `storage/handoffs.jsonl` | The chat: where customers handed to the staff are written down, with why. |
 
 ## If something goes wrong
 

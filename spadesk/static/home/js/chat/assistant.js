@@ -1,30 +1,36 @@
 /**
- * @file The chat's connection to the model. `askAssistant` sends the question
- * to the server route POST /api/chat (see spadesk/assistant/customer.py),
- * which calls the model and returns its reply as structured data.
+ * @file The chat's connection to Pebby, the booking agent. `askAssistant`
+ * sends the customer's message to POST /api/assistant (see
+ * spadesk/agent/routes.py), which runs one turn of the conversation on the
+ * server and returns Pebby's reply.
+ *
+ * Every message carries this chat's thread id, made up when the page opens:
+ * the server keeps the conversation under it, which is how Pebby remembers
+ * the customer's name, what was said, and a booking waiting for their yes.
+ * A new page is a new conversation.
  *
  * The model is called from the server, never from this file: anything in the
  * browser is visible to every visitor, including an API key.
  */
 
+const THREAD = crypto.randomUUID();
+
 /**
- * Answers one question.
+ * Sends one message and returns Pebby's reply.
  *
- * @param {string} question what the visitor typed
- * @returns {Promise<{answer: string, items: {name: string, detail: string}[], covered: boolean,
- *   sections: string[], suggestions: string[], rag: boolean, chunks: number}>}
- *   `answer` is the text to show; `items` holds the entries when the answer
- *   is a list (empty otherwise); `covered` is false when the profile does not
- *   contain the answer; `sections` names the parts of the profile it came
- *   from; `suggestions` holds follow-up questions; `rag` and `chunks` say how
- *   the answer was produced
+ * @param {string} message what the customer typed or tapped
+ * @returns {Promise<{answer: string, items: {name: string, detail: string}[], suggestions: string[],
+ *   confirming: boolean}>}
+ *   `answer` is the text to show; `items` holds the entries when the answer is
+ *   a list (empty otherwise); `suggestions` holds replies the customer can tap;
+ *   `confirming` is true when Pebby is asking them to confirm a booking or
+ *   cancellation, and the suggestions are then its yes and no
  */
-export async function askAssistant(question) {
-  const response = await fetch("/api/chat", {
+export async function askAssistant(message) {
+  const response = await fetch("/api/assistant", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    // The server answers from the chunks retrieved for the question (RAG).
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ thread: THREAD, message }),
   });
   const body = await response.json();
   // On an error the server sends { detail } and no reply; throwing makes the

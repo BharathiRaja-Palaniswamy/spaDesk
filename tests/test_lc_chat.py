@@ -100,6 +100,6 @@ class Unreachable(GenericFakeChatModel):
 def test_the_route_reports_when_the_model_is_unavailable(monkeypatch):
     monkeypatch.setitem(providers.PROVIDERS, "down", lambda model: Unreachable(messages=iter([])))
     monkeypatch.setitem(providers.STRUCTURED, "down", "native")
-    monkeypatch.setenv("SPADESK_MODEL_PROVIDER", "down")
+    monkeypatch.setenv("SPADESK_CLAUDE_HIGH", "down:any")
     reply = TestClient(app).post("/api/chat", json={"question": "Are you open today?"})
     assert reply.status_code == 503 and "unavailable" in reply.json()["detail"]

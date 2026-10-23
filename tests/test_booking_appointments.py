@@ -1,8 +1,9 @@
 """Tests for the booking rules (spadesk/booking/appointments.py), on the real
 document's schedule, an in-memory calendar and a fixed clock.
 
-"Now" is Thursday 22 October 2026, 2:10 PM at the spa. Priya works Fridays
-(the 23rd); Maya teaches Prenatal Yoga at 10:00 on Wednesdays (the 28th).
+"Now" is Thursday 22 October 2026, 2:10 PM at the spa, and a booking needs
+30 minutes' notice. Priya works Fridays (the 23rd); Maya teaches Prenatal
+Yoga at 10:00 on Wednesdays (the 28th).
 
 Run with:  .venv/bin/python -m pytest tests/test_booking_appointments.py
 """
@@ -23,9 +24,24 @@ NOW = datetime(2026, 10, 22, 14, 10, tzinfo=SPA)
 THURSDAY, FRIDAY, MONDAY, WEDNESDAY = date(2026, 10, 22), date(2026, 10, 23), date(2026, 10, 26), date(2026, 10, 28)
 
 
+class Clock:
+    """A clock the test can move forward."""
+
+    def __init__(self, now):
+        self.now = now
+
+    def __call__(self):
+        return self.now
+
+
 @pytest.fixture
-def desk():
-    return Appointments(read_schedule(get_knowledge()), MemoryCalendar(), SPA, 30, now=lambda: NOW)
+def clock():
+    return Clock(NOW)
+
+
+@pytest.fixture
+def desk(clock):
+    return Appointments(read_schedule(get_knowledge()), MemoryCalendar(), SPA, 30, notice=30, now=clock)
 
 
 def times(slots):
@@ -47,8 +63,16 @@ def test_nobody_is_offered_on_a_day_they_do_not_work(desk):
     assert desk.free_slots("Prenatal Massage", MONDAY) == []
 
 
-def test_times_already_past_are_not_offered(desk):
-    assert times(desk.free_slots("Swedish Massage", THURSDAY))[0] == "14:30"
+def test_times_less_than_30_minutes_ahead_are_not_offered(desk):
+    # At 14:10, 14:30 is only 20 minutes away; 15:00 is the first with 30 minutes' notice.
+    assert times(desk.free_slots("Swedish Massage", THURSDAY))[0] == "15:00"
+
+
+def test_a_time_exactly_30_minutes_ahead_can_be_booked(desk, clock):
+    clock.now = at(THURSDAY, "14:30")
+    assert desk.book("Swedish Massage", "Daniel Ruiz", at(THURSDAY, "15:00"), "Asha", "408 555 0101")
+    with pytest.raises(BookingError, match="not free"):
+        desk.book("Swedish Massage", "Daniel Ruiz", at(THURSDAY, "14:30"), "Ben", "408 555 0102")
 
 
 def test_an_instructor_is_not_free_while_teaching(desk):
@@ -89,6 +113,15 @@ def test_cancelling_needs_the_phone_number_it_was_booked_with(desk):
     # Written another way, the same number matches; the time is then free again.
     assert desk.cancel(booking.id.lower(), "408-555-0101") == booking
     assert "10:00" in times(desk.free_slots("Prenatal Massage", FRIDAY))
+
+
+def test_a_booking_less_than_30_minutes_away_cannot_be_cancelled(desk, clock):
+    booking = desk.book("Prenatal Massage", "Priya Nair", at(FRIDAY, "10:00"), "Asha", "(408) 555-0101")
+    clock.now = at(FRIDAY, "09:40")
+    with pytest.raises(BookingError, match="less than 30 minutes away"):
+        desk.cancel(booking.id, "4085550101")
+    clock.now = at(FRIDAY, "09:30")  # exactly 30 minutes ahead is still allowed
+    assert desk.cancel(booking.id, "4085550101") == booking
 
 
 def test_the_owner_sees_the_days_bookings_for_one_therapist_or_all(desk):

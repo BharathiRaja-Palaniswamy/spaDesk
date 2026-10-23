@@ -35,10 +35,10 @@ log = logging.getLogger("spadesk.booking")
 UNAVAILABLE = "Booking is unavailable right now. Please call the spa to book or cancel."
 
 
-def _guarded(run: Callable[[dict[str, Any]], Any]) -> Callable[[dict[str, Any]], Any]:
+def guarded(run: Callable[[dict[str, Any]], Any]) -> Callable[[dict[str, Any]], Any]:
     """`run`, with a broken booking rule, or a calendar that cannot be
     reached, returned as {"error": ...} instead of raised."""
-    def guarded(args: dict[str, Any]) -> Any:
+    def wrapped(args: dict[str, Any]) -> Any:
         try:
             return run(args)
         except BookingError as error:
@@ -48,7 +48,7 @@ def _guarded(run: Callable[[dict[str, Any]], Any]) -> Callable[[dict[str, Any]],
             return {"error": UNAVAILABLE}
         except ValueError:  # a date or time the model wrote in the wrong format
             return {"error": "Dates are YYYY-MM-DD and times YYYY-MM-DDTHH:MM, in the spa's time zone."}
-    return guarded
+    return wrapped
 
 
 def _when(moment: datetime) -> str:
@@ -56,7 +56,7 @@ def _when(moment: datetime) -> str:
     return moment.strftime("%Y-%m-%dT%H:%M")
 
 
-def _confirmation(booking: Booking) -> dict[str, Any]:
+def confirmation(booking: Booking) -> dict[str, Any]:
     """What the customer is told about their own booking."""
     return {"reference": booking.id, "service": booking.service, "therapist": booking.therapist,
             "start": _when(booking.start), "end": _when(booking.end), "name": booking.name}
@@ -77,18 +77,18 @@ def book_appointment(args: dict[str, Any]) -> dict[str, Any]:
     """Book one free time."""
     booking = get_appointments().book(args["service"], args["therapist"], datetime.fromisoformat(args["start"]),
                                       args["name"], args["phone"], args.get("minutes"))
-    return {"booked": _confirmation(booking)}
+    return {"booked": confirmation(booking)}
 
 
 def cancel_booking(args: dict[str, Any]) -> dict[str, Any]:
     """Cancel a booking, given its reference and phone number."""
-    return {"cancelled": _confirmation(get_appointments().cancel(args["reference"], args["phone"]))}
+    return {"cancelled": confirmation(get_appointments().cancel(args["reference"], args["phone"]))}
 
 
 def day_schedule(args: dict[str, Any]) -> dict[str, Any]:
     """The day's bookings, with the customers' details."""
     bookings = get_appointments().day_bookings(date.fromisoformat(args["date"]), args.get("therapist"))
-    return {"date": args["date"], "bookings": [{**_confirmation(b), "phone": b.phone} for b in bookings]}
+    return {"date": args["date"], "bookings": [{**confirmation(b), "phone": b.phone} for b in bookings]}
 
 
 def booking_tools(owner: bool = False) -> list[Tool]:
@@ -106,7 +106,7 @@ def booking_tools(owner: bool = False) -> list[Tool]:
              {"type": "object", "properties": {"service": services, "date": day, "therapist": therapists,
                                                "minutes": minutes},
               "required": ["service", "date"]},
-             _guarded(find_free_times)),
+             guarded(find_free_times)),
         Tool("book_appointment",
              "Books a free time found with find_free_times. Only call this after the customer has seen "
              "the service, therapist, day and time, and has said yes, and has given a name and a phone "
@@ -116,18 +116,18 @@ def booking_tools(owner: bool = False) -> list[Tool]:
                  "start": {"type": "string", "description": "The start, YYYY-MM-DDTHH:MM, as find_free_times gave it."},
                  "name": {"type": "string"}, "phone": {"type": "string"}},
               "required": ["service", "therapist", "start", "name", "phone"]},
-             _guarded(book_appointment)),
+             guarded(book_appointment)),
         Tool("cancel_booking",
              "Cancels a booking. Needs its reference (e.g. BK-7F3A2C) and the phone number it "
              "was booked with. Only call this after the customer has said they want to cancel.",
              {"type": "object", "properties": {"reference": {"type": "string"}, "phone": {"type": "string"}},
               "required": ["reference", "phone"]},
-             _guarded(cancel_booking)),
+             guarded(cancel_booking)),
     ]
     if owner:
         tools.append(Tool(
             "day_schedule",
             "Every booking on one day, with the customers' names and phone numbers; one therapist's or everyone's.",
             {"type": "object", "properties": {"date": day, "therapist": therapists}, "required": ["date"]},
-            _guarded(day_schedule)))
+            guarded(day_schedule)))
     return tools

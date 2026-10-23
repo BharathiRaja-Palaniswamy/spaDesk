@@ -53,6 +53,12 @@ PROVIDERS: dict[str, Callable[[str], BaseChatModel]] = {
     "nebius": _nebius,
 }
 
+# Provider -> the name shown to people ("Powered by Claude" under each chat).
+NAMES: dict[str, str] = {
+    "anthropic": "Claude",
+    "nebius": "Nebius",
+}
+
 # Provider -> how it is asked for a reply in a fixed shape (see structured.py).
 # A provider missing here uses "answer-tool", which any model with tool calling supports.
 STRUCTURED: dict[str, str] = {

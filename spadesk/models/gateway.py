@@ -13,6 +13,13 @@ gateway:
      profile has a fallback, tries that model instead
   5. records what the call used (usage.py)
 
+Every call is labelled for LangSmith (when tracing is on), so a trace shows,
+and can be filtered by, which job made it and with which model: tags such as
+"profile:booking-agent" and "provider:nebius", and metadata with the profile,
+tier, model set, provider, model and whether it was the fallback. The
+provider here is the app's own name for it: an open model reached through
+the OpenAI-compatible client shows as "nebius", not "openai".
+
 Messages are LangChain messages, or (role, text) pairs such as
 ("system", "...") and ("human", "..."), the same for every provider.
 """
@@ -24,6 +31,7 @@ from typing import TypeVar
 
 from langchain_core.language_models import LanguageModelInput
 from langchain_core.messages import AIMessage, AIMessageChunk
+from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel
 
 from . import structured as shapes
@@ -61,6 +69,17 @@ def _candidates(profile: Profile) -> list[tuple[ModelSpec, bool]]:
     return [(profile.primary, False)] + ([(profile.fallback, True)] if profile.fallback else [])
 
 
+def trace_labels(profile: Profile, spec: ModelSpec, is_fallback: bool) -> RunnableConfig:
+    """How one model call is named and labelled in LangSmith."""
+    tags = [f"profile:{profile.name}", f"provider:{spec.provider}", f"model:{spec.model}"]
+    tags += [f"tier:{profile.tier}"] if profile.tier else []
+    tags += [f"set:{profile.model_set}"] if profile.model_set else []
+    tags += ["fallback"] if is_fallback else []
+    return {"run_name": profile.name, "tags": tags, "metadata": {
+        "profile": profile.name, "tier": profile.tier, "model_set": profile.model_set,
+        "provider": spec.provider, "model": spec.model, "fallback": is_fallback}}
+
+
 def _model_error(error: Exception, spec: ModelSpec) -> ModelError:
     """`error` as a ModelError; anything that is not a provider error is raised as it is."""
     if isinstance(error, ModelError):
@@ -70,15 +89,17 @@ def _model_error(error: Exception, spec: ModelSpec) -> ModelError:
     return normalized
 
 
-def _first_that_works(profile: str, attempt: Callable[[ModelSpec], tuple[AIMessage, Result]]) -> tuple[Result, Usage]:
+def _first_that_works(profile: str, attempt: Callable[[ModelSpec, RunnableConfig], tuple[AIMessage, Result]]
+                      ) -> tuple[Result, Usage]:
     """Run `attempt` with the profile's model, then with its fallback if the
-    first failed. Returns what `attempt` made of the answer, and the usage of
-    the call that worked. Raises the last ModelError when every model failed."""
-    failure = None
-    for spec, is_fallback in _candidates(get_profile(profile)):
+    first failed. `attempt` is given the model and its LangSmith labels.
+    Returns what `attempt` made of the answer, and the usage of the call that
+    worked. Raises the last ModelError when every model failed."""
+    failure, chosen = None, get_profile(profile)
+    for spec, is_fallback in _candidates(chosen):
         started = time.perf_counter()
         try:
-            message, result = attempt(spec)
+            message, result = attempt(spec, trace_labels(chosen, spec, is_fallback))
         except Exception as error:
             failure = _model_error(error, spec)
             continue
@@ -90,8 +111,8 @@ def _first_that_works(profile: str, attempt: Callable[[ModelSpec], tuple[AIMessa
 
 def chat(profile: str, messages: LanguageModelInput) -> Reply:
     """Send `messages` to the profile's model, and return its answer as text."""
-    def attempt(spec: ModelSpec) -> tuple[AIMessage, AIMessage]:
-        message = build(spec).invoke(messages)
+    def attempt(spec: ModelSpec, labels: RunnableConfig) -> tuple[AIMessage, AIMessage]:
+        message = build(spec).invoke(messages, config=labels)
         return message, message
 
     message, usage = _first_that_works(profile, attempt)
@@ -107,9 +128,9 @@ def structured(profile: str, messages: LanguageModelInput, shape: type[BaseModel
     model is tried."""
     offered = tools or []
 
-    def attempt(spec: ModelSpec) -> tuple[AIMessage, tuple[BaseModel | None, list[dict], AIMessage]]:
+    def attempt(spec: ModelSpec, labels: RunnableConfig) -> tuple[AIMessage, tuple[BaseModel | None, list[dict], AIMessage]]:
         method = STRUCTURED.get(spec.provider, "answer-tool")
-        message = shapes.prepare(build(spec), method, shape, offered).invoke(messages)
+        message = shapes.prepare(build(spec), method, shape, offered).invoke(messages, config=labels)
         reply, requests = shapes.read(message, method, shape, str(spec))
         return message, (reply, requests, message)
 
@@ -126,7 +147,7 @@ def stream(profile: str, messages: LanguageModelInput) -> Iterator[str]:
     for spec, is_fallback in _candidates(chosen):
         started, whole, sent = time.perf_counter(), None, False
         try:
-            for chunk in build(spec).stream(messages):
+            for chunk in build(spec).stream(messages, config=trace_labels(chosen, spec, is_fallback)):
                 whole = chunk if whole is None else whole + chunk  # chunks add up to the whole message
                 if chunk.text:
                     sent = True

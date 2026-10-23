@@ -1,9 +1,9 @@
 """A stand-in model provider for tests that go through the model gateway.
 
 `use_standin(monkeypatch, replies)` registers a provider called "standin" and
-makes it the main model, so any code that asks the gateway for a model gets
-one that plays back `replies` in order, records the messages it was sent, and
-never calls a real API.
+makes it both models of the Claude set, high and low, so any code that asks
+the gateway for a model gets one that plays back `replies` in order, records
+the messages it was sent, and never calls a real API.
 """
 
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
@@ -20,7 +20,7 @@ class StandIn(GenericFakeChatModel):
 
 
 def use_standin(monkeypatch, replies: list[AIMessage], method: str = "native") -> list:
-    """Make the gateway's main model a stand-in that answers with `replies`.
+    """Make the gateway's models a stand-in that answers with `replies`.
     `method` is how it gives fixed-shape replies ("native" like Claude, or
     "answer-tool" like an open model). Returns the list each call's messages
     are added to."""
@@ -36,6 +36,6 @@ def use_standin(monkeypatch, replies: list[AIMessage], method: str = "native") -
 
     monkeypatch.setitem(providers.PROVIDERS, "standin", lambda model: Recording(messages=queue))
     monkeypatch.setitem(providers.STRUCTURED, "standin", method)
-    monkeypatch.setenv("SPADESK_MODEL_PROVIDER", "standin")
-    monkeypatch.setenv("SPADESK_MODEL", "any")
+    monkeypatch.setenv("SPADESK_CLAUDE_HIGH", "standin:any")
+    monkeypatch.setenv("SPADESK_CLAUDE_LOW", "standin:any")
     return sent

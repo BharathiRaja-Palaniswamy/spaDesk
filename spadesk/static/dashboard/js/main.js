@@ -13,6 +13,7 @@
  */
 
 import { getOptions, getReport } from "./api.js";
+import { showPoweredBy } from "./chat/powered.js";
 import { initChat } from "./chat/widget.js";
 import { $ } from "./dom.js";
 import { initFilters } from "./filters.js";
@@ -140,5 +141,6 @@ initTabs((name) => {
 });
 
 initChat();
+showPoweredBy();
 
 start();

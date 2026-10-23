@@ -1,4 +1,8 @@
-"""The call to the model, shared by both assistants.
+"""The call to the model, shared by both assistants of the hand-built pipeline.
+
+That pipeline is kept as the reference, and calls the Anthropic library
+directly, so it always uses Claude: the high model of the "claude" set
+(SPADESK_CLAUDE_HIGH), whatever set the rest of the app uses.
 
 It is its own function so it shows up as one step of the trace (see
 spadesk/tracing.py): `ls_provider` and `ls_model_name` tell LangSmith which
@@ -12,11 +16,23 @@ from langsmith import traceable
 from pydantic import BaseModel
 
 from ..config import get_settings
+from ..models.profiles import parse_spec
 from ..tracing import model_messages, model_reply
 
 
+def claude_model() -> str:
+    """The Claude model this pipeline uses, e.g. "claude-opus-5-5"."""
+    return parse_spec(get_settings().model_sets["claude"]["high"]).model
+
+
+# Labelled like the gateway's calls (spadesk/models/gateway.py), so both
+# pipelines can be filtered the same way in LangSmith.
 @traceable(run_type="llm", process_inputs=model_messages, process_outputs=model_reply,
-           metadata={"ls_provider": "anthropic", "ls_model_name": get_settings().model})
+           tags=["profile:chat-default", "provider:anthropic", f"model:{claude_model()}", "tier:high", "set:claude",
+                 "engine:handbuilt"],
+           metadata={"ls_provider": "anthropic", "ls_model_name": claude_model(), "profile": "chat-default",
+                     "tier": "high", "model_set": "claude", "provider": "anthropic", "model": claude_model(),
+                     "fallback": False})
 def ask_model(system: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]],
               output_format: type[BaseModel]) -> Any:
     """Send the conversation so far to the model and return the SDK's response.
@@ -26,7 +42,7 @@ def ask_model(system: str, messages: list[dict[str, Any]], tools: list[dict[str,
     # pydantic class, the model must reply with JSON matching it, and the
     # SDK turns that JSON into an instance of the class (`parsed_output`).
     return anthropic.Anthropic().messages.parse(
-        model=get_settings().model,
+        model=claude_model(),
         max_tokens=16000,
         system=system,
         messages=messages,

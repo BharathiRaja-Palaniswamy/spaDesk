@@ -83,3 +83,10 @@ def test_api():
     assert {"name": "Lip Wax", "category": "Hair Removal", "description": "", "duration": "45 minutes", "price": "$18"} in spa["services"]
 
     assert client.get("/api/profile").json()["name"] == "Pebble Spa"
+
+
+def test_the_powered_by_line_follows_the_model_set(monkeypatch):
+    client = TestClient(app_module.app)
+    assert client.get("/api/powered-by").json() == {"customer": "Claude", "owner": "Claude"}
+    monkeypatch.setenv("SPADESK_MODELS", "opensource")
+    assert client.get("/api/powered-by").json() == {"customer": "Nebius", "owner": "Nebius"}

@@ -400,6 +400,7 @@ Yes. There is a free parking lot behind the building, including accessible space
 - Appointments may be booked online, by phone, or in person.
 - A valid phone number and name are required to reserve an appointment.
 - Some premium or package bookings may require a card on file.
+- Appointments can be booked, changed or cancelled online up to 30 minutes before they start. Within 30 minutes, please call the spa.
 
 ### Cancellation Policy
 - Cancellations or rescheduling requests should be made at least 24 hours in advance.

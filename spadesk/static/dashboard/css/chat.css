@@ -85,6 +85,8 @@
 .chat-sources { align-self: flex-start; margin-top: -4px; font-size: 11px; color: var(--text-muted); }
 
 .chat-form { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--hairline); }
+/* "Powered by Claude": which provider answers, small and quiet under the input. */
+.chat-powered { margin: -4px 0 0; padding: 0 12px 10px; font-size: 11px; color: var(--text-muted); }
 .chat-form input {
   flex: 1;
   min-width: 0;

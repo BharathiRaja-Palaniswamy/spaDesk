@@ -26,6 +26,13 @@ CSS and JavaScript in the browser, no build step.
   (who offers what, on which days, opening hours, classes taught) and the
   therapists' calendars (in memory, or Google Calendar: see
   [docs/google-calendar.md](docs/google-calendar.md)).
+- **Pebby, the chat**: a booking agent (`spadesk/agent/`, a LangGraph graph
+  with memory per conversation). It asks for the customer's name and phone
+  first, answers from the guide, finds free times, and books or cancels, but
+  only after the customer says yes to exactly what will happen. When it
+  cannot help (a complaint, a person asked for, a class or package, repeated
+  failures) it hands the customer to the staff: the request is written to
+  `storage/handoffs.jsonl`.
 
 ### Manage page (`/manage`)
 
@@ -82,11 +89,14 @@ duration and price per category, packages, offers, add-ons, FAQs and policies.
   LangGraph graph (`spadesk/lc/owner/`). The hand-built pipeline (`spadesk/rag/`,
   `assistant/model.py`) is kept as the reference; `SPADESK_RAG_ENGINE=handbuilt`
   switches to it.
-- **Model gateway**: every model call of the LangChain pipeline and the evals
-  goes through `spadesk/models/`, which maps a job ("chat-default", "judge")
-  to a model by settings: Claude by default, or an open model hosted by
-  Nebius, with an optional fallback model, and logs the tokens and time of
-  each call.
+- **Model gateway**: every model call of the LangChain pipeline, the agent and
+  the evals goes through `spadesk/models/`. One setting, `SPADESK_MODELS`,
+  picks a set of models: `claude` (Opus and Haiku) or `opensource` (two Qwen3
+  models hosted by Nebius). Each job asks for a tier, high-end for the chats
+  and the booking agent, low-end for quick jobs, so switching sets keeps a
+  model of the right size for each. The evals always answer with
+  `opensource` (if open models do well, Claude should too); their judge stays
+  on Claude. The gateway also logs the tokens and time of each call.
 
 How the project got here, stage by stage, and what each stage taught us:
 [docs/evolution.md](docs/evolution.md).
@@ -118,6 +128,7 @@ settings with the key left blank.
 | File | What it is | Read by |
 |---|---|---|
 | `data/business_doc.md` | What the business is: name, services, prices, hours, policies, FAQs, offers | Customer site, business profile tab, assistant, and the reports (for service names, categories and prices) |
+| `storage/handoffs.jsonl` | Customers the chat handed to the staff, with why (created on first use) | The staff |
 | `data/spadesk_bookings.json` | What happened: one year of mock bookings, the customers who made them, and the channels they came through | Reports |
 
 Each fact is stored once. The bookings file holds no business details: a
@@ -218,8 +229,15 @@ spadesk/
     prompt.py                  the system prompt both assistants share (profile rules, time, profile)
     model.py                   the traced model call
     replies.py                 the question body and one reply list entry
-    customer.py                the customer assistant: /api/chat, profile only, no tools
+    customer.py                the question-and-answer assistant: /api/chat, no tools or memory (kept for the evals)
     engine.py                  which pipeline answers both chats: LangChain (default) or hand-built
+  agent/                       Pebby, the booking agent: /api/assistant
+    identify.py                name and phone first
+    tools.py                   search the guide, find times, book, cancel, list, hand off
+    confirm.py                 the customer's yes before a booking is made or cancelled
+    handoffs.py                passing a conversation to the staff
+    prompt.py                  its instructions and the shape of its replies
+    nodes.py, graph.py         its steps, how they are joined, and its memory
   lc/                          the same pipeline with LangChain; each provider a setting
     owner/                     the owner chat as a LangGraph graph: state, nodes, graph
   models/                      the model gateway: jobs -> models, providers, tools, fixed-shape replies, fallback, usage

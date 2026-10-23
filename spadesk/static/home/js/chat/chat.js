@@ -7,8 +7,8 @@
 
 import { $, el } from "../dom.js";
 import { askAssistant } from "./assistant.js";
-import { showReply, sourceLine, suggestionChips } from "./reply.js";
-import { greeting, STARTER_QUESTIONS } from "./welcome.js";
+import { showReply, suggestionChips } from "./reply.js";
+import { greeting } from "./welcome.js";
 
 /**
  * Wires up the chat that is in index.html and greets the visitor.
@@ -65,9 +65,9 @@ export function initChat(business) {
     try {
       const reply = await askAssistant(question);
       // Each field of the structured reply has its own place: the answer and
-      // list in the bubble, the sources under it, then the follow-up questions.
+      // list in the bubble, then the replies to tap (a yes and a no when
+      // Pebby is asking the customer to confirm a booking).
       showReply(bubble, reply);
-      if (reply.sections.length) messages.append(sourceLine(reply.sections));
       addSuggestions(reply.suggestions);
     } catch {
       bubble.textContent = "Sorry, something went wrong. Please try again.";
@@ -85,5 +85,4 @@ export function initChat(business) {
   });
 
   addMessage("assistant", greeting(business));
-  addSuggestions(STARTER_QUESTIONS);
 }

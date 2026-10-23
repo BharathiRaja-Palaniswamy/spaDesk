@@ -58,9 +58,7 @@ def plays(monkeypatch):
     def use(main: str, replies: dict[str, AIMessage], fallback: str = "") -> None:
         for provider, message in replies.items():
             monkeypatch.setitem(providers.PROVIDERS, provider, lambda model, m=message: StandIn(messages=iter([m])))
-        provider, _, model = main.partition(":")
-        monkeypatch.setenv("SPADESK_MODEL_PROVIDER", provider)
-        monkeypatch.setenv("SPADESK_MODEL", model)
+        monkeypatch.setenv("SPADESK_CLAUDE_HIGH", main)
         monkeypatch.setenv("SPADESK_MODEL_FALLBACK", fallback)
     return use
 

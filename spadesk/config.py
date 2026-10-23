@@ -38,6 +38,14 @@ TEAM_SECTION = "Our Team"
 
 # Environment variables that pick a model for one profile (spadesk/models/profiles.py).
 PROFILE_PREFIX = "SPADESK_PROFILE_"
+# The model sets, each a high-end and a low-end model (see spadesk/models/profiles.py):
+# set name -> (the variables that name its two models, and their defaults).
+MODEL_SETS = {
+    "claude": {"high": ("SPADESK_CLAUDE_HIGH", "anthropic:claude-opus-5-5"),
+               "low": ("SPADESK_CLAUDE_LOW", "anthropic:claude-haiku-4-5-20251001")},
+    "opensource": {"high": ("SPADESK_OPENSOURCE_HIGH", "nebius:Qwen/Qwen3-235B-A22B-Instruct-2507"),
+                   "low": ("SPADESK_OPENSOURCE_LOW", "nebius:Qwen/Qwen3-30B-A3B-Instruct-2507")},
+}
 
 @dataclass(frozen=True)  # frozen: settings cannot be changed after they are loaded
 class Settings:
@@ -45,7 +53,6 @@ class Settings:
 
     data_path: Path  # the business document the customer site reads
     report_data_path: Path  # the bookings JSON the report dashboard reads
-    model: str  # which Claude model the dashboard assistant uses
     timezone: str  # the spa's time zone, used to tell the assistant the current time
     chunk_tokens: int  # RAG: how many tokens each chunk of the document holds
     chunk_overlap: int  # RAG: how many tokens a chunk shares with the one before it
@@ -60,10 +67,13 @@ class Settings:
     rerank_candidates: int  # RAG: how many chunks the first search fetches for the reranker to choose from
     calendar: str  # booking: where bookings are kept: "memory", or "google" (Google Calendar)
     slot_minutes: int  # booking: appointments start on this grid, e.g. every 30 minutes from opening
+    min_notice_minutes: int  # booking: the fewest minutes ahead a booking can be made, changed or cancelled
+    handoffs_path: Path  # the chat: where requests for the staff to call a customer back are appended
     rag_engine: str  # which pipeline answers both chats: "langchain" (lc/) or the reference "handbuilt" (rag/)
     # The model gateway (spadesk/models/). A model is named "provider:model", e.g.
-    # "nebius:Qwen/Qwen3-32B"; a bare model name uses model_provider.
-    model_provider: str  # the provider every profile uses unless it says otherwise ("anthropic")
+    # "nebius:Qwen/Qwen3-235B-A22B-Instruct-2507".
+    model_set: str  # which set of models the app uses: "claude" or "opensource"
+    model_sets: dict[str, dict[str, str]]  # set -> {"high": "provider:model", "low": "provider:model"}
     model_fallback: str  # "provider:model" to try when a profile's own model fails; "" for none
     profile_models: dict[str, str]  # profile -> "provider:model", from SPADESK_PROFILE_<NAME> variables
     nebius_base_url: str  # the address of Nebius's OpenAI-compatible API
@@ -80,7 +90,6 @@ def get_settings() -> Settings:
     return Settings(
         data_path=Path(os.getenv("SPADESK_DATA", ROOT / "data" / "business_doc.md")),
         report_data_path=Path(os.getenv("SPADESK_REPORT_DATA", ROOT / "data" / "spadesk_bookings.json")),
-        model=os.getenv("SPADESK_MODEL", "claude-opus-5-5"),
         timezone=os.getenv("SPADESK_TIMEZONE", "America/Los_Angeles"),
         chunk_tokens=int(os.getenv("SPADESK_CHUNK_TOKENS", "150")),
         chunk_overlap=int(os.getenv("SPADESK_CHUNK_OVERLAP", "30")),
@@ -95,8 +104,12 @@ def get_settings() -> Settings:
         rerank_candidates=int(os.getenv("SPADESK_RERANK_CANDIDATES", "20")),
         calendar=os.getenv("SPADESK_CALENDAR", "memory"),
         slot_minutes=int(os.getenv("SPADESK_SLOT_MINUTES", "30")),
+        min_notice_minutes=int(os.getenv("SPADESK_MIN_NOTICE_MINUTES", "30")),
+        handoffs_path=Path(os.getenv("SPADESK_HANDOFFS", ROOT / "storage" / "handoffs.jsonl")),
         rag_engine=os.getenv("SPADESK_RAG_ENGINE", "langchain"),
-        model_provider=os.getenv("SPADESK_MODEL_PROVIDER", "anthropic"),
+        model_set=os.getenv("SPADESK_MODELS", "claude"),
+        model_sets={name: {tier: os.getenv(variable, default) for tier, (variable, default) in tiers.items()}
+                    for name, tiers in MODEL_SETS.items()},
         model_fallback=os.getenv("SPADESK_MODEL_FALLBACK", ""),
         # SPADESK_PROFILE_CHEAP_ROUTER=nebius:... -> {"cheap-router": "nebius:..."}
         profile_models={name.removeprefix(PROFILE_PREFIX).lower().replace("_", "-"): value

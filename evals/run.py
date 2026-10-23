@@ -17,15 +17,24 @@ retrieval changed.
 
 With LANGSMITH_TRACING=true, every question is also traced to LangSmith, in
 its own project (see observe.py).
+
+The answers always come from the open-source models (SPADESK_MODELS is set
+to "opensource" here, whatever `.env` says), with no fallback, so a score
+always measures them. The reasoning: if the open models answer well, Claude
+can be expected to do as well or better. The judge stays on Claude Opus
+(spadesk/models/profiles.py). The LangChain pipeline is used, since the
+hand-built one calls Claude directly.
 """
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
 from spadesk.app import app
+from spadesk.models.profiles import get_profile
 
 from .observe import ask_case
 from .summary import Result, print_summary
@@ -39,6 +48,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run the evals against the real model.")
     parser.add_argument("--label", default="unlabelled", help='names this run in LangSmith, e.g. "rerank"')
     label = parser.parse_args().label
+    # Settings are read on every call, so setting these here applies to the whole run.
+    os.environ |= {"SPADESK_MODELS": "opensource", "SPADESK_MODEL_FALLBACK": "", "SPADESK_RAG_ENGINE": "langchain"}
+    print(f"Answers: {get_profile('chat-default').primary}    Judge: {get_profile('judge').primary}")
     cases = json.loads(CASES.read_text())
     # Stop before spending anything if a case no longer matches the document or data.
     if stale := stale_cases(cases):
