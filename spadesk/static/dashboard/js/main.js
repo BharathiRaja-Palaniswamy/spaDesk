@@ -15,6 +15,7 @@
 import { getOptions, getReport } from "./api.js";
 import { showPoweredBy } from "./chat/powered.js";
 import { initChat } from "./chat/widget.js";
+import { initVoiceWidget } from "./voice.js";
 import { $ } from "./dom.js";
 import { initFilters } from "./filters.js";
 import { showProfile } from "./profile.js";
@@ -142,5 +143,6 @@ initTabs((name) => {
 
 initChat();
 showPoweredBy();
+initVoiceWidget();
 
 start();

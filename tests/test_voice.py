@@ -27,6 +27,7 @@ from spadesk.booking.calendars.memory import MemoryCalendar
 from spadesk.booking.schedule import read_schedule
 from spadesk.business.store import get_knowledge
 from spadesk.voice.call import read_call
+from spadesk.voice import routes
 from spadesk.voice.routes import FILLER, NO_CALL_ID
 
 SPA = ZoneInfo("America/Los_Angeles")
@@ -95,9 +96,16 @@ def test_once_named_pebby_answers_after_a_filler_using_the_caller_number(client,
         "Thanks Asha! We have Swedish and deep tissue."
     # Pebby was told it is on a phone call, with the caller's number as the phone number.
     assert "phone +1 408 555 0101" in sent[-1][0].content and "phone call" in sent[-1][0].content
-    # Now the caller is known, the next turn starts with a filler while Pebby thinks.
+    # A reply that takes longer than FILLER_AFTER starts with a filler while Pebby thinks.
+    monkeypatch.setattr(routes, "FILLER_AFTER", 0)
     assert spoken(turn(client, "Hi", "...", "Asha", "...", "Which is best for back pain?", stream=True)) == \
         FILLER + "Sure."
+
+
+def test_a_quick_reply_has_no_filler_and_silence_gets_no_reply(client, monkeypatch):
+    use_standin(monkeypatch, [AIMessage(content=Details(name="", phone="", asks=False).model_dump_json())])
+    assert FILLER not in spoken(turn(client, "Hi", stream=True))  # the stand-in answers at once
+    assert spoken(turn(client, "Hi", "May I have your name?", "...", stream=True)) == ""
 
 
 def test_a_request_without_a_call_id_gets_a_spoken_apology(client):
@@ -111,3 +119,11 @@ def test_the_confirmation_is_worded_to_be_spoken(client):
     question, problem = confirm.problem_with(request, "Asha", "+1 408 555 0101", spoken=True)
     assert problem == "" and question == ("Just to confirm: a 60-minute Prenatal Massage with Priya Nair on "
                                           "Friday the 30th of October at 3 PM, for Asha. Shall I book it?")
+
+
+def test_the_voice_widget_shows_only_when_an_agent_is_set(monkeypatch):
+    client = TestClient(app)
+    monkeypatch.setenv("SPADESK_VOICE_AGENT_ID", "")
+    assert client.get("/api/voice-widget").json() == {"agent_id": ""}
+    monkeypatch.setenv("SPADESK_VOICE_AGENT_ID", "agent_abc123")
+    assert client.get("/api/voice-widget").json() == {"agent_id": "agent_abc123"}

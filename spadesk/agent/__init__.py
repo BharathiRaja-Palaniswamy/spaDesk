@@ -38,18 +38,6 @@ class Turn:
     confirming: bool = False  # Pebby asked the customer to confirm a booking or cancellation
 
 
-def _memory(thread: str) -> dict:
-    """What the agent remembers about the conversation `thread` (empty if new)."""
-    return get_graph().get_state({"configurable": {"thread_id": thread}}).values
-
-
-def will_think(thread: str) -> bool:
-    """True when this conversation's next message goes to the model (the
-    customer's details are known), rather than to a quick fixed reply."""
-    memory = _memory(thread)
-    return bool(memory.get("name") and memory.get("phone"))
-
-
 def respond(thread: str, message: str, channel: str = "chat", caller: str = "") -> Turn | None:
     """Run one turn of the conversation `thread` with the customer's `message`.
     `channel` is "chat" or "voice"; `caller` is the number calling, on a phone call.

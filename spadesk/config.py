@@ -82,6 +82,7 @@ class Settings:
     google_service_account: str = field(repr=False)  # booking: the service account's key, as JSON text or a file path
     calendar_owner: str  # booking: a Google account the calendars are shared with, to see them; "" for none
     voice_secret: str = field(repr=False)  # phone line: the secret ElevenLabs sends; "" switches the line off
+    voice_agent_id: str  # the ElevenLabs agent the site's voice widget talks to; "" hides the widget
 
 
 def get_settings() -> Settings:
@@ -121,4 +122,5 @@ def get_settings() -> Settings:
         google_service_account=os.getenv("GOOGLE_SERVICE_ACCOUNT", ""),
         calendar_owner=os.getenv("SPADESK_CALENDAR_OWNER", ""),
         voice_secret=os.getenv("SPADESK_VOICE_SECRET", ""),
+        voice_agent_id=os.getenv("SPADESK_VOICE_AGENT_ID", ""),
     )
