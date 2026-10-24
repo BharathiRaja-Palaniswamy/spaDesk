@@ -11,12 +11,15 @@
     turns.py     one turn at a time per conversation, and undoing replaced turns
     routes.py    POST /api/assistant
 
-`respond` runs one turn: the customer's message in, Pebby's reply out. The
+`respond` runs one turn: the customer's message in, Pebby's reply out.
+`hand_over` is what a route says instead when a turn fails: the request goes
+to the staff (handoffs.py), so the conversation never just stops. The
 same agent answers the website chat and phone calls (spadesk/voice/); the
 channel only changes how replies are phrased, and on a call the caller's
 number stands in for the phone number.
 """
 
+import logging
 from dataclasses import dataclass, field
 
 from langchain_core.messages import HumanMessage
@@ -24,8 +27,11 @@ from langchain_core.messages import HumanMessage
 from ..assistant.replies import MAX_SUGGESTIONS, ReplyItem
 from .confirm import CHOICES
 from .graph import get_graph
+from .handoffs import HANDOVER, record_handoff
 from .prompt import time_note
 from .turns import KEEP, arrive, lock, replaced, take_restore, undo_later
+
+log = logging.getLogger("spadesk.agent")
 
 
 @dataclass(frozen=True)
@@ -36,6 +42,19 @@ class Turn:
     items: list[ReplyItem] = field(default_factory=list)
     suggestions: list[str] = field(default_factory=list)
     confirming: bool = False  # Pebby asked the customer to confirm a booking or cancellation
+
+
+def hand_over(thread: str, reason: str, said: str = "", caller: str = "") -> Turn:
+    """Hand the conversation `thread` to the staff after something went wrong:
+    write down who to call back (the name and number Pebby has, or the number
+    calling) and why, and return what to tell the customer."""
+    try:
+        memory = get_graph().get_state({"configurable": {"thread_id": thread}}).values
+        record_handoff(memory.get("name", ""), memory.get("phone") or caller,
+                       f"{reason} Their last message: {said!r}" if said else reason)
+    except Exception:  # the customer must still hear HANDOVER, whatever failed here
+        log.exception("could not record the handoff for %s", thread)
+    return Turn(HANDOVER)
 
 
 def respond(thread: str, message: str, channel: str = "chat", caller: str = "") -> Turn | None:

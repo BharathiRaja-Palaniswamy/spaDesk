@@ -8,6 +8,7 @@ Run with:  .venv/bin/python -m pytest tests/test_voice.py
 """
 
 import json
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -18,6 +19,7 @@ from standins import use_standin
 
 from spadesk.agent import confirm, tools
 from spadesk.agent.graph import get_graph
+from spadesk.agent.handoffs import HANDOVER
 from spadesk.agent.identify import Details
 from spadesk.agent.prompt import AgentReply
 from spadesk.app import app
@@ -26,9 +28,10 @@ from spadesk.booking.appointments import Appointments
 from spadesk.booking.calendars.memory import MemoryCalendar
 from spadesk.booking.schedule import read_schedule
 from spadesk.business.store import get_knowledge
-from spadesk.voice.call import read_call
+from spadesk.models import ModelError
 from spadesk.voice import routes
-from spadesk.voice.routes import FILLER, NO_CALL_ID
+from spadesk.voice.call import read_call
+from spadesk.voice.routes import FILLER
 
 SPA = ZoneInfo("America/Los_Angeles")
 SECRET = "test-voice-secret"
@@ -108,9 +111,9 @@ def test_a_quick_reply_has_no_filler_and_silence_gets_no_reply(client, monkeypat
     assert spoken(turn(client, "Hi", "May I have your name?", "...", stream=True)) == ""
 
 
-def test_a_request_without_a_call_id_gets_a_spoken_apology(client):
+def test_a_request_without_a_call_id_is_handed_over_not_dropped(client):
     reply = turn(client, "Hi", prompt="You are Pebby.")
-    assert reply.json()["choices"][0]["message"]["content"] == NO_CALL_ID
+    assert reply.json()["choices"][0]["message"]["content"] == HANDOVER
 
 
 def test_the_confirmation_is_worded_to_be_spoken(client):
@@ -127,3 +130,22 @@ def test_the_voice_widget_shows_only_when_an_agent_is_set(monkeypatch):
     assert client.get("/api/voice-widget").json() == {"agent_id": ""}
     monkeypatch.setenv("SPADESK_VOICE_AGENT_ID", "agent_abc123")
     assert client.get("/api/voice-widget").json() == {"agent_id": "agent_abc123"}
+
+
+def test_a_failing_turn_is_handed_over_with_the_callers_number(client, monkeypatch, tmp_path):
+    def broken(*args, **kwargs):
+        raise ModelError("unavailable", "standin", "down")
+    monkeypatch.setattr(routes, "respond", broken)
+    assert spoken(turn(client, "I'd like a massage", stream=True)) == HANDOVER
+    handoff = json.loads((tmp_path / "handoffs.jsonl").read_text())
+    assert handoff["phone"] == "+1 408 555 0101" and "I'd like a massage" in handoff["reason"]
+
+
+def test_a_turn_that_takes_too_long_is_handed_over_before_the_line_drops(client, monkeypatch, tmp_path):
+    def slow(*args, **kwargs):
+        time.sleep(0.5)
+    monkeypatch.setattr(routes, "respond", slow)
+    monkeypatch.setattr(routes, "FILLER_AFTER", 0.05)
+    monkeypatch.setattr(routes, "TURN_LIMIT", 0.2)
+    assert spoken(turn(client, "Book Friday", stream=True)) == FILLER + HANDOVER
+    assert "took too long" in json.loads((tmp_path / "handoffs.jsonl").read_text())["reason"]

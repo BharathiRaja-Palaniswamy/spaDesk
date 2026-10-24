@@ -6,6 +6,10 @@ The browser makes up a thread id when the chat opens and sends it with every
 message; the agent keeps each thread's conversation (graph.py). The id is
 not a secret: it only joins the messages of one chat.
 
+When a turn fails (a model cannot be reached, an unexpected error), the
+customer gets Pebby's handover message, and the staff a handoff to act on
+(agent.hand_over), rather than an error.
+
 (POST /api/chat, the question-and-answer assistant without memory or tools,
 stays for the evals, so their scores remain comparable.)
 """
@@ -19,7 +23,7 @@ from pydantic import BaseModel, Field
 from ..assistant.replies import ReplyItem
 from ..models import ModelError
 from ..rag.errors import ModelUnavailable
-from . import respond
+from . import hand_over, respond
 
 router = APIRouter(prefix="/api")
 log = logging.getLogger("spadesk.agent")
@@ -53,7 +57,10 @@ def assistant(body: Message) -> Reply:
         turn = respond(body.thread, body.message)
     except (ModelError, ModelUnavailable) as error:
         log.warning("assistant unavailable: %s", error)  # the reason, for whoever reads the server log
-        raise HTTPException(status_code=503, detail="The assistant is unavailable right now.")
+        turn = hand_over(body.thread, "The assistant could not be reached.", body.message)
+    except Exception:  # any failure ends in a handover, never an error page
+        log.exception("assistant turn failed")
+        turn = hand_over(body.thread, "The assistant hit an unexpected error.", body.message)
     if turn is None:  # a newer message of the same chat arrived while this one ran
         raise HTTPException(status_code=409, detail="A newer message replaced this one.")
     return Reply(answer=turn.answer, items=turn.items, suggestions=turn.suggestions, confirming=turn.confirming)

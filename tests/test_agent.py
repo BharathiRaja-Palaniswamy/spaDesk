@@ -20,9 +20,9 @@ from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessage, ToolMessage
 from standins import use_standin
 
-from spadesk import agent as agent_package
 from spadesk.agent import confirm, nodes, respond, tools, turns
 from spadesk.agent.graph import get_graph
+from spadesk.agent.handoffs import HANDOVER
 from spadesk.agent.identify import Details
 from spadesk.agent.nodes import MAX_TOOL_ROUNDS
 from spadesk.agent.prompt import AgentReply
@@ -180,7 +180,7 @@ def test_too_many_steps_hands_the_customer_to_the_staff(desk, monkeypatch, tmp_p
     identified(monkeypatch, "thread-stuck")
     looping = [asks("search_guide", {"question": "hours"}, f"call-{n}") for n in range(MAX_TOOL_ROUNDS + 1)]
     chat(monkeypatch, *looping)
-    assert "asked our team to call you on (408) 555-0101" in respond("thread-stuck", "Help me book").answer
+    assert respond("thread-stuck", "Help me book").answer == HANDOVER
     handoff = json.loads((tmp_path / "handoffs.jsonl").read_text())
     assert handoff["name"] == "Asha Rao" and handoff["phone"] == "(408) 555-0101"
 
@@ -195,18 +195,23 @@ def test_the_agent_can_hand_off_when_asked_for_a_person(desk, monkeypatch, tmp_p
 
 # ---- the route --------------------------------------------------------------------------
 
-def test_the_route_runs_a_turn_and_reports_an_unavailable_model(desk, monkeypatch):
+def test_the_route_runs_a_turn_and_hands_over_when_anything_fails(desk, monkeypatch, tmp_path):
     client = TestClient(app)
     chat(monkeypatch, details(asks=True))
     reply = client.post("/api/assistant", json={"thread": "thread-route", "message": "Hi"}).json()
     assert reply == {"answer": "Before we start, may I have your name and phone number?", "items": [],
                      "suggestions": [], "confirming": False}
 
-    def broken(*args, **kwargs):
-        raise ModelError("unavailable", "standin", "down")
-    monkeypatch.setattr(agent_package, "respond", broken)
-    monkeypatch.setattr("spadesk.agent.routes.respond", broken)
-    assert client.post("/api/assistant", json={"thread": "thread-route", "message": "Hi"}).status_code == 503
+    # A model that cannot be reached, or any other failure: never an error, always the handover.
+    for failure in (ModelError("unavailable", "standin", "down"), KeyError("a bug")):
+        def broken(*args, failure=failure, **kwargs):
+            raise failure
+        monkeypatch.setattr("spadesk.agent.routes.respond", broken)
+        reply = client.post("/api/assistant", json={"thread": "thread-route", "message": "Book me in"})
+        assert reply.status_code == 200 and reply.json()["answer"] == HANDOVER
+    # Each failure was written down for the staff, with what the customer asked.
+    handoffs = (tmp_path / "handoffs.jsonl").read_text().splitlines()
+    assert len(handoffs) == 2 and "Book me in" in json.loads(handoffs[0])["reason"]
 
 
 # ---- turns replaced by newer ones (agent/turns.py) ---------------------------------------

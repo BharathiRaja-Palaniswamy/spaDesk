@@ -26,7 +26,7 @@ from langgraph.graph import END
 
 from ..models import run_requests, structured
 from .confirm import is_yes, problem_with
-from .handoffs import record_handoff
+from .handoffs import HANDOVER, record_handoff
 from .identify import ask_for, read_details, valid_phone
 from .prompt import AgentReply, instructions
 from .state import AgentState
@@ -153,7 +153,7 @@ def decide(state: AgentState) -> dict:
 def give_up(state: AgentState) -> dict:
     """Stop, hand the request to the staff, and tell the customer."""
     record_handoff(state["name"], state["phone"], "The assistant could not finish the customer's request.")
-    say = f"I'm sorry, I couldn't finish that here. I've asked our team to call you on {state['phone']}."
+    say = HANDOVER
     # Every request gets a result, so the conversation can carry on next turn.
     stopped = [ToolMessage(json.dumps({"error": "Stopped: too many steps."}), tool_call_id=r["id"])
                for r in state["requests"]]

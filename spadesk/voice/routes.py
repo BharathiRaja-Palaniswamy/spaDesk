@@ -13,8 +13,10 @@ Only ElevenLabs may call this: it sends the shared secret SPADESK_VOICE_SECRET
 as its API key ("Authorization: Bearer <secret>"). Without the setting the
 line is off and every request is refused.
 
-When something fails, the caller hears an apology instead of silence, and
-the reason goes to the server log.
+The call never just ends: when something fails (a model or the search
+cannot be reached, a turn runs past TURN_LIMIT, an unexpected error), the
+caller hears Pebby's handover message and the staff get a handoff to act on
+(agent.hand_over); the reason goes to the server log.
 
 A reply that takes a while (Pebby searching the guide, looking up times) is
 preceded by a short filler, said as soon as the wait passes FILLER_AFTER, so
@@ -33,7 +35,8 @@ from fastapi.responses import StreamingResponse
 from langsmith import get_current_run_tree, traceable
 from pydantic import BaseModel
 
-from ..agent import respond
+from ..agent import hand_over, respond
+from ..agent.handoffs import HANDOVER
 from ..config import get_settings
 from ..models import ModelError
 from ..rag.errors import ModelUnavailable
@@ -45,8 +48,10 @@ log = logging.getLogger("spadesk.voice")
 
 FILLER = "Let me check... "  # said while Pebby thinks; ElevenLabs suggests ending a filler with "... "
 FILLER_AFTER = 1.5  # seconds: a reply ready sooner is said straight away, with no filler
-SORRY = "Sorry, I'm having trouble right now. Please try again in a moment, or call back later."
-NO_CALL_ID = "Sorry, this line isn't set up correctly yet. Please call back later."
+# Seconds a turn may take before the caller is handed over instead. Under ElevenLabs'
+# own wait for a reply (set to 10 s in the agent), so the caller hears the handover
+# rather than the line going dead.
+TURN_LIMIT = 8.0
 # Turns run here, so the reply can be waited for with a time limit while the stream is open.
 _turns = ThreadPoolExecutor(max_workers=8, thread_name_prefix="voice-turn")
 
@@ -79,20 +84,28 @@ def _spoken(answer: str, items: list) -> str:
 def _reply(call_id: str, caller: str, said: str) -> Iterator[str]:
     """Pebby's reply to one turn, in pieces: a filler first when the reply takes a while."""
     if not call_id:
+        # Nothing to remember the call by, so nothing to write down: the log says why.
         log.warning("voice request without a call id: add 'Call ID: {{system__conversation_id}}' to the prompt")
-        yield NO_CALL_ID
+        yield HANDOVER
         return
     if not re.search(r"\w", said):  # no words (ElevenLabs sends "..." for silence): nothing to answer
         return
-    work = _turns.submit(respond, f"call-{call_id}", said, channel="voice", caller=caller)
+    thread = f"call-{call_id}"
+    work = _turns.submit(respond, thread, said, channel="voice", caller=caller)
     if not wait([work], timeout=FILLER_AFTER).done:
         yield FILLER  # the caller hears something while Pebby thinks
+    if not wait([work], timeout=TURN_LIMIT - FILLER_AFTER).done:
+        log.warning("voice turn took longer than %s s", TURN_LIMIT)
+        yield hand_over(thread, "The phone call's turn took too long.", said, caller).answer
+        return
     try:
         turn = work.result()
     except (ModelError, ModelUnavailable) as error:
         log.warning("voice turn failed: %s", error)
-        yield SORRY
-        return
+        turn = hand_over(thread, "The assistant could not be reached on a call.", said, caller)
+    except Exception:  # any failure ends in a handover, never a dropped call
+        log.exception("voice turn failed")
+        turn = hand_over(thread, "The assistant hit an unexpected error on a call.", said, caller)
     if turn is not None:  # None: ElevenLabs sent a newer version of this turn, and nobody hears this one
         yield _spoken(turn.answer, turn.items)
 

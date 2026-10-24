@@ -6,6 +6,10 @@ settle, wants something the tools cannot do (a class, a package, a group),
 or the calendar keeps failing. Each handoff is one line appended to a JSON
 Lines file (SPADESK_HANDOFFS), with who to call back and why, for the staff
 to read and act on.
+
+The conversation never just stops: whenever something goes wrong (a model or
+the search cannot be reached, a turn takes too long, an unexpected error),
+the customer hears HANDOVER and the request is written down here.
 """
 
 import json
@@ -16,6 +20,9 @@ from zoneinfo import ZoneInfo
 from ..config import get_settings
 
 log = logging.getLogger("spadesk.agent")
+
+# What the customer is told whenever their request goes to the staff.
+HANDOVER = "I need to hand this request over to our staff, and they will reach out to you shortly."
 
 
 def record_handoff(name: str, phone: str, reason: str) -> dict:
