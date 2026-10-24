@@ -36,6 +36,14 @@ CSS and JavaScript in the browser, no build step.
 
 ### Manage page (`/manage`)
 
+For the owner only: it opens after signing in at `/login` with the owner's
+password (`SPADESK_OWNER_PASSWORD`). Who may do what is one table in
+`spadesk/access/permissions.py`: customers may search the guide, ask for the
+staff and book under their own number; only the owner sees the reports, the
+day's bookings and the phone-line test. Every owner route checks it (401
+without the sign-in), and Pebby is only ever given the tools a customer may
+use.
+
 The page has two tabs, switched without reloading; the address keeps the
 active one (`/manage#reports`).
 
@@ -208,7 +216,7 @@ spadesk/
     schedule.py                what can be booked, with whom, when: read from the business document
     calendars/                 where bookings are kept, one calendar per therapist: in memory or Google Calendar
     appointments.py            the booking rules: free times, book, cancel, the day's bookings
-    tools.py                   those rules as tools a model can ask for (not yet used by a chat)
+    actions.py                 those rules in the shape a model's tool request takes
     routes.py                  those rules as the booking form's routes
   rag/
     chunking.py                cuts the document into fixed-size chunks with overlap
@@ -232,6 +240,7 @@ spadesk/
     customer.py                the question-and-answer assistant: /api/chat, no tools or memory (kept for the evals)
     engine.py                  which pipeline answers both chats: LangChain (default) or hand-built
   voice/                       the phone line: Pebby behind /v1/chat/completions, which ElevenLabs calls
+  access/                      who may do what: roles and permissions, the owner's sign-in, /login
   agent/                       Pebby, the booking agent: /api/assistant
     identify.py                name and phone first
     tools.py                   search the guide, find times, book, cancel, list, hand off
@@ -244,6 +253,8 @@ spadesk/
   models/                      the model gateway: jobs -> models, providers, tools, fixed-shape replies, fallback, usage
   static/
     home/                      the customer site: index.html, css/ and js/, one file per area
+    login/                     the owner's sign-in page
+    shared/                    scripts both pages use (the "Powered by" line)
     dashboard/
       index.html               the dashboard shell
       css/                     one stylesheet per area
@@ -295,9 +306,10 @@ route in `spadesk/app.py`, then `spadesk/business/knowledge.py`.
 - With the in-memory calendar, bookings are lost when the server restarts.
 - The bookings data is generated, not real, and ends on a fixed date, so the
   dashboard's "last 30 days" means the last 30 days of the data.
-- Nothing has a login. Put the dashboard behind authentication before using it
-  with real data.
-- Each assistant question stands alone (no memory).
+- The owner is one password, not separate staff accounts. Customers are not
+  signed in: they are identified only by the name and number they give.
+- The owner's assistant (manage page) takes each question on its own, with
+  no memory; Pebby, the customer chat, remembers its conversation.
 - With RAG on, questions that need the whole document ("which service is
   cheapest?") can be answered wrongly, because only a few chunks are sent.
 

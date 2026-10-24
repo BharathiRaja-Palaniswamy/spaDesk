@@ -13,6 +13,10 @@ Example:  /api/report?start=2026-09-01&end=2026-09-30&category=Facials
 
 The routes live in an APIRouter, a group of routes that app.py plugs in with
 one line. That keeps these routes out of app.py.
+
+All of them are the owner's: the data routes need the "reports" permission
+(spadesk/access/), so a request without the owner's sign-in gets 401, and
+the page sends a visitor who has not signed in to /login.
 """
 
 import json
@@ -23,11 +27,13 @@ from pathlib import Path
 from typing import Any
 
 import anthropic
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import FileResponse, RedirectResponse
 from langsmith import traceable
 from pydantic import BaseModel, Field
 
+from ..access.permissions import allowed
+from ..access.session import require, role_of
 from ..assistant.engine import rag_engine
 from ..assistant.model import ask_model
 from ..assistant.prompt import checked_sections, profile_prompt
@@ -43,14 +49,17 @@ from .tools import MAX_TOOL_ROUNDS, TOOL_NAME, report_label, report_tool, run_re
 
 PAGE = Path(__file__).resolve().parent.parent / "static" / "dashboard" / "index.html"
 
-router = APIRouter(prefix="/api/report")  # the data routes
+router = APIRouter(prefix="/api/report", dependencies=[Depends(require("reports"))])  # the data routes
 page_router = APIRouter()  # the page itself, at /manage
 log = logging.getLogger("spadesk.assistant")
 
 
-@page_router.get("/manage")
-def manage() -> FileResponse:
-    """The manage page: business profile and reports, as two tabs."""
+@page_router.get("/manage", response_model=None)
+def manage(request: Request) -> FileResponse | RedirectResponse:
+    """The manage page: business profile and reports, as two tabs. Only for
+    the signed-in owner; anyone else is sent to the sign-in page."""
+    if not allowed(role_of(request), "reports"):
+        return RedirectResponse("/login?next=/manage")
     # The page's CSS and JavaScript are served from /static/dashboard/ by app.py.
     return FileResponse(PAGE)
 

@@ -3,6 +3,8 @@
  * (The assistant chat has its own request, in chat/assistant.js.)
  */
 
+import { checkSignedIn } from "./session.js";
+
 /**
  * Fetches a URL and returns its JSON body.
  * @param {string} url
@@ -11,6 +13,7 @@
  */
 async function getJson(url) {
   const response = await fetch(url);
+  checkSignedIn(response);
   const body = await response.json();
   if (!response.ok) {
     // The server sends a readable message in `detail` for filters it rejects.

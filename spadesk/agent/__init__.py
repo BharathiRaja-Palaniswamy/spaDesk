@@ -29,9 +29,19 @@ from .confirm import CHOICES
 from .graph import get_graph
 from .handoffs import HANDOVER, record_handoff
 from .prompt import time_note
-from .turns import KEEP, arrive, lock, replaced, take_restore, undo_later
+from .turns import (
+    KEEP,
+    answered,
+    arrive,
+    lock,
+    newer_reply,
+    replaced,
+    take_restore,
+    undo_later,
+)
 
 log = logging.getLogger("spadesk.agent")
+WAIT_FOR_NEWER = 10.0  # seconds a replaced turn waits for the newer turn's reply
 
 
 @dataclass(frozen=True)
@@ -57,12 +67,8 @@ def hand_over(thread: str, reason: str, said: str = "", caller: str = "") -> Tur
     return Turn(HANDOVER)
 
 
-def respond(thread: str, message: str, channel: str = "chat", caller: str = "") -> Turn | None:
-    """Run one turn of the conversation `thread` with the customer's `message`.
-    `channel` is "chat" or "voice"; `caller` is the number calling, on a phone call.
-    Returns None when a newer turn of the same conversation replaced this one
-    (turns.py): nobody is waiting for its reply any more."""
-    number = arrive(thread)
+def _run(thread: str, number: int, message: str, channel: str, caller: str) -> Turn | None:
+    """Run turn `number` of `thread`, one at a time; None if a newer turn replaced it."""
     with lock(thread):  # one turn at a time per conversation
         if replaced(thread, number):
             return None
@@ -93,3 +99,18 @@ def respond(thread: str, message: str, channel: str = "chat", caller: str = "") 
         return Turn(state["say"])
     reply = state["reply"]
     return Turn(reply.answer, reply.items, reply.suggestions[:MAX_SUGGESTIONS])
+
+
+def respond(thread: str, message: str, channel: str = "chat", caller: str = "") -> Turn | None:
+    """Run one turn of the conversation `thread` with the customer's `message`.
+    `channel` is "chat" or "voice"; `caller` is the number calling, on a phone call.
+
+    If a newer turn of the same conversation replaced this one (turns.py),
+    this one waits for the newer turn's reply and returns it, so no request
+    is left without an answer; None only if that reply does not come in time."""
+    number = arrive(thread)
+    turn = _run(thread, number, message, channel, caller)
+    if turn is None:
+        return newer_reply(thread, number, WAIT_FOR_NEWER)
+    answered(thread, number, turn)
+    return turn

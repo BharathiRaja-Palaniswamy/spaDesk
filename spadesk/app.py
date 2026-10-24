@@ -8,6 +8,8 @@ booking routes, the chats) and exposes them as HTTP routes. The actual work happ
 
 Routes:
   GET  /                      the customer site (static/home/index.html)
+  GET  /login                 the owner's sign-in page        (routes in access/routes.py)
+  POST /api/login, /api/logout  sign the owner in and out
   GET  /static/...            CSS and JavaScript for both pages
   GET  /api/spa               spa facts for the customer site, read from the document
   GET  /api/profile           the whole business profile, for both pages
@@ -28,6 +30,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from .access.routes import router as owner_sign_in
 from .agent.routes import router as booking_agent
 from .assistant.customer import router as customer_chat
 from .booking.routes import router as booking
@@ -35,9 +38,10 @@ from .business.profile import build_profile
 from .business.store import get_knowledge
 from .config import HOURS_BLOCK
 from .models.profiles import get_profile
-from .voice.routes import router as phone_line
 from .models.providers import NAMES
-from .reports.routes import page_router as manage_page, router as report_router
+from .reports.routes import page_router as manage_page
+from .reports.routes import router as report_router
+from .voice.routes import router as phone_line
 
 STATIC = Path(__file__).parent / "static"
 app = FastAPI(title="spaDesk")
@@ -47,6 +51,7 @@ app.include_router(manage_page)
 # So do the customer site's chats (agent/routes.py, assistant/customer.py) and booking (booking/routes.py).
 app.include_router(customer_chat)
 app.include_router(booking_agent)
+app.include_router(owner_sign_in)
 app.include_router(phone_line)
 app.include_router(booking)
 

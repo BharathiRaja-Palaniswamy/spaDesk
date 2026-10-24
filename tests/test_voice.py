@@ -13,17 +13,18 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import pytest
+from conftest import signed_in
 from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessage
 from standins import use_standin
 
-from spadesk.agent import confirm, tools
+from spadesk.agent import confirm, identify, tools
 from spadesk.agent.graph import get_graph
 from spadesk.agent.handoffs import HANDOVER
 from spadesk.agent.identify import Details
 from spadesk.agent.prompt import AgentReply
 from spadesk.app import app
-from spadesk.booking import tools as booking_tools
+from spadesk.booking import actions
 from spadesk.booking.appointments import Appointments
 from spadesk.booking.calendars.memory import MemoryCalendar
 from spadesk.booking.schedule import read_schedule
@@ -45,7 +46,7 @@ def client(monkeypatch, tmp_path):
     monkeypatch.setenv("SPADESK_HANDOFFS", str(tmp_path / "handoffs.jsonl"))
     desk = Appointments(read_schedule(get_knowledge()), MemoryCalendar(), SPA, 30, notice=30,
                         now=lambda: datetime(2026, 10, 22, 14, 10, tzinfo=SPA))
-    for module in (tools, confirm, booking_tools):
+    for module in (tools, confirm, identify, actions):
         monkeypatch.setattr(module, "get_appointments", lambda: desk)
     get_graph.cache_clear()
     yield TestClient(app)
@@ -105,10 +106,11 @@ def test_once_named_pebby_answers_after_a_filler_using_the_caller_number(client,
         FILLER + "Sure."
 
 
-def test_a_quick_reply_has_no_filler_and_silence_gets_no_reply(client, monkeypatch):
+def test_a_quick_reply_has_no_filler_and_silence_gets_a_nudge(client, monkeypatch):
     use_standin(monkeypatch, [AIMessage(content=Details(name="", phone="", asks=False).model_dump_json())])
     assert FILLER not in spoken(turn(client, "Hi", stream=True))  # the stand-in answers at once
-    assert spoken(turn(client, "Hi", "May I have your name?", "...", stream=True)) == ""
+    # Never an empty reply: ElevenLabs would take it as an error and drop the call.
+    assert spoken(turn(client, "Hi", "May I have your name?", "...", stream=True)) == routes.NUDGE
 
 
 def test_a_request_without_a_call_id_is_handed_over_not_dropped(client):
@@ -124,8 +126,9 @@ def test_the_confirmation_is_worded_to_be_spoken(client):
                                           "Friday the 30th of October at 3 PM, for Asha. Shall I book it?")
 
 
-def test_the_voice_widget_shows_only_when_an_agent_is_set(monkeypatch):
-    client = TestClient(app)
+def test_the_voice_widget_is_the_owners_and_shows_only_when_an_agent_is_set(monkeypatch):
+    assert TestClient(app).get("/api/voice-widget").status_code == 401  # not signed in
+    client = signed_in(app)
     monkeypatch.setenv("SPADESK_VOICE_AGENT_ID", "")
     assert client.get("/api/voice-widget").json() == {"agent_id": ""}
     monkeypatch.setenv("SPADESK_VOICE_AGENT_ID", "agent_abc123")

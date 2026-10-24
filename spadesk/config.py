@@ -83,6 +83,8 @@ class Settings:
     calendar_owner: str  # booking: a Google account the calendars are shared with, to see them; "" for none
     voice_secret: str = field(repr=False)  # phone line: the secret ElevenLabs sends; "" switches the line off
     voice_agent_id: str  # the ElevenLabs agent the site's voice widget talks to; "" hides the widget
+    owner_password: str = field(repr=False)  # the manage page's sign-in; "" keeps the owner's pages closed
+    session_secret: str = field(repr=False)  # signs the owner's sign-in cookie; "" uses a random key per start
 
 
 def get_settings() -> Settings:
@@ -123,4 +125,6 @@ def get_settings() -> Settings:
         calendar_owner=os.getenv("SPADESK_CALENDAR_OWNER", ""),
         voice_secret=os.getenv("SPADESK_VOICE_SECRET", ""),
         voice_agent_id=os.getenv("SPADESK_VOICE_AGENT_ID", ""),
+        owner_password=os.getenv("SPADESK_OWNER_PASSWORD", ""),
+        session_secret=os.getenv("SPADESK_SESSION_SECRET", ""),
     )

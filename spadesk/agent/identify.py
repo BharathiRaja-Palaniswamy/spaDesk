@@ -8,7 +8,11 @@ once they have given their details).
 
 On a phone call the number calling (caller ID) is taken as the phone
 number, so only the name is asked for, and the caller is told which number
-will be kept; a number they give instead wins. The phone number is taken as given;
+will be kept; a number they give instead wins.
+
+Once the name and number are known, the number's upcoming bookings are
+looked up: if there are any, Pebby asks whether the customer is calling about
+one of them or about something new, before anything else. The phone number is taken as given;
 it only has to have at least 7 digits.
 """
 
@@ -17,7 +21,10 @@ import re
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
+from ..booking.appointments import get_appointments
+from ..booking.errors import BookingError, CalendarUnavailable
 from ..models import structured
+from .confirm import when
 
 PROFILE = "cheap-router"  # a small, fast model: this is a quick reading job
 
@@ -56,3 +63,19 @@ def ask_for(name: str, phone: str, caller: str = "") -> str:
     if not phone:
         return f"Thank you, {name}! And a phone number we can reach you on?"
     return "Thank you! And your name, please?"
+
+
+def about_bookings(name: str, phone: str, spoken: bool) -> str:
+    """The question to ask when this number has upcoming bookings ("" when it
+    has none, or the calendar cannot be read: then Pebby simply carries on)."""
+    try:
+        upcoming = get_appointments().upcoming(phone)
+    except (BookingError, CalendarUnavailable):
+        return ""
+    if not upcoming:
+        return ""
+    first, others = upcoming[0], len(upcoming) - 1
+    more = f", and {others} more booking{'s' if others > 1 else ''}" if others else ""
+    return (f"Thank you, {name}! I can see your {first.service} with {first.therapist} on "
+            f"{when(first.start, spoken)}{more}. Is this about {'that booking' if not others else 'a booking'}, "
+            "or something new?")

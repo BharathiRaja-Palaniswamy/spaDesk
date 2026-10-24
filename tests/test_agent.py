@@ -20,16 +20,18 @@ from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessage, ToolMessage
 from standins import use_standin
 
-from spadesk.agent import confirm, nodes, respond, tools, turns
+from spadesk import agent
+from spadesk.agent import confirm, identify, nodes, respond, tools, turns
 from spadesk.agent.graph import get_graph
 from spadesk.agent.handoffs import HANDOVER
 from spadesk.agent.identify import Details
 from spadesk.agent.nodes import MAX_TOOL_ROUNDS
 from spadesk.agent.prompt import AgentReply
 from spadesk.app import app
-from spadesk.booking import tools as booking_tools
+from spadesk.booking import actions
 from spadesk.booking.appointments import Appointments
 from spadesk.booking.calendars.memory import MemoryCalendar
+from spadesk.booking.errors import CalendarUnavailable
 from spadesk.booking.schedule import read_schedule
 from spadesk.business.store import get_knowledge
 from spadesk.models import ModelError
@@ -59,7 +61,7 @@ def desk(monkeypatch, tmp_path):
     """One in-memory calendar with a fixed clock, for every part of the agent; a fresh memory."""
     desk = Appointments(read_schedule(get_knowledge()), MemoryCalendar(), SPA, 30, notice=30,
                         now=lambda: datetime(2026, 10, 22, 14, 10, tzinfo=SPA))
-    for module in (tools, confirm, booking_tools):
+    for module in (tools, confirm, identify, actions):
         monkeypatch.setattr(module, "get_appointments", lambda: desk)
     monkeypatch.setenv("SPADESK_HANDOFFS", str(tmp_path / "handoffs.jsonl"))
     get_graph.cache_clear()
@@ -159,13 +161,41 @@ def test_a_booking_that_would_fail_is_not_offered_for_a_yes(desk, monkeypatch):
 
 
 def test_cancelling_also_waits_for_a_yes(desk, monkeypatch):
-    booking = desk.book("Prenatal Massage", "Priya Nair", datetime(2026, 10, 30, 15, 0), "Asha Rao", "4085550101")
     identified(monkeypatch, "thread-cancel")
+    booking = desk.book("Prenatal Massage", "Priya Nair", datetime(2026, 10, 30, 15, 0), "Asha Rao", "4085550101")
     chat(monkeypatch, asks("cancel_booking", {"reference": booking.id}), says("Cancelled."))
     turn = respond("thread-cancel", "Cancel my Friday massage")
     assert turn.confirming and booking.id in turn.answer and turn.suggestions == ["Yes, cancel it", "No, keep it"]
     assert respond("thread-cancel", "yes").answer == "Cancelled."
     assert desk.day_bookings(datetime(2026, 10, 30).date()) == []
+
+
+def test_a_returning_customer_is_asked_about_their_upcoming_booking_first(desk, monkeypatch):
+    desk.book("Prenatal Massage", "Priya Nair", datetime(2026, 10, 30, 15, 0), "Asha Rao", "(408) 555-0101")
+    sent = chat(monkeypatch, details("Asha Rao", "408-555-0101", asks=True), says("Sure, let's move it."))
+    question = respond("thread-back", "Hi, it's Asha, 408-555-0101, I need help").answer
+    assert question == ("Thank you, Asha Rao! I can see your Prenatal Massage with Priya Nair on Friday 30 October "
+                        "at 15:00. Is this about that booking, or something new?")
+    assert len(sent) == 1  # asked by the graph itself: no call to Pebby's model yet
+    # Their answer goes to Pebby, with the whole conversation.
+    assert respond("thread-back", "The existing one, I want to move it").answer == "Sure, let's move it."
+
+
+def test_on_a_call_the_question_is_spoken_and_uses_the_caller_id(desk, monkeypatch):
+    desk.book("Prenatal Massage", "Priya Nair", datetime(2026, 10, 30, 15, 0), "Raja", "+19257198037")
+    chat(monkeypatch, details(), details(name="Raja"))
+    respond("thread-call", "Hi", channel="voice", caller="+19257198037")  # asks for the name only
+    assert respond("thread-call", "Raja", channel="voice", caller="+19257198037").answer == (
+        "Thank you, Raja! I can see your Prenatal Massage with Priya Nair on Friday the 30th of October at 3 PM. "
+        "Is this about that booking, or something new?")
+
+
+def test_a_calendar_that_cannot_be_read_just_skips_the_question(desk, monkeypatch):
+    def down():
+        raise CalendarUnavailable("timed out")
+    monkeypatch.setattr(identify, "get_appointments", down)
+    chat(monkeypatch, details("Asha Rao", "(408) 555-0101"))
+    assert respond("thread-down", "Asha Rao, (408) 555-0101").answer == "Thank you, Asha Rao! How can I help you today?"
 
 
 def test_the_tools_only_reach_this_customers_bookings(desk, monkeypatch):
@@ -235,8 +265,9 @@ def interrupted(module, name: str, thread: str):
 def test_a_replaced_turn_is_dropped_and_forgotten(desk, monkeypatch):
     identified(monkeypatch, "thread-paused")
     chat(monkeypatch, says("Shall we say today?"), says("Sunday works: 10 or 12:30."))
+    monkeypatch.setattr(agent, "WAIT_FOR_NEWER", 0.05)  # the newer turn here never runs, so don't wait for it
     with interrupted(nodes, "structured", "thread-paused"):
-        assert respond("thread-paused", "I'd like a prenatal with Priya") is None  # nobody hears this reply
+        assert respond("thread-paused", "I'd like a prenatal with Priya") is None  # its own reply is dropped
     assert respond("thread-paused", "I'd like a prenatal with Priya on Sunday").answer == "Sunday works: 10 or 12:30."
     remembered = [m.content for m in memory("thread-paused")["messages"]]
     # Pebby remembers what the customer finally said and heard, not the replaced turn.
@@ -245,7 +276,7 @@ def test_a_replaced_turn_is_dropped_and_forgotten(desk, monkeypatch):
     assert not any("Shall we say today?" in str(m) for m in remembered)
 
 
-def test_a_turn_waiting_behind_a_newer_one_never_runs(desk, monkeypatch):
+def test_a_turn_waiting_behind_a_newer_one_never_runs_but_gets_its_reply(desk, monkeypatch):
     identified(monkeypatch, "thread-queue")
     chat(monkeypatch, says("Only the newest is answered."))
     results = {}
@@ -259,13 +290,15 @@ def test_a_turn_waiting_behind_a_newer_one_never_runs(desk, monkeypatch):
         while turns._newest["thread-queue"] < 3:
             time.sleep(0.01)
     first.join(), second.join()
-    assert results["first"] is None and results["second"].answer == "Only the newest is answered."
+    # The model answered once (the stand-in has one reply), and both requests were answered with it.
+    assert results["first"].answer == results["second"].answer == "Only the newest is answered."
 
 
 def test_a_replaced_turn_that_booked_is_remembered_so_it_is_not_booked_twice(desk, monkeypatch):
     identified(monkeypatch, "thread-yes")
     chat(monkeypatch, asks("book_appointment", PRENATAL), says("Booked!"), says("All set, you're booked."))
     assert respond("thread-yes", "Book Friday 3pm with Priya").confirming
+    monkeypatch.setattr(agent, "WAIT_FOR_NEWER", 0.05)
     with interrupted(nodes, "is_yes", "thread-yes"):
         assert respond("thread-yes", "Yes") is None  # replaced, but the booking was made
     # The newer turn is not asked to confirm again: the memory kept the booking.

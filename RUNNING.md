@@ -119,6 +119,8 @@ files, so after changing `.env`, stop the server and start it again.
 | `SPADESK_CALENDAR_OWNER` | none | Booking with `google`: a Google account the calendars are shared with, to see the bookings. Optional. |
 | `SPADESK_SLOT_MINUTES` | `30` | Booking: appointments start every this many minutes from opening. |
 | `SPADESK_MIN_NOTICE_MINUTES` | `30` | Booking: the fewest minutes ahead a customer can book, change or cancel. |
+| `SPADESK_OWNER_PASSWORD` | none (manage page closed) | The owner's password for `/login`, which opens the manage page and the reports. |
+| `SPADESK_SESSION_SECRET` | random per start | Signs the owner's sign-in cookie. Set it so a restart does not sign the owner out. |
 | `SPADESK_VOICE_SECRET` | none (line off) | The phone line: the secret ElevenLabs sends when it calls `/v1/chat/completions`. |
 | `SPADESK_VOICE_AGENT_ID` | none (no widget) | The ElevenLabs agent of the manage page's phone-line test (a voice widget; customers never see it). |
 | `SPADESK_HANDOFFS` | `storage/handoffs.jsonl` | The chat: where customers handed to the staff are written down, with why. |

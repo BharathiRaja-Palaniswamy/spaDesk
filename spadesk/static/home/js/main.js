@@ -8,7 +8,7 @@
 import { initBooking, loadBookingOptions } from "./booking.js";
 import { initChat } from "./chat/chat.js";
 import { initChatNudge } from "./chat/nudge.js";
-import { showPoweredBy } from "./chat/powered.js";
+import { showPoweredBy } from "/static/shared/powered.js";
 import { initChatWindow } from "./chat/window.js";
 import { loadProfile, renderSections } from "./sections/sections.js";
 import { loadSpa, renderSpa } from "./spa.js";
@@ -21,4 +21,4 @@ initBooking(bookable);
 initChatWindow();
 initChatNudge();
 initChat(spa.name);
-showPoweredBy();
+showPoweredBy("customer");

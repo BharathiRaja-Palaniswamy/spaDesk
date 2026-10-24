@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Owner sign-in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&family=Figtree:wght@400;500;600;700&display=swap">
+  <!-- The manage page's colours and fonts, then this page's own layout. -->
+  <link rel="stylesheet" href="/static/dashboard/css/tokens.css">
+  <link rel="stylesheet" href="/static/login/css/login.css">
+</head>
+<body>
+  <!-- The owner's sign-in: one password field. js/login.js sends it to POST /api/login. -->
+  <main class="sign-in">
+    <p class="eyebrow">Manage</p>
+    <h1>Owner sign-in</h1>
+    <p class="hint">The manage page shows the business's reports and bookings, so it is for the owner only.</p>
+    <form id="sign-in-form">
+      <label>Password
+        <input type="password" name="password" autocomplete="current-password" required autofocus>
+      </label>
+      <p class="error" id="sign-in-error" role="alert" hidden></p>
+      <button type="submit">Sign in</button>
+    </form>
+    <a class="back" href="/">Back to the customer site</a>
+  </main>
+  <script type="module" src="/static/login/js/login.js"></script>
+</body>
+</html>

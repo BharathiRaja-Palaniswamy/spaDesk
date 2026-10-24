@@ -11,13 +11,16 @@ wrong day).
 So, per conversation:
   - turns run one at a time: a newer one waits for the one running;
   - every turn gets a number when it arrives; a turn that is no longer the
-    newest when it starts, or when it finishes, was replaced, and its reply
-    is dropped;
+    newest when it starts, or when it finishes, was replaced, and its own
+    reply is dropped;
   - a replaced turn's changes to the memory are undone: the next turn
     starts from the memory as it was before it (LangGraph keeps every saved
     step, so the conversation can carry on from an earlier one);
   - except when the replaced turn made or cancelled a booking: that really
-    happened, so the memory keeps it, and Pebby does not do it a second time.
+    happened, so the memory keeps it, and Pebby does not do it a second time;
+  - a replaced turn's request is still answered, never left empty: it waits
+    for the newer turn's reply and gives the same one (whoever is still
+    listening on it hears what the newest turn says).
 
 The numbers and locks are kept in this server's memory, as the
 conversations are (graph.py).
@@ -31,6 +34,8 @@ _newest: dict[str, int] = {}  # conversation -> the number of the newest turn th
 # conversation -> the saved step the next turn starts from (None: start the conversation afresh)
 _restore: dict[str, str | None] = {}
 KEEP = object()  # take_restore()'s answer when nothing needs undoing
+_answered = threading.Condition()  # signalled whenever a turn's reply is ready
+_answers: dict[str, tuple[int, object]] = {}  # conversation -> (turn number, its reply), the newest so far
 
 
 def arrive(thread: str) -> int:
@@ -65,3 +70,19 @@ def take_restore(thread: str) -> object:
     """The step the next turn should start from, or KEEP when nothing needs undoing."""
     with _guard:
         return _restore.pop(thread, KEEP)
+
+
+def answered(thread: str, number: int, reply: object) -> None:
+    """Keep turn `number`'s reply, for requests of older turns that are waiting for it."""
+    with _answered:
+        if number > _answers.get(thread, (0, None))[0]:
+            _answers[thread] = (number, reply)
+        _answered.notify_all()
+
+
+def newer_reply(thread: str, number: int, timeout: float) -> object | None:
+    """The reply of a turn newer than `number`, once there is one, or None after `timeout` seconds."""
+    with _answered:
+        _answered.wait_for(lambda: _answers.get(thread, (0, None))[0] > number, timeout)
+        newest = _answers.get(thread)
+        return newest[1] if newest and newest[0] > number else None

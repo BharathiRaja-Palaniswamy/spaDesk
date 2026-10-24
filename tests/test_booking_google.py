@@ -17,7 +17,8 @@ from zoneinfo import ZoneInfo
 import pytest
 from googleapiclient.errors import HttpError
 
-from spadesk.booking import tools
+from spadesk.agent.tools import agent_tools
+from spadesk.booking import actions
 from spadesk.booking.appointments import Appointments
 from spadesk.booking.calendars import google
 from spadesk.booking.calendars.google import GoogleCalendar, calendar_name
@@ -161,11 +162,10 @@ def test_google_failing_is_reported_as_calendar_unavailable_and_the_tool_says_so
     with pytest.raises(CalendarUnavailable, match="could not be reached"):
         desk.book("Prenatal Massage", "Priya Nair", at("10:00"), "Asha", "(408) 555-0101")
     # Through the tool, the model gets a message it can pass on, not the reason.
-    monkeypatch.setattr(tools, "get_appointments", lambda: desk)
-    book = next(t for t in tools.booking_tools() if t.name == "book_appointment")
-    reply = book.run({"service": "Prenatal Massage", "therapist": "Priya Nair", "start": "2026-10-23T10:00",
-                      "name": "Asha", "phone": "4085550101"})
-    assert reply == {"error": tools.UNAVAILABLE}
+    monkeypatch.setattr(actions, "get_appointments", lambda: desk)
+    book = next(t for t in agent_tools("Asha", "4085550101") if t.name == "book_appointment")
+    reply = book.run({"service": "Prenatal Massage", "therapist": "Priya Nair", "start": "2026-10-23T10:00"})
+    assert reply == {"error": actions.UNAVAILABLE}
 
 
 def test_someone_new_in_the_team_gets_a_calendar_shared_with_the_owner(api, monkeypatch):

@@ -27,7 +27,7 @@ from langgraph.graph import END
 from ..models import run_requests, structured
 from .confirm import is_yes, problem_with
 from .handoffs import HANDOVER, record_handoff
-from .identify import ask_for, read_details, valid_phone
+from .identify import about_bookings, ask_for, read_details, valid_phone
 from .prompt import AgentReply, instructions
 from .state import AgentState
 from .tools import NEEDS_YES, agent_tools
@@ -54,8 +54,9 @@ def first_step(state: AgentState) -> str:
 
 def identify(state: AgentState) -> dict:
     """Read the name and phone number from the customer's message, and ask
-    for whatever is still missing. Once both are known, an earlier question
-    goes on to the agent; otherwise the customer is thanked."""
+    for whatever is still missing. Once both are known: if the number has
+    upcoming bookings, ask whether this is about one of them or something new;
+    otherwise an earlier question goes on to the agent, or the customer is thanked."""
     details = read_details(_latest(state).text)
     caller = state.get("caller", "")
     name = state.get("name") or details.name.strip()
@@ -64,6 +65,9 @@ def identify(state: AgentState) -> dict:
     phone = given or state.get("phone") or caller
     held = state.get("held", False) or details.asks
     known = {"name": name, "phone": phone}
+    if name and phone and (question := about_bookings(name, phone, state.get("channel") == "voice")):
+        # Their reply goes to the agent, which sees the whole conversation, the first request included.
+        return {**known, "held": False, "say": question, "messages": [AIMessage(question)]}
     if name and phone and held:
         return {**known, "held": False}  # on to the agent, which answers what they asked
     say = f"Thank you, {name}! How can I help you today?" if name and phone else ask_for(name, phone, caller)

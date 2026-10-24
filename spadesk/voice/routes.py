@@ -30,11 +30,12 @@ import re
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor, wait
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from langsmith import get_current_run_tree, traceable
 from pydantic import BaseModel
 
+from ..access.session import require
 from ..agent import hand_over, respond
 from ..agent.handoffs import HANDOVER
 from ..config import get_settings
@@ -52,6 +53,9 @@ FILLER_AFTER = 1.5  # seconds: a reply ready sooner is said straight away, with 
 # own wait for a reply (set to 10 s in the agent), so the caller hears the handover
 # rather than the line going dead.
 TURN_LIMIT = 8.0
+# Said when the caller was silent (ElevenLabs then sends "..."). Every turn needs a reply:
+# ElevenLabs treats an empty one as an error, retries, and drops the call.
+NUDGE = "Sorry, I didn't catch that. Could you say that again?"
 # Turns run here, so the reply can be waited for with a time limit while the stream is open.
 _turns = ThreadPoolExecutor(max_workers=8, thread_name_prefix="voice-turn")
 
@@ -88,7 +92,8 @@ def _reply(call_id: str, caller: str, said: str) -> Iterator[str]:
         log.warning("voice request without a call id: add 'Call ID: {{system__conversation_id}}' to the prompt")
         yield HANDOVER
         return
-    if not re.search(r"\w", said):  # no words (ElevenLabs sends "..." for silence): nothing to answer
+    if not re.search(r"\w", said):  # no words (ElevenLabs sends "..." for silence): a nudge, no model needed
+        yield NUDGE
         return
     thread = f"call-{call_id}"
     work = _turns.submit(respond, thread, said, channel="voice", caller=caller)
@@ -106,13 +111,14 @@ def _reply(call_id: str, caller: str, said: str) -> Iterator[str]:
     except Exception:  # any failure ends in a handover, never a dropped call
         log.exception("voice turn failed")
         turn = hand_over(thread, "The assistant hit an unexpected error on a call.", said, caller)
-    if turn is not None:  # None: ElevenLabs sent a newer version of this turn, and nobody hears this one
-        yield _spoken(turn.answer, turn.items)
+    # None only when this turn was replaced and the newer one's reply never came: still say something.
+    yield _spoken(turn.answer, turn.items) if turn is not None else NUDGE
 
 
-@router.get("/api/voice-widget")
+@router.get("/api/voice-widget", dependencies=[Depends(require("voice_test"))])
 def voice_widget() -> dict:
     """The ElevenLabs agent for the manage page's phone-line test, or "" to show none.
+    The owner's only: the widget spends the spa's ElevenLabs minutes.
     An agent id is not a secret: the widget needs it in the page anyway."""
     return {"agent_id": get_settings().voice_agent_id}
 

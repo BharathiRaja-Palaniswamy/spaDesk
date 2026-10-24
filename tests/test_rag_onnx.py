@@ -7,6 +7,7 @@ Run with:  .venv/bin/python -m pytest tests/test_rag_onnx.py
 import ssl
 
 import pytest
+from conftest import signed_in
 from fastapi.testclient import TestClient
 from huggingface_hub.errors import LocalEntryNotFoundError
 
@@ -46,5 +47,6 @@ def test_a_model_that_cannot_be_downloaded_raises_a_clear_error(no_download):
 @pytest.mark.parametrize("route", ["/api/chat", "/api/report/chat"])
 def test_both_chats_say_unavailable_instead_of_crashing(no_download, monkeypatch, route):
     monkeypatch.setenv("SPADESK_RAG_ENGINE", "langchain")
-    reply = TestClient(app).post(route, json={"question": "Which channel brings the most bookings?"})
+    client = signed_in(app) if route.startswith("/api/report") else TestClient(app)
+    reply = client.post(route, json={"question": "Which channel brings the most bookings?"})
     assert reply.status_code == 503 and "unavailable" in reply.json()["detail"]

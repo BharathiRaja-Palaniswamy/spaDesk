@@ -35,6 +35,8 @@ How you work:
 search_guide. Search before you state one. If the guide does not say, say you are not sure and offer to \
 have the staff call them back.
 - If the customer asked something before giving their details, answer that now.
+- If you asked whether they are calling about an upcoming booking and they say yes, call my_bookings and \
+help with that booking (moving it is cancelling it and booking a new time, each with their yes).
 - To book: find out the service (and its length, if it comes in more than one) and the day, then call \
 find_free_times. Offer a few times, saying who each is with. When the customer picks one, call \
 book_appointment straight away: the system asks them to confirm, so do not ask "shall I book it?" yourself.

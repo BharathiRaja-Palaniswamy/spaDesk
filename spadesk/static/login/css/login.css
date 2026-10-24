@@ -1,0 +1,34 @@
+/* The owner's sign-in page: one card in the middle of the page, in the
+   manage page's colours (dashboard/css/tokens.css). */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px;
+  background: var(--page); color: var(--text-primary); font-family: var(--font);
+}
+
+.sign-in {
+  width: min(400px, 100%); background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 32px; display: grid; gap: 14px;
+}
+.sign-in h1 { margin: 0; font-size: 1.6rem; }
+.eyebrow { margin: 0; font: 500 0.75rem var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
+           color: var(--text-secondary); }
+.hint { margin: 0; color: var(--text-secondary); font-size: 0.92rem; }
+
+form { display: grid; gap: 12px; }
+label { display: grid; gap: 6px; font-weight: 600; font-size: 0.88rem; }
+input {
+  font: inherit; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--text-primary);
+}
+button {
+  font: 600 0.95rem var(--font); padding: 11px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--accent); color: var(--on-accent);
+}
+button:disabled { opacity: 0.6; cursor: default; }
+input:focus-visible, button:focus-visible, .back:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.error { margin: 0; color: #b42318; font-size: 0.9rem; }
+.back { color: var(--text-secondary); font-size: 0.88rem; }

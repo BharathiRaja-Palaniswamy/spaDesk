@@ -13,8 +13,9 @@
  */
 
 import { getOptions, getReport } from "./api.js";
-import { showPoweredBy } from "./chat/powered.js";
+import { showPoweredBy } from "/static/shared/powered.js";
 import { initChat } from "./chat/widget.js";
+import { initSignOut } from "./session.js";
 import { initVoiceWidget } from "./voice.js";
 import { $ } from "./dom.js";
 import { initFilters } from "./filters.js";
@@ -142,7 +143,8 @@ initTabs((name) => {
 });
 
 initChat();
-showPoweredBy();
+initSignOut();
+showPoweredBy("owner");
 initVoiceWidget();
 
 start();

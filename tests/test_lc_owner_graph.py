@@ -10,8 +10,9 @@ Run with:  .venv/bin/python -m pytest tests/test_lc_owner_graph.py
 import json
 
 import pytest
-from fastapi.testclient import TestClient
+from conftest import signed_in
 from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
+from standins import use_standin
 
 from spadesk.app import app
 from spadesk.assistant.replies import ReplyItem
@@ -19,7 +20,6 @@ from spadesk.lc.owner import graph
 from spadesk.models.structured import ANSWER as ANSWER_TOOL
 from spadesk.reports.routes import SYSTEM, ChatReply, get_dataset
 from spadesk.reports.tools import MAX_TOOL_ROUNDS, TOOL_NAME
-from standins import use_standin
 
 ANSWER = ChatReply(answer="Facials in September 2026.", covered=True,
                    items=[ReplyItem(name="Revenue", detail="$7,530")],
@@ -102,7 +102,7 @@ def graph_engine(monkeypatch):
 
 
 def test_the_route_answers_through_the_graph(graph_engine):
-    reply = TestClient(app).post("/api/report/chat",
+    reply = signed_in(app).post("/api/report/chat",
                                  json={"question": "How did facials do in September?", "rag": False}).json()
     # The same checks as the hand-built loop: no made-up section, at most three suggestions.
     assert reply == {"answer": "Facials in September 2026.", "covered": True,
@@ -115,5 +115,5 @@ def test_the_route_answers_through_the_graph(graph_engine):
 def test_the_route_reports_when_the_graph_has_no_answer(monkeypatch):
     monkeypatch.setenv("SPADESK_RAG_ENGINE", "langchain")
     use_standin(monkeypatch, [AIMessage(content="Not JSON")])
-    reply = TestClient(app).post("/api/report/chat", json={"question": "Hello"})
+    reply = signed_in(app).post("/api/report/chat", json={"question": "Hello"})
     assert reply.status_code == 503

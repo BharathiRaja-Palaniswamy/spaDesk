@@ -17,9 +17,9 @@ import re
 from datetime import datetime
 from typing import Any
 
+from ..booking.actions import UNAVAILABLE
 from ..booking.appointments import get_appointments
 from ..booking.errors import BookingError, CalendarUnavailable
-from ..booking.tools import UNAVAILABLE
 
 # A reply that starts like this is a yes; anything else is not.
 YES = re.compile(r"^\s*(y|yes|yeah|yep|yup|sure|ok|okay|confirm(ed)?|please do|go ahead|do it|book it|cancel it|"
@@ -32,7 +32,7 @@ def is_yes(message: str) -> bool:
     return bool(YES.match(message))
 
 
-def _when(start: datetime, spoken: bool) -> str:
+def when(start: datetime, spoken: bool) -> str:
     """'Friday 30 October at 15:00' to read; 'Friday the 30th of October at 3 PM' to say."""
     if not spoken:
         return f"{start:%A} {start.day} {start:%B} at {start:%H:%M}"
@@ -55,13 +55,13 @@ def question_for(request: dict[str, Any], name: str, phone: str, spoken: bool = 
         length = int((slot.end - slot.start).total_seconds() // 60)
         if spoken:
             return (f"Just to confirm: a {length}-minute {args['service']} with {args['therapist']} on "
-                    f"{_when(start, True)}, for {name}. Shall I book it?")
+                    f"{when(start, True)}, for {name}. Shall I book it?")
         return (f"Shall I book {args['service']} ({length} minutes) with {args['therapist']} on "
-                f"{_when(start, False)}, for {name} ({phone})?")
+                f"{when(start, False)}, for {name} ({phone})?")
     booking = desk.check_cancel(args["reference"], phone)
     if spoken:
-        return f"Just to confirm: cancel your {booking.service} on {_when(booking.start, True)}. Shall I cancel it?"
-    return (f"Shall I cancel your {booking.service} with {booking.therapist} on {_when(booking.start, False)} "
+        return f"Just to confirm: cancel your {booking.service} on {when(booking.start, True)}. Shall I cancel it?"
+    return (f"Shall I cancel your {booking.service} with {booking.therapist} on {when(booking.start, False)} "
             f"(reference {booking.id})?")
 
 

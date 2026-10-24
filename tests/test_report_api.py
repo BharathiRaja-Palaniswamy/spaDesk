@@ -8,7 +8,7 @@ import re
 from types import SimpleNamespace
 
 import pytest
-from fastapi.testclient import TestClient
+from conftest import signed_in
 
 from spadesk.app import app
 from spadesk.rag.stores import get_store
@@ -18,8 +18,8 @@ from spadesk.reports.tools import run_report
 
 @pytest.fixture(scope="module")
 def client():
-    """A test browser for the app: makes requests without starting a server."""
-    return TestClient(app)
+    """A test browser for the app, signed in as the owner: makes requests without starting a server."""
+    return signed_in(app)
 
 
 def test_options(client):

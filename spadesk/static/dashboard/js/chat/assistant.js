@@ -8,6 +8,8 @@
  * browser is visible to every visitor, including an API key.
  */
 
+import { checkSignedIn } from "../session.js";
+
 /**
  * Answers one question. Called by the chat window (widget.js), which shows
  * "Thinking…" until the returned promise resolves, then shows the reply. If
@@ -32,6 +34,7 @@ export async function askAssistant(question) {
     // The server answers from the chunks retrieved for the question (RAG).
     body: JSON.stringify({ question }),
   });
+  checkSignedIn(response);
   const body = await response.json();
   // On an error the server sends { detail } and no reply; throwing makes the
   // chat window show its error message.

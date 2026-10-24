@@ -15,6 +15,8 @@ developer's `.env` says (load_dotenv never replaces a variable already set):
   the local models, so a test never touches Pinecone.
 - Bookings go to the in-memory calendar, with no Google key, so a test never
   touches Google Calendar.
+- The owner's password is a known test one; `signed_in()` gives a test
+  browser that has signed in with it, for the owner's pages and data.
 """
 
 import os
@@ -30,4 +32,15 @@ os.environ["SPADESK_VECTOR_STORE"] = "memory"
 os.environ["SPADESK_EMBEDDING_PROVIDER"] = "minilm"
 os.environ["SPADESK_RERANKER"] = "cross-encoder"
 os.environ["SPADESK_CALENDAR"] = "memory"
+os.environ["SPADESK_OWNER_PASSWORD"] = "test-owner-password"
+os.environ["SPADESK_SESSION_SECRET"] = "test-session-secret"
 os.environ["GOOGLE_SERVICE_ACCOUNT"] = ""
+
+
+def signed_in(app):
+    """A test browser for `app` that has signed in as the owner."""
+    from fastapi.testclient import TestClient
+
+    client = TestClient(app)
+    client.post("/api/login", json={"password": os.environ["SPADESK_OWNER_PASSWORD"]}).raise_for_status()
+    return client

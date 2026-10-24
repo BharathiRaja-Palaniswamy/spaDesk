@@ -35,7 +35,10 @@
       <!-- js/main.js writes the business name into #business-name. -->
       <h1><span class="brand-mark" aria-hidden="true"></span><span id="business-name">&nbsp;</span></h1>
     </div>
-    <a class="back" href="/">Customer site</a>
+    <nav class="top-links">
+      <a class="back" href="/">Customer site</a>
+      <button class="back sign-out" id="sign-out" type="button">Sign out</button>
+    </nav>
   </header>
 
   <main>
@@ -103,7 +106,7 @@
       <input id="chat-input" autocomplete="off" maxlength="2000" placeholder="Ask about your business…">
       <button type="submit">Send</button>
     </form>
-    <!-- Which provider answers, filled in by js/chat/powered.js. -->
+    <!-- Which provider answers, filled in by /static/shared/powered.js. -->
     <p class="chat-powered" id="chat-powered" hidden></p>
   </section>
 
