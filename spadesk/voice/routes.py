@@ -80,7 +80,8 @@ def _reply(call_id: str, caller: str, said: str) -> Iterator[str]:
         log.warning("voice turn failed: %s", error)
         yield SORRY
         return
-    yield _spoken(turn.answer, turn.items)
+    if turn is not None:  # None: ElevenLabs sent a newer version of this turn, and nobody hears this one
+        yield _spoken(turn.answer, turn.items)
 
 
 @router.post("/v1/chat/completions")

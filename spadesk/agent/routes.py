@@ -54,4 +54,6 @@ def assistant(body: Message) -> Reply:
     except (ModelError, ModelUnavailable) as error:
         log.warning("assistant unavailable: %s", error)  # the reason, for whoever reads the server log
         raise HTTPException(status_code=503, detail="The assistant is unavailable right now.")
+    if turn is None:  # a newer message of the same chat arrived while this one ran
+        raise HTTPException(status_code=409, detail="A newer message replaced this one.")
     return Reply(answer=turn.answer, items=turn.items, suggestions=turn.suggestions, confirming=turn.confirming)

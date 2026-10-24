@@ -9,6 +9,9 @@ Run with:  .venv/bin/python -m pytest tests/test_agent.py
 """
 
 import json
+import threading
+import time
+from contextlib import contextmanager
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -18,7 +21,7 @@ from langchain_core.messages import AIMessage, ToolMessage
 from standins import use_standin
 
 from spadesk import agent as agent_package
-from spadesk.agent import confirm, respond, tools
+from spadesk.agent import confirm, nodes, respond, tools, turns
 from spadesk.agent.graph import get_graph
 from spadesk.agent.identify import Details
 from spadesk.agent.nodes import MAX_TOOL_ROUNDS
@@ -204,3 +207,63 @@ def test_the_route_runs_a_turn_and_reports_an_unavailable_model(desk, monkeypatc
     monkeypatch.setattr(agent_package, "respond", broken)
     monkeypatch.setattr("spadesk.agent.routes.respond", broken)
     assert client.post("/api/assistant", json={"thread": "thread-route", "message": "Hi"}).status_code == 503
+
+
+# ---- turns replaced by newer ones (agent/turns.py) ---------------------------------------
+
+@contextmanager
+def interrupted(module, name: str, thread: str):
+    """Within the block, `module.name` behaves as before, but a newer turn of `thread`
+    arrives while it runs, as when a caller keeps talking after a pause."""
+    real = getattr(module, name)
+
+    def with_newer_turn(*args, **kwargs):
+        turns.arrive(thread)
+        return real(*args, **kwargs)
+    setattr(module, name, with_newer_turn)
+    try:
+        yield
+    finally:
+        setattr(module, name, real)
+
+
+def test_a_replaced_turn_is_dropped_and_forgotten(desk, monkeypatch):
+    identified(monkeypatch, "thread-paused")
+    chat(monkeypatch, says("Shall we say today?"), says("Sunday works: 10 or 12:30."))
+    with interrupted(nodes, "structured", "thread-paused"):
+        assert respond("thread-paused", "I'd like a prenatal with Priya") is None  # nobody hears this reply
+    assert respond("thread-paused", "I'd like a prenatal with Priya on Sunday").answer == "Sunday works: 10 or 12:30."
+    remembered = [m.content for m in memory("thread-paused")["messages"]]
+    # Pebby remembers what the customer finally said and heard, not the replaced turn.
+    assert "I'd like a prenatal with Priya on Sunday" in remembered
+    assert "I'd like a prenatal with Priya" not in remembered
+    assert not any("Shall we say today?" in str(m) for m in remembered)
+
+
+def test_a_turn_waiting_behind_a_newer_one_never_runs(desk, monkeypatch):
+    identified(monkeypatch, "thread-queue")
+    chat(monkeypatch, says("Only the newest is answered."))
+    results = {}
+    with turns.lock("thread-queue"):  # a turn is running: the next two have to wait
+        first = threading.Thread(target=lambda: results.update(first=respond("thread-queue", "Hi")))
+        first.start()
+        while turns._newest["thread-queue"] < 2:  # wait until the first has arrived and is waiting
+            time.sleep(0.01)
+        second = threading.Thread(target=lambda: results.update(second=respond("thread-queue", "Hi, hello")))
+        second.start()
+        while turns._newest["thread-queue"] < 3:
+            time.sleep(0.01)
+    first.join(), second.join()
+    assert results["first"] is None and results["second"].answer == "Only the newest is answered."
+
+
+def test_a_replaced_turn_that_booked_is_remembered_so_it_is_not_booked_twice(desk, monkeypatch):
+    identified(monkeypatch, "thread-yes")
+    chat(monkeypatch, asks("book_appointment", PRENATAL), says("Booked!"), says("All set, you're booked."))
+    assert respond("thread-yes", "Book Friday 3pm with Priya").confirming
+    with interrupted(nodes, "is_yes", "thread-yes"):
+        assert respond("thread-yes", "Yes") is None  # replaced, but the booking was made
+    # The newer turn is not asked to confirm again: the memory kept the booking.
+    turn = respond("thread-yes", "Yes, book it please")
+    assert not turn.confirming and turn.answer == "All set, you're booked."
+    assert len(desk.day_bookings(datetime(2026, 10, 30).date())) == 1

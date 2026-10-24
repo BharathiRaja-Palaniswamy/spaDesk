@@ -35,3 +35,4 @@ class AgentState(TypedDict, total=False):
     reply: BaseModel | None  # the model's reply this turn, once it gives one
     say: str  # a reply written by the graph itself this turn (asking for details or for a yes)
     confirming: bool  # this turn ends by asking the customer to confirm
+    acted: bool  # this turn made or cancelled a booking (the customer said yes)

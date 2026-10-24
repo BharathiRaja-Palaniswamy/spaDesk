@@ -135,13 +135,14 @@ def decide(state: AgentState) -> dict:
         if not isinstance(message, HumanMessage):
             break
         turn.insert(0, message)
-    if is_yes(said.text):
+    acted = is_yes(said.text)  # a yes makes or cancels the booking: something that really happens
+    if acted:
         tool = next(t for t in agent_tools(state["name"], state["phone"]) if t.name == pending["name"])
         outcome = {"customer_said_yes_to": pending["question"], "result": tool.run(pending["args"])}
     else:
         outcome = {"not_done": f"The customer was asked {pending['question']!r} and did not say yes, so "
                                "nothing was changed. Their reply follows."}
-    return {"pending": None, "messages": [
+    return {"pending": None, "acted": acted, "messages": [
         *[RemoveMessage(id=message.id) for message in turn],
         ToolMessage(json.dumps(outcome), tool_call_id=pending["id"]),
         *[HumanMessage(message.content) for message in turn]]}
