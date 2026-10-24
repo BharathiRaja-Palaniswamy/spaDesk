@@ -4,21 +4,15 @@ app, on the real document, an in-memory calendar and a fixed clock.
 Run with:  .venv/bin/python -m pytest tests/test_booking_routes.py
 """
 
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
+from standin_calendar import standin_desk
 
 from spadesk import app as app_module
 from spadesk.booking import routes
-from spadesk.booking.appointments import Appointments
-from spadesk.booking.calendars.memory import MemoryCalendar
 from spadesk.booking.errors import CalendarUnavailable
-from spadesk.booking.schedule import read_schedule
-from spadesk.business.store import get_knowledge
 
-SPA = ZoneInfo("America/Los_Angeles")
 ASHA = {"service": "Prenatal Massage", "therapist": "Priya Nair", "start": "2026-10-30T15:00",
         "name": "Asha Rao", "phone": "(408) 555-0101"}
 
@@ -26,8 +20,7 @@ ASHA = {"service": "Prenatal Massage", "therapist": "Priya Nair", "start": "2026
 @pytest.fixture
 def client(monkeypatch):
     """The app, booking on one in-memory calendar, with "now" fixed on Thursday 22 October 2026."""
-    desk = Appointments(read_schedule(get_knowledge()), MemoryCalendar(), SPA, 30,
-                        now=lambda: datetime(2026, 10, 22, 14, 10, tzinfo=SPA))
+    desk = standin_desk(notice=0)
     monkeypatch.setattr(routes, "get_appointments", lambda: desk)
     return TestClient(app_module.app)
 

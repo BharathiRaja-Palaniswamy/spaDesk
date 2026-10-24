@@ -22,12 +22,12 @@ from pydantic import BaseModel, Field
 
 from ..business.store import get_knowledge
 from .appointments import get_appointments
-from .errors import BookingError, CalendarUnavailable
+from .actions import by_therapist, confirmation
+from .errors import UNAVAILABLE, BookingError, CalendarUnavailable
 from .schedule import read_schedule
 
 router = APIRouter()
 log = logging.getLogger("spadesk.booking")
-UNAVAILABLE = "Booking is unavailable right now. Please call the spa to book."
 
 
 class BookingForm(BaseModel):
@@ -66,10 +66,7 @@ def free(service: str, day: date, therapist: str | None = None, minutes: int | N
         raise HTTPException(status_code=422, detail=str(error))
     except CalendarUnavailable as error:
         raise _calendar_down(error)
-    times: dict[str, list[str]] = {}
-    for slot in slots:
-        times.setdefault(slot.therapist, []).append(slot.start.strftime("%H:%M"))
-    return {"service": service, "day": day.isoformat(), "free": times}
+    return {"service": service, "day": day.isoformat(), "free": by_therapist(slots)}
 
 
 @router.post("/api/bookings")
@@ -82,6 +79,4 @@ def book(form: BookingForm) -> dict:
         raise HTTPException(status_code=422, detail=str(error))
     except CalendarUnavailable as error:
         raise _calendar_down(error)
-    return {"reference": booking.id, "service": booking.service, "therapist": booking.therapist,
-            "start": booking.start.strftime("%Y-%m-%dT%H:%M"), "end": booking.end.strftime("%Y-%m-%dT%H:%M"),
-            "name": booking.name}
+    return confirmation(booking)

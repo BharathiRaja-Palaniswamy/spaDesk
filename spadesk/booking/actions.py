@@ -19,12 +19,11 @@ from collections.abc import Callable
 from datetime import date, datetime
 from typing import Any
 
-from .appointments import get_appointments
+from .appointments import Slot, get_appointments
 from .calendars import Booking
-from .errors import BookingError, CalendarUnavailable
+from .errors import UNAVAILABLE, BookingError, CalendarUnavailable
 
 log = logging.getLogger("spadesk.booking")
-UNAVAILABLE = "Booking is unavailable right now. Please call the spa to book or cancel."
 
 
 def guarded(run: Callable[[dict[str, Any]], Any]) -> Callable[[dict[str, Any]], Any]:
@@ -49,18 +48,23 @@ def _when(moment: datetime) -> str:
 
 
 def confirmation(booking: Booking) -> dict[str, Any]:
-    """What the customer is told about their own booking."""
+    """What the customer is told about their own booking (in the chat, on a call, and on the booking form)."""
     return {"reference": booking.id, "service": booking.service, "therapist": booking.therapist,
             "start": _when(booking.start), "end": _when(booking.end), "name": booking.name}
 
 
-def find_free_times(args: dict[str, Any]) -> dict[str, Any]:
-    """Free start times on a day, by therapist."""
-    slots = get_appointments().free_slots(args["service"], date.fromisoformat(args["date"]),
-                                          args.get("therapist"), args.get("minutes"))
+def by_therapist(slots: list[Slot]) -> dict[str, list[str]]:
+    """Free times as start times ("HH:MM") by therapist, earliest first: {"Priya Nair": ["10:00", ...]}."""
     free: dict[str, list[str]] = {}
     for slot in slots:
         free.setdefault(slot.therapist, []).append(slot.start.strftime("%H:%M"))
+    return free
+
+
+def find_free_times(args: dict[str, Any]) -> dict[str, Any]:
+    """Free start times on a day, by therapist."""
+    free = by_therapist(get_appointments().free_slots(args["service"], date.fromisoformat(args["date"]),
+                                                      args.get("therapist"), args.get("minutes")))
     return {"service": args["service"], "date": args["date"], "free": free} if free else \
         {"service": args["service"], "date": args["date"], "free": {}, "note": "No free times that day."}
 

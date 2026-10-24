@@ -9,17 +9,12 @@ Run with:  .venv/bin/python -m pytest tests/test_booking_appointments.py
 """
 
 from datetime import date, datetime
-from zoneinfo import ZoneInfo
 
 import pytest
+from standin_calendar import SPA, standin_desk
 
-from spadesk.booking.appointments import Appointments
-from spadesk.booking.calendars.memory import MemoryCalendar
 from spadesk.booking.errors import BookingError
-from spadesk.booking.schedule import read_schedule
-from spadesk.business.store import get_knowledge
 
-SPA = ZoneInfo("America/Los_Angeles")
 NOW = datetime(2026, 10, 22, 14, 10, tzinfo=SPA)
 THURSDAY, FRIDAY, MONDAY, WEDNESDAY = date(2026, 10, 22), date(2026, 10, 23), date(2026, 10, 26), date(2026, 10, 28)
 
@@ -41,7 +36,7 @@ def clock():
 
 @pytest.fixture
 def desk(clock):
-    return Appointments(read_schedule(get_knowledge()), MemoryCalendar(), SPA, 30, notice=30, now=clock)
+    return standin_desk(now=clock)
 
 
 def times(slots):

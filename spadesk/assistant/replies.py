@@ -10,6 +10,8 @@ from pydantic import BaseModel, Field
 # How many follow-up questions a chat shows under an answer. The schema cannot
 # limit a list's length, so each route cuts the list to this many.
 MAX_SUGGESTIONS = 3
+# What both question-and-answer routes answer (503) when the model cannot be reached.
+UNAVAILABLE = "The assistant is unavailable right now."
 
 
 class ChatQuestion(BaseModel):

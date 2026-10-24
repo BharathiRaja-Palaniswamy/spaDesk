@@ -6,28 +6,21 @@ Run with:  .venv/bin/python -m pytest tests/test_booking_actions.py
 """
 
 import json
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
 import pytest
+from standin_calendar import standin_desk
 
 from spadesk.agent.tools import agent_tools
 from spadesk.booking import actions
-from spadesk.booking.appointments import Appointments
-from spadesk.booking.calendars.memory import MemoryCalendar
-from spadesk.booking.schedule import read_schedule
-from spadesk.business.store import get_knowledge
 from spadesk.models.tools import run_requests
 
-SPA = ZoneInfo("America/Los_Angeles")
 PRENATAL = {"service": "Prenatal Massage", "therapist": "Priya Nair", "start": "2026-10-23T10:00"}
 
 
 @pytest.fixture(autouse=True)
 def desk(monkeypatch):
     """The actions book on one in-memory calendar, with "now" fixed on Thursday 22 October 2026."""
-    desk = Appointments(read_schedule(get_knowledge()), MemoryCalendar(), SPA, 30,
-                        now=lambda: datetime(2026, 10, 22, 14, 10, tzinfo=SPA))
+    desk = standin_desk(notice=0)
     monkeypatch.setattr(actions, "get_appointments", lambda: desk)
     return desk
 

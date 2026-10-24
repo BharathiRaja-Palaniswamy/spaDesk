@@ -21,7 +21,7 @@ from ..rag.errors import ModelUnavailable
 from .engine import rag_engine
 from .model import ask_model
 from .prompt import checked_sections, profile_prompt
-from .replies import MAX_SUGGESTIONS, ChatQuestion, ReplyItem
+from .replies import MAX_SUGGESTIONS, UNAVAILABLE, ChatQuestion, ReplyItem
 
 router = APIRouter(prefix="/api")
 log = logging.getLogger("spadesk.assistant")
@@ -101,7 +101,7 @@ def chat(body: ChatQuestion) -> CustomerAnswer:
         # The others: the hand-built engine calls the Anthropic library itself,
         # which raises TypeError when no API key is set.
         log.warning("assistant unavailable: %s", error)  # the reason, for whoever reads the server log
-        raise HTTPException(status_code=503, detail="The assistant is unavailable right now.")
+        raise HTTPException(status_code=503, detail=UNAVAILABLE)
 
     if reply is None:
         # No structured reply came back, for example because the model declined.

@@ -45,8 +45,8 @@ http://127.0.0.1:8000/manage for the owner's manage page.
 ## 4. Try it
 
 - On the customer site, click **Book now**: give a name and phone, pick a service and a date, choose
-  one of the free times and book it. Ask for the same day again and that time is gone. With
-  `SPADESK_CALENDAR=google`, the booking appears on the therapist's Google calendar.
+  one of the free times and book it. Ask for the same day again and that time is gone. The booking
+  appears on the therapist's Google calendar (set up once: [docs/google-calendar.md](docs/google-calendar.md)).
 - Open the manage page, go to the **Reports** tab, switch between the date presets, pick a category or
   channel, and use **Show table** on a chart.
 - On the manage page, click **Ask assistant** and ask about the business, for
@@ -114,9 +114,8 @@ files, so after changing `.env`, stop the server and start it again.
 | `SPADESK_VECTOR_STORE` | `pinecone` | RAG: which vector store keeps the chunks and their vectors: `pinecone` (needs `PINECONE_API_KEY`) or `memory` (offline). |
 | `SPADESK_VECTOR_STORE_PATH` | `storage/vectors` | RAG: names a local index (tests give each its own). |
 | `SPADESK_RETRIEVAL_TOP_K` | `3` | RAG: how many chunks are fetched for a question. |
-| `SPADESK_CALENDAR` | `memory` | Booking: where bookings are kept: `memory` (lost on restart) or `google` (one Google calendar per therapist; see [docs/google-calendar.md](docs/google-calendar.md)). |
-| `GOOGLE_SERVICE_ACCOUNT` | none | Booking with `google`: the service account's key file, as a path or its JSON text. |
-| `SPADESK_CALENDAR_OWNER` | none | Booking with `google`: a Google account the calendars are shared with, to see the bookings. Optional. |
+| `GOOGLE_SERVICE_ACCOUNT` | none | Booking: the service account's key file, as a path or its JSON text. Without it, booking says it is unavailable. |
+| `SPADESK_CALENDAR_OWNER` | none | Booking: a Google account the calendars are shared with, to see the bookings. Optional. |
 | `SPADESK_SLOT_MINUTES` | `30` | Booking: appointments start every this many minutes from opening. |
 | `SPADESK_MIN_NOTICE_MINUTES` | `30` | Booking: the fewest minutes ahead a customer can book, change or cancel. |
 | `SPADESK_OWNER_PASSWORD` | none (manage page closed) | The owner's password for `/login`, which opens the manage page and the reports. |

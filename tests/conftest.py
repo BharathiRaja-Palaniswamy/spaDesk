@@ -13,8 +13,8 @@ developer's `.env` says (load_dotenv never replaces a variable already set):
   fallback, whatever `.env` says, so a test never reaches another provider.
 - The vector store is the in-memory one, and the embedder and reranker are
   the local models, so a test never touches Pinecone.
-- Bookings go to the in-memory calendar, with no Google key, so a test never
-  touches Google Calendar.
+- There is no Google key, so a test can never reach the real calendars; the
+  booking tests use a stand-in calendar (standin_calendar.py).
 - The owner's password is a known test one; `signed_in()` gives a test
   browser that has signed in with it, for the owner's pages and data.
 """
@@ -31,7 +31,6 @@ os.environ["SPADESK_MODEL_FALLBACK"] = ""
 os.environ["SPADESK_VECTOR_STORE"] = "memory"
 os.environ["SPADESK_EMBEDDING_PROVIDER"] = "minilm"
 os.environ["SPADESK_RERANKER"] = "cross-encoder"
-os.environ["SPADESK_CALENDAR"] = "memory"
 os.environ["SPADESK_OWNER_PASSWORD"] = "test-owner-password"
 os.environ["SPADESK_SESSION_SECRET"] = "test-session-secret"
 os.environ["GOOGLE_SERVICE_ACCOUNT"] = ""

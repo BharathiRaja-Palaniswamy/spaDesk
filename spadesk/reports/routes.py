@@ -37,7 +37,7 @@ from ..access.session import require, role_of
 from ..assistant.engine import rag_engine
 from ..assistant.model import ask_model
 from ..assistant.prompt import checked_sections, profile_prompt
-from ..assistant.replies import MAX_SUGGESTIONS, ChatQuestion, ReplyItem
+from ..assistant.replies import MAX_SUGGESTIONS, UNAVAILABLE, ChatQuestion, ReplyItem
 from ..business.store import get_knowledge
 from ..config import get_settings
 from ..lc.owner import answer as graph_answer
@@ -214,7 +214,7 @@ def chat(body: ChatQuestion) -> ChatAnswer:
         # The others: the hand-built engine calls the Anthropic library itself,
         # which raises TypeError when no API key is set.
         log.warning("assistant unavailable: %s", error)  # the reason, for whoever reads the server log
-        raise HTTPException(status_code=503, detail="The assistant is unavailable right now.")
+        raise HTTPException(status_code=503, detail=UNAVAILABLE)
 
     if reply is None:
         # No structured reply came back, for example because the model declined

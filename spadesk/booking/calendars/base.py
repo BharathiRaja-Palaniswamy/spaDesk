@@ -9,7 +9,7 @@ A calendar holds what the document cannot: the bookings, and anything else
 that makes a therapist busy (in Google Calendar, an event a therapist adds
 for time off). It knows nothing about services, opening hours or booking
 rules; those are in schedule.py and appointments.py, so a calendar is easy
-to swap: in memory for tests (memory.py), Google Calendar on the site.
+to swap: Google Calendar in the app (google.py), a stand-in in the tests.
 """
 
 from dataclasses import dataclass

@@ -195,3 +195,13 @@ def test_without_a_key_the_error_says_what_to_do(monkeypatch):
     monkeypatch.setenv("GOOGLE_SERVICE_ACCOUNT", "")
     with pytest.raises(CalendarUnavailable, match="GOOGLE_SERVICE_ACCOUNT is not set"):
         google.connect()
+
+
+def test_there_is_no_other_place_for_bookings_without_google(monkeypatch):
+    # Without the key, booking is unavailable: nothing is quietly kept somewhere else.
+    from spadesk.booking.calendars import get_calendar
+    monkeypatch.setenv("GOOGLE_SERVICE_ACCOUNT", "")
+    get_calendar.cache_clear()
+    with pytest.raises(CalendarUnavailable, match="GOOGLE_SERVICE_ACCOUNT is not set"):
+        get_calendar()
+    get_calendar.cache_clear()

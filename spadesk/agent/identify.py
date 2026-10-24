@@ -21,7 +21,7 @@ import re
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
-from ..booking.appointments import get_appointments
+from ..booking.appointments import digits, get_appointments
 from ..booking.errors import BookingError, CalendarUnavailable
 from ..models import structured
 from .confirm import when
@@ -49,7 +49,7 @@ def read_details(message: str) -> Details:
 
 def valid_phone(phone: str) -> bool:
     """At least 7 digits, however written: the only check (numbers are not verified)."""
-    return len(re.sub(r"\D", "", phone)) >= 7
+    return len(digits(phone)) >= 7
 
 
 def ask_for(name: str, phone: str, caller: str = "") -> str:
@@ -57,7 +57,7 @@ def ask_for(name: str, phone: str, caller: str = "") -> str:
     calling, on a phone call."""
     if not name and caller and phone == caller:
         return (f"May I have your name, please? I'll keep the number you're calling from, ending in "
-                f"{re.sub(r'\D', '', caller)[-4:]}, unless you'd like to give another.")
+                f"{digits(caller)[-4:]}, unless you'd like to give another.")
     if not name and not phone:
         return "Before we start, may I have your name and phone number?"
     if not phone:

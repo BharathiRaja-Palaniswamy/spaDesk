@@ -3,11 +3,10 @@
     .venv/bin/python -m scripts.check_calendar           # book, read back, cancel
     .venv/bin/python -m scripts.check_calendar --keep    # leave the booking, to see it in Google Calendar
 
-Uses whichever calendar SPADESK_CALENDAR names (set it to google to check
-Google Calendar). It books the first free time for a Swedish Massage two
-weeks from today, for a customer called "Calendar check", reads it back
-from the day's bookings, then cancels it, so the calendar is left as it
-was. With --keep it is not cancelled: it stays on the therapist's calendar
+Uses the spa's Google calendars (GOOGLE_SERVICE_ACCOUNT). It books the
+first free time for a Swedish Massage two weeks from today, for a customer
+called "Calendar check", reads it back from the day's bookings, then
+cancels it, so the calendar is left as it was. With --keep it is not cancelled: it stays on the therapist's calendar
 until deleted there (or cancelled with its reference and the phone below).
 Claude is never called; the Calendar API has no charge.
 """

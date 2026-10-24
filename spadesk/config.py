@@ -65,7 +65,6 @@ class Settings:
     retrieval_top_k: int  # RAG: how many chunks are given to the model for a question
     reranker: str  # RAG: which reranker reorders the candidates, or "none"
     rerank_candidates: int  # RAG: how many chunks the first search fetches for the reranker to choose from
-    calendar: str  # booking: where bookings are kept: "memory", or "google" (Google Calendar)
     slot_minutes: int  # booking: appointments start on this grid, e.g. every 30 minutes from opening
     min_notice_minutes: int  # booking: the fewest minutes ahead a booking can be made, changed or cancelled
     handoffs_path: Path  # the chat: where requests for the staff to call a customer back are appended
@@ -106,7 +105,6 @@ def get_settings() -> Settings:
         retrieval_top_k=int(os.getenv("SPADESK_RETRIEVAL_TOP_K", "3")),
         reranker=os.getenv("SPADESK_RERANKER", "pinecone"),
         rerank_candidates=int(os.getenv("SPADESK_RERANK_CANDIDATES", "20")),
-        calendar=os.getenv("SPADESK_CALENDAR", "memory"),
         slot_minutes=int(os.getenv("SPADESK_SLOT_MINUTES", "30")),
         min_notice_minutes=int(os.getenv("SPADESK_MIN_NOTICE_MINUTES", "30")),
         handoffs_path=Path(os.getenv("SPADESK_HANDOFFS", ROOT / "storage" / "handoffs.jsonl")),

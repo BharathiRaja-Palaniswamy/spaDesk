@@ -43,7 +43,6 @@ if it is listed. Wait a few minutes, then create the key.
 On your laptop, in `.env`:
 
 ```
-SPADESK_CALENDAR=google
 GOOGLE_SERVICE_ACCOUNT=/Users/<you>/.config/spadesk/google-service-account.json
 SPADESK_CALENDAR_OWNER=<a Gmail address>
 ```
@@ -55,7 +54,7 @@ stay apart from your own.
 
 On Replit, in **Secrets**: `GOOGLE_SERVICE_ACCOUNT` with the key file's
 **whole JSON text** pasted as the value (the app accepts either the text or a
-path), plus `SPADESK_CALENDAR=google` and, optionally, `SPADESK_CALENDAR_OWNER`.
+path), plus, optionally, `SPADESK_CALENDAR_OWNER`.
 
 ## 4. Create the calendars
 

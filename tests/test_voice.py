@@ -9,13 +9,12 @@ Run with:  .venv/bin/python -m pytest tests/test_voice.py
 
 import json
 import time
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
 import pytest
 from conftest import signed_in
 from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessage
+from standin_calendar import standin_desk
 from standins import use_standin
 
 from spadesk.agent import confirm, identify, tools
@@ -25,16 +24,11 @@ from spadesk.agent.identify import Details
 from spadesk.agent.prompt import AgentReply
 from spadesk.app import app
 from spadesk.booking import actions
-from spadesk.booking.appointments import Appointments
-from spadesk.booking.calendars.memory import MemoryCalendar
-from spadesk.booking.schedule import read_schedule
-from spadesk.business.store import get_knowledge
 from spadesk.models import ModelError
 from spadesk.voice import routes
 from spadesk.voice.call import read_call
 from spadesk.voice.routes import FILLER
 
-SPA = ZoneInfo("America/Los_Angeles")
 SECRET = "test-voice-secret"
 PROMPT = "You are Pebby on the phone.\nCall ID: conv_123\nCaller number: +1 408 555 0101"
 
@@ -44,8 +38,7 @@ def client(monkeypatch, tmp_path):
     """The app with the phone line on, an in-memory calendar with a fixed clock, and a fresh memory."""
     monkeypatch.setenv("SPADESK_VOICE_SECRET", SECRET)
     monkeypatch.setenv("SPADESK_HANDOFFS", str(tmp_path / "handoffs.jsonl"))
-    desk = Appointments(read_schedule(get_knowledge()), MemoryCalendar(), SPA, 30, notice=30,
-                        now=lambda: datetime(2026, 10, 22, 14, 10, tzinfo=SPA))
+    desk = standin_desk()
     for module in (tools, confirm, identify, actions):
         monkeypatch.setattr(module, "get_appointments", lambda: desk)
     get_graph.cache_clear()

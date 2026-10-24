@@ -41,7 +41,7 @@ class Slot:
     end: datetime
 
 
-def _digits(phone: str) -> str:
+def digits(phone: str) -> str:
     """'(408) 555-0188' -> '4085550188', so two ways of writing a number compare equal."""
     return re.sub(r"\D", "", phone)
 
@@ -77,7 +77,7 @@ class Appointments:
         A time with no time zone is taken as the spa's."""
         if not name.strip():
             raise BookingError("Please give the name the booking is for.")
-        if len(_digits(phone)) < 7:
+        if len(digits(phone)) < 7:
             raise BookingError("Please give a phone number the spa can reach you on.")
         start = start.astimezone(self.zone) if start.tzinfo else start.replace(tzinfo=self.zone)
         free = self.free_slots(service, start.date(), therapist, minutes)
@@ -107,7 +107,7 @@ class Appointments:
         booking = self.calendar.find(booking_id.strip().upper())
         # The same answer whether the reference or the phone number is wrong,
         # so nobody can find out which bookings exist by guessing.
-        if booking is None or _digits(booking.phone) != _digits(phone):
+        if booking is None or digits(booking.phone) != digits(phone):
             raise BookingError("No booking matches that reference and phone number.")
         if booking.start - self._now() < self.notice:
             minutes = int(self.notice.total_seconds() // 60)
@@ -118,7 +118,7 @@ class Appointments:
     def upcoming(self, phone: str, days: int = 60) -> list[Booking]:
         """The bookings made with this phone number in the next `days` days, earliest first."""
         now = self._now()
-        return [b for b in self.calendar.bookings(now, now + timedelta(days=days)) if _digits(b.phone) == _digits(phone)]
+        return [b for b in self.calendar.bookings(now, now + timedelta(days=days)) if digits(b.phone) == digits(phone)]
 
     # ---- for the owner only ------------------------------------------------
 

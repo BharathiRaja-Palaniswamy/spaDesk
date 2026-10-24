@@ -17,7 +17,7 @@ import re
 from datetime import datetime
 from typing import Any
 
-from ..booking.actions import UNAVAILABLE
+from ..booking.errors import UNAVAILABLE
 from ..booking.appointments import get_appointments
 from ..booking.errors import BookingError, CalendarUnavailable
 

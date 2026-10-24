@@ -24,8 +24,8 @@ CSS and JavaScript in the browser, no build step.
   and a date, shows the free times by therapist, and books the chosen one,
   with a reference to keep. The free times come from the business document
   (who offers what, on which days, opening hours, classes taught) and the
-  therapists' calendars (in memory, or Google Calendar: see
-  [docs/google-calendar.md](docs/google-calendar.md)).
+  therapists' Google calendars (see [docs/google-calendar.md](docs/google-calendar.md)). If Google
+  cannot be reached, booking says it is unavailable; bookings are never kept anywhere else.
 - **Pebby, the chat**: a booking agent (`spadesk/agent/`, a LangGraph graph
   with memory per conversation). It asks for the customer's name and phone
   first, answers from the guide, finds free times, and books or cancels, but
@@ -303,7 +303,6 @@ route in `spadesk/app.py`, then `spadesk/business/knowledge.py`.
 - Booking is for one person and one service at a time. Group classes,
   packages and cancelling from the site are not bookable yet (cancelling is
   a tool, for the chat). Phone numbers are not verified.
-- With the in-memory calendar, bookings are lost when the server restarts.
 - The bookings data is generated, not real, and ends on a fixed date, so the
   dashboard's "last 30 days" means the last 30 days of the data.
 - The owner is one password, not separate staff accounts. Customers are not

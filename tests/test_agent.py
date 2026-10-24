@@ -13,11 +13,11 @@ import threading
 import time
 from contextlib import contextmanager
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessage, ToolMessage
+from standin_calendar import standin_desk
 from standins import use_standin
 
 from spadesk import agent
@@ -29,14 +29,9 @@ from spadesk.agent.nodes import MAX_TOOL_ROUNDS
 from spadesk.agent.prompt import AgentReply
 from spadesk.app import app
 from spadesk.booking import actions
-from spadesk.booking.appointments import Appointments
-from spadesk.booking.calendars.memory import MemoryCalendar
 from spadesk.booking.errors import CalendarUnavailable
-from spadesk.booking.schedule import read_schedule
-from spadesk.business.store import get_knowledge
 from spadesk.models import ModelError
 
-SPA = ZoneInfo("America/Los_Angeles")
 ASHA = Details(name="Asha Rao", phone="(408) 555-0101", asks=False)
 PRENATAL = {"service": "Prenatal Massage", "therapist": "Priya Nair", "start": "2026-10-30T15:00"}
 
@@ -59,8 +54,7 @@ def asks(name: str, args: dict, call_id: str = "call-1") -> AIMessage:
 @pytest.fixture
 def desk(monkeypatch, tmp_path):
     """One in-memory calendar with a fixed clock, for every part of the agent; a fresh memory."""
-    desk = Appointments(read_schedule(get_knowledge()), MemoryCalendar(), SPA, 30, notice=30,
-                        now=lambda: datetime(2026, 10, 22, 14, 10, tzinfo=SPA))
+    desk = standin_desk()
     for module in (tools, confirm, identify, actions):
         monkeypatch.setattr(module, "get_appointments", lambda: desk)
     monkeypatch.setenv("SPADESK_HANDOFFS", str(tmp_path / "handoffs.jsonl"))

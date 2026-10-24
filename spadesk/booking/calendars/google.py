@@ -1,6 +1,6 @@
 """The therapists' calendars in Google Calendar, through the Calendar API.
 
-Chosen with SPADESK_CALENDAR=google. Each therapist has their own calendar,
+The app's only calendar (calendars/__init__.py). Each therapist has their own calendar,
 named after the spa and the therapist ("Pebble Spa – Priya Nair"), so the
 calendars are found by name and nothing else needs to be configured.
 
@@ -64,7 +64,7 @@ def connect() -> Any:
     """A Calendar API client signed in as the service account in GOOGLE_SERVICE_ACCOUNT."""
     key = get_settings().google_service_account.strip()
     if not key:
-        raise CalendarUnavailable("SPADESK_CALENDAR is google but GOOGLE_SERVICE_ACCOUNT is not set. "
+        raise CalendarUnavailable("GOOGLE_SERVICE_ACCOUNT is not set, so bookings cannot be kept. "
                                   "See docs/google-calendar.md.")
     try:
         # The key file's JSON text (a host's secret), or the path to the file (on a laptop).
