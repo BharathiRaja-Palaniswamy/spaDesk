@@ -109,8 +109,9 @@ duration and price per category, packages, offers, add-ons, FAQs and policies.
 How the project got here, stage by stage, and what each stage taught us:
 [docs/evolution.md](docs/evolution.md).
 
-A one-page project brief, as a web page: [docs/index.html](docs/index.html),
-published with GitHub Pages at https://bharathiraja-palaniswamy.github.io/spaDesk/.
+A one-page project brief, as a web page: [docs/index.html](docs/index.html) (this week: booking by chat
+and phone, and the agents), published with GitHub Pages at https://bharathiraja-palaniswamy.github.io/spaDesk/.
+Last week's brief (answering questions) is [docs/week-2.html](docs/week-2.html).
 
 ## Running it
 

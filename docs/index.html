@@ -3,30 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Spa Desk: an AI-native portal for a spa, with Pebby, an AI assistant for customers and the owner. Week 2 project brief.">
-<title>Spa Desk Project Brief</title>
+<title>Spa Desk Agents Brief</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a landing-page hero (copy left, illustration right, like the Spa Desk site), then one reading column of sections. */
+/* Layout: the same landing-page hero and single reading column as the previous brief, so the two read as a series. */
 :root {
   --bg: #ffffff; --surface: #ffffff; --wash: #f6f4fa;
   --shadow: 0 1px 2px rgba(25, 30, 73, 0.05), 0 8px 24px rgba(25, 30, 73, 0.06);
   --ink: #191e49; --ink-soft: #4f5680; --line: #e4e1ee;
-  --accent: #bc269b; --accent-dark: #961c7b; --on-accent: #ffffff; --good: #13706b;
+  --accent: #bc269b; --accent-dark: #961c7b; --on-accent: #ffffff; --good: #13706b; --warn: #b4233f;
   --sky: linear-gradient(#8a9eea 0%, #a9abe5 22%, #d0b0cd 40%, #eeb0b6 52%, #c4a6b0 78%, #d4a294 100%);
   --wave: linear-gradient(90deg, #a0a9fc, #c098f5 35%, #faa4cd 70%, #ffc9a3);
-  --glass: rgba(255, 255, 255, 0.76);
   --sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --radius: 16px;
+  color-scheme: light;
 }
-/* Always light: the brief stays on a white page whatever the viewer's system theme. */
-:root { color-scheme: light; }
+/* Always light, like the previous brief; an explicit dark choice still gets a dark page. */
 :root[data-theme="dark"] {
   --bg: #12142b; --surface: #1a1d3a; --wash: #1f2244; --ink: #eceaf6; --ink-soft: #b3b6d6; --line: #2e3260;
-  --accent: #f07fd2; --accent-dark: #f7a3e0; --on-accent: #1a0f24; --good: #6fd4c9;
-  --glass: rgba(26, 29, 58, 0.78); --shadow: none; color-scheme: dark; }
+  --accent: #f07fd2; --accent-dark: #f7a3e0; --on-accent: #1a0f24; --good: #6fd4c9; --warn: #ff8fa3;
+  --shadow: none; color-scheme: dark; }
 
 body { background: var(--bg); color: var(--ink); font: 17px/1.7 var(--sans); }
 h1, h2, h3 { margin: 0; line-height: 1.2; text-wrap: balance; }
@@ -37,7 +35,6 @@ li::marker { color: var(--accent); font-weight: 700; }
 .eyebrow { font: 500 0.75rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
 .soft { color: var(--ink-soft); }
 
-/* Top bar */
 .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   padding: 14px 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.1rem; }
@@ -45,43 +42,53 @@ li::marker { color: var(--accent); font-weight: 700; }
 .badge { font: 500 0.75rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent);
   border: 1.5px solid var(--accent); border-radius: 999px; padding: 4px 12px; }
 
-/* Hero: the copy over the illustration's own colours, the illustration on the right */
 .hero { position: relative; isolation: isolate; overflow: hidden; background: var(--sky);
   display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); align-items: end; }
 .hero-copy { padding: clamp(36px, 6vw, 72px) 20px clamp(36px, 6vw, 64px) clamp(20px, 5vw, 64px); display: grid; gap: 18px; color: #191e49; }
 .hero-copy .eyebrow { color: #191e49; }
-.hero h1 { font-size: clamp(2.2rem, 5.4vw, 3.6rem); font-weight: 800; letter-spacing: -0.02em; }
-.hero .lead { font-size: 1.15rem; max-width: 46ch; }
-.hero-art { align-self: stretch; min-height: 380px; background: url("assets/brief-hero.jpg") center 78% / cover no-repeat;
+.hero h1 { font-size: clamp(2.1rem, 5.2vw, 3.4rem); font-weight: 800; letter-spacing: -0.02em; }
+.hero .lead { font-size: 1.15rem; max-width: 48ch; }
+.hero-title { display: flex; align-items: center; gap: clamp(14px, 2.5vw, 22px); }
+.hero-pebby { flex: none; width: clamp(72px, 11vw, 112px); height: clamp(72px, 11vw, 112px); border-radius: 50%;
+  background: #ffffff; border: 4px solid #ffffff; box-shadow: 0 8px 24px rgba(25, 30, 73, 0.18); }
+.hero-sub { font-size: 1.3rem; font-weight: 700; color: #bc269b; }
+.hero-art { align-self: stretch; min-height: 360px; background: url("assets/brief-hero.jpg") center 78% / cover no-repeat;
   -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24%); mask-image: linear-gradient(90deg, transparent 0, #000 24%); }
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; }
-  .hero-art { min-height: 300px; order: 2; -webkit-mask-image: linear-gradient(transparent 0, #000 25%); mask-image: linear-gradient(transparent 0, #000 25%); }
+  .hero-art { min-height: 280px; order: 2; -webkit-mask-image: linear-gradient(transparent 0, #000 25%); mask-image: linear-gradient(transparent 0, #000 25%); }
 }
 .wave { height: 6px; background: var(--wave); }
 
-/* Content */
-.page { max-width: 780px; margin: 0 auto; padding-inline: 20px; padding-block: 48px 64px; display: grid; gap: 24px; }
-/* Each section is a card of its own; the cards inside it sit on a soft wash so they read as a level below */
+.page { max-width: 800px; margin: 0 auto; padding-inline: 20px; padding-block: 48px 64px; display: grid; gap: 24px; }
 section { display: grid; gap: 14px; min-width: 0; background: var(--surface); border: 1px solid var(--line);
-  border-top: 4px solid var(--accent); border-radius: var(--radius); box-shadow: var(--shadow);
-  padding: clamp(20px, 4vw, 32px); }
+  border-top: 4px solid var(--accent); border-radius: var(--radius); box-shadow: var(--shadow); padding: clamp(20px, 4vw, 32px); }
 h2.big { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.01em; }
 h3 { font-size: 1.05rem; font-weight: 700; }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
-.card { background: var(--wash); border: 1px solid transparent; border-radius: var(--radius); padding: 18px 20px; display: grid; gap: 10px; align-content: start; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.card { background: var(--wash); border-radius: var(--radius); padding: 18px 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
 .card ul { color: var(--ink-soft); font-size: 0.97rem; gap: 6px; }
+.kind { justify-self: start; font: 500 0.7rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
+  border-radius: 999px; padding: 2px 10px; background: var(--surface); color: var(--ink-soft); border: 1px solid var(--line); }
+.kind.ai { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .with-pebby { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; align-items: start; }
 .with-pebby img { width: 56px; height: 56px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); }
-.diagram pre.mermaid { margin: 0; display: flex; justify-content: center; }
 .diagram { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; overflow-x: auto; }
+.diagram pre.mermaid { margin: 0; display: flex; justify-content: center; }
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
-table { border-collapse: collapse; width: 100%; font-size: 0.95rem; min-width: 480px; }
-th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+table { border-collapse: collapse; width: 100%; font-size: 0.95rem; min-width: 520px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { font: 500 0.74rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); background: var(--wash); }
 tr:last-child td { border-bottom: 0; }
 td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .better { color: var(--good); font-weight: 700; }
+.status { font: 500 0.72rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+.status.done { color: var(--good); border: 1.5px solid var(--good); }
+.status.next { color: var(--ink-soft); border: 1.5px dashed var(--ink-soft); }
+.principles { list-style: none; padding: 0; counter-reset: p; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.principles li { counter-increment: p; background: var(--wash); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; }
+.principles li::before { content: counter(p); font: 500 0.75rem var(--mono); color: var(--accent); }
+.principles li p { color: var(--ink-soft); font-size: 0.95rem; }
 .timeline { list-style: none; padding: 0; margin: 0; display: grid; gap: 0; }
 .timeline > li { position: relative; padding: 0 0 26px 34px; display: grid; gap: 8px; }
 .timeline > li::before { content: ""; position: absolute; left: 8px; top: 10px; bottom: -10px; width: 2px; background: var(--line); }
@@ -91,40 +98,42 @@ td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .timeline > li.now::after { background: var(--accent); }
 .when { font: 500 0.74rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
 .timeline ul { color: var(--ink-soft); font-size: 0.97rem; gap: 6px; }
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 12px; }
-.stat { background: var(--wash); border-radius: 12px; padding: 14px 16px; display: grid; gap: 2px; font-size: 0.92rem; color: var(--ink-soft); }
-.stat .num { font-size: 1.7rem; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.2; }
-.switches { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 12px; }
 .oif { display: grid; gap: 8px; margin: 0; }
 .oif > div { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 10px; align-items: start;
   background: var(--wash); border-radius: 10px; padding: 8px 12px; font-size: 0.95rem; }
 .oif dt { font: 500 0.72rem/1.9 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
 .oif .fix dt { color: var(--good); }
-.oif dd { margin: 0; }
+.oif dd { margin: 0; min-width: 0; }
 .oif dd ul { gap: 4px; color: var(--ink); font-size: 0.95rem; }
 @media (max-width: 520px) { .oif > div { grid-template-columns: 1fr; gap: 2px; } }
 .eg { margin-top: 6px; font-size: 0.92rem; color: var(--ink-soft); font-style: italic; }
 .eg strong { font-style: normal; color: var(--ink); }
-.issue { font-size: 0.95rem; color: var(--ink-soft); background: var(--wash); border-radius: 10px; padding: 8px 12px; }
-.issue strong { color: var(--ink); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 12px; }
+.stat { background: var(--wash); border-radius: 12px; padding: 14px 16px; display: grid; gap: 2px; font-size: 0.92rem; color: var(--ink-soft); }
+.stat .num { font-size: 1.7rem; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.2; }
 .lessons { list-style: none; padding: 0; gap: 12px; }
-.lessons li { background: var(--wash); border: 1px solid transparent; border-radius: var(--radius); padding: 14px 18px; display: grid; gap: 4px; }
+.lessons li { background: var(--wash); border-radius: var(--radius); padding: 14px 18px; display: grid; gap: 4px; }
 .lessons li p { color: var(--ink-soft); font-size: 0.97rem; }
 footer { font-size: 0.88rem; color: var(--ink-soft); border-top: 1px solid var(--line); padding-top: 16px; }
 </style>
 </head>
 <body>
 
+
 <div class="bar">
   <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Spa Desk</div>
-  <span class="badge">Week 2 Project</span>
+  <span class="badge">Week 3 Project</span>
 </div>
 
 <header class="hero">
   <div class="hero-copy">
-    <p class="eyebrow">Week 2 Project · The AI-native spa</p>
-    <h1>Run your whole spa business the AI-native way.</h1>
-    <p class="lead">Spa Desk is one portal for the spa and everyone it serves. Customers get instant, trustworthy answers online. Owners see their business profile and finances in one place. And an assistant ties it all together.</p>
+    <p class="eyebrow">Week 3 Project · From answers to actions</p>
+    <div class="hero-title">
+      <img class="hero-pebby" src="assets/pebby.png" alt="Pebby, the spa's assistant">
+      <h1>Chat or call,<br>Pebby's there to help.</h1>
+    </div>
+    <p class="hero-sub">Book, change or cancel, any time, in a few words.</p>
+    <p class="lead">Last week Pebby answered questions. This week it acts: it books appointments on the spa's real calendars, takes calls on a real phone number, and hears feedback. The AI talks and decides; code does everything exact, and nothing happens without the customer's yes.</p>
   </div>
   <div class="hero-art" role="img" aria-label="Two pebble characters, Mind and Body, resting on beach loungers at sunset"></div>
 </header>
@@ -134,288 +143,260 @@ footer { font-size: 0.88rem; color: var(--ink-soft); border-top: 1px solid var(-
 
 <section aria-labelledby="idea-h">
   <p class="eyebrow">The idea</p>
-  <h2 class="big" id="idea-h">An AI-native business, front desk to back office</h2>
-  <p>Most small spas still run on phone calls, paper notes and spreadsheets. Customers call to ask what a facial costs, whether a treatment is safe during pregnancy or how to cancel. Owners dig through records to see how last month went.</p>
-  <p>Spa Desk puts the whole business online with AI built in from the start. Anything a customer needs to know is one question away, and anything the owner wants to know about the business is too.</p>
+  <h2 class="big" id="idea-h">An assistant that does things has to be safe to trust</h2>
+  <p>Answering "how much is a facial?" wrongly is a bad answer. Booking the wrong facial on the wrong day is a real appointment a therapist turns up for. Once Pebby could act, the question changed from "is the answer right?" to "can the AI ever do something the customer didn't ask for?"</p>
+  <p>Our answer: an AI only where thinking is needed, which is reading what people mean. Everything exact (dates, times, availability, booking) is code. The service, day, time and therapist always come from the customer's own words, and every change waits for their yes.</p>
 </section>
 
 <section aria-labelledby="what-h">
   <p class="eyebrow">What we built</p>
-  <h2 class="big" id="what-h">Two views, one assistant</h2>
-  <p>Everything comes from two files: a written guide for what the spa offers, and the booking records for what happened. Both views read the same files, so they never disagree.</p>
+  <h2 class="big" id="what-h">One Pebby, on the website and the phone</h2>
   <div class="cards">
-    <div class="card"><h3>Customer view</h3><ul>
-      <li>A landing page built from the spa's guide: services, prices, packages, policies, timetable and team</li>
-      <li>A booking request form</li>
-      <li>Pebby in a chat panel on the side</li>
+    <div class="card"><h3>Customers</h3><ul>
+      <li>Book one service or several in one go, with one yes; packages book every service they include</li>
+      <li>Add-ons (a scalp massage with a facial), also onto a booking they already have</li>
+      <li>Change a booking ("same time, deep tissue instead") or cancel one or more</li>
+      <li>Ask which days work, and when someone is free</li>
+      <li>Call the spa's phone number and talk to the same Pebby</li>
+      <li>Share feedback, and get a caring reply</li>
     </ul></div>
-    <div class="card"><h3>Owner view</h3><ul>
-      <li>The business profile, read straight from the guide</li>
-      <li>A reports dashboard from a year of bookings: revenue, cancellations, channels and feedback</li>
-      <li>Filters by date, category and channel</li>
-      <li>Pebby on every tab</li>
+    <div class="card"><h3>The owner</h3><ul>
+      <li>Every booking lands on the therapist's own Google Calendar, with its package and add-ons</li>
+      <li>A Feedback tab: one card per piece of feedback, complaints flagged, closed with a note</li>
+      <li>Sign-in, and a permission for each owner-only page and tool</li>
+      <li>A phone-line test widget, and a debug panel that shows every step of a turn</li>
     </ul></div>
   </div>
-  <div class="card with-pebby">
-    <img src="assets/pebby.png" alt="">
-    <div style="display:grid;gap:8px">
-      <h3>Pebby, the AI virtual assistant</h3>
+</section>
+
+<section aria-labelledby="agents-h">
+  <p class="eyebrow">The agents</p>
+  <h2 class="big" id="agents-h">Two AI agents, and code for everything exact</h2>
+  <p>An agent is an AI that decides what to do next, for example which tool to use, instead of following a fixed script. We gave that role only to jobs that need judgement over language.</p>
+  <div class="cards">
+    <div class="card with-pebby">
+      <img src="assets/pebby.png" alt="">
+      <div style="display:grid;gap:8px;min-width:0">
+        <span class="kind ai">AI agent</span>
+        <h3>Pebby, the front desk</h3>
+        <ul>
+          <li>The only one who talks to the customer</li>
+          <li>Decides what each message is about: a question, a booking, feedback, or something for the staff</li>
+          <li>Collects a booking's details in conversation, then sends them once</li>
+          <li>Tools: search the guide, booking, record feedback, hand off to staff</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <span class="kind ai">AI agent</span>
+      <h3>The Feedback agent</h3>
       <ul>
-        <li><strong>Answers in seconds, day or night,</strong> so customers don't wait on the phone</li>
-        <li><strong>Only says what the spa has written,</strong> and shows where each answer came from</li>
-        <li><strong>Says "I don't know"</strong> instead of guessing</li>
-        <li><strong>Gives the owner real figures</strong> for any period, with what changed and why</li>
-        <li><strong>Keeps private data private:</strong> the customer side never sees bookings or revenue</li>
+        <li>Reads how the customer feels and what about (treatment, staff, facilities…)</li>
+        <li>Writes the reply they see, kind and careful: no promises of refunds, no invented facts</li>
+        <li>Asks one question when the feedback is too brief to act on</li>
+        <li>Files a card for the owner, open until it is closed</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="kind">Code</span>
+      <h3>The booking side</h3>
+      <ul>
+        <li><strong>Details:</strong> checks every detail is in the customer's words, reads "Thursday, after 3pm" into a date and times</li>
+        <li><strong>The yes:</strong> reads the details back, then the times found</li>
+        <li><strong>Booking:</strong> fits the services back to back on the day</li>
+        <li><strong>Executor:</strong> books all of it or none, never twice</li>
       </ul>
     </div>
   </div>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+  C(["Customer<br/>chat or phone"]) --> I["<b>Identify</b> · small AI<br/>name and phone first"]
+  I --> P["<b>Pebby</b> · AI agent<br/>what is this message about?"]
+  P -->|a question| G["search_guide<br/>RAG over the guide"]
+  P -->|feedback| F["<b>Feedback agent</b> · AI<br/>reads it, replies, files a card"]
+  F --> O[("Owner's<br/>Feedback tab")]
+  P -->|a booking| D["<b>Details</b> · code<br/>the customer's own words only"]
+  D --> Y1{"<b>Yes?</b><br/>details read back"}
+  Y1 --> B["<b>Booking</b> · code<br/>fits the times"]
+  B --> Y2{"<b>Yes?</b><br/>the plan, or what is cancelled"}
+  Y2 --> E["<b>Executor</b> · code<br/>all or none"]
+  E --> K[("Google Calendar<br/>one per therapist")]
+  P -->|can't help| H["hand_off<br/>staff call back"]
+</pre>
+  </div>
+  <p class="soft">Each turn is a LangGraph graph: identify, Pebby, tools, the yes. Every step is traced in LangSmith and shown in the debug panel as one line: <code>Customer → Pebby → booking → The yes → Customer</code>.</p>
 </section>
 
-<section aria-labelledby="why-h">
-  <p class="eyebrow">Why we built it</p>
-  <h2 class="big" id="why-h">Do more with less, and get it right every time</h2>
-  <p>A small spa can't keep someone on the phone all day. Customers wait on hold for a simple answer, and the owner spends evenings piecing reports together by hand. That friction costs bookings and time.</p>
+<section aria-labelledby="phone-h">
+  <p class="eyebrow">The phone line</p>
+  <h2 class="big" id="phone-h">ElevenLabs and Twilio: the same Pebby, by voice</h2>
+  <div class="cards">
+    <div class="card"><h3>Twilio</h3><p class="soft">Provides the spa's real phone number and carries the call. When someone dials it, Twilio connects the call to ElevenLabs.</p></div>
+    <div class="card"><h3>ElevenLabs</h3><p class="soft">Runs the conversation by voice: turns the caller's speech into text, sends it to Pebby, speaks Pebby's reply in a natural voice, and handles turn-taking. Its "custom model" setting points at our server, so the thinking stays ours.</p></div>
+    <div class="card"><h3>Our server</h3><p class="soft">Receives each turn as an OpenAI-style chat request, protected by a secret, and streams the reply back. It runs exactly the same Pebby, tools and rules as the chat; only the wording changes for speech.</p></div>
+  </div>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  CALL(["Caller"]) -->|dials| T["<b>Twilio</b><br/>the phone number"]
+  T --> EL["<b>ElevenLabs agent</b><br/>speech to text, voice, turn-taking"]
+  EL -->|"each turn: text + call id + caller number"| S["<b>spaDesk server</b><br/>/v1/chat/completions"]
+  S --> PB["Pebby<br/>the same agent as the chat"]
+  PB -->|"reply, streamed"| EL
+  EL -->|speaks| CALL
+</pre>
+  </div>
   <ul>
-    <li><strong>Less customer friction.</strong> Answers come instantly, day or night, with no call and no wait.</li>
-    <li><strong>More done with fewer people.</strong> The routine questions and the number-crunching are automated, so the team can focus on guests.</li>
-    <li><strong>Fewer human errors.</strong> When the portal is AI-native, every answer comes from one source of truth instead of someone's memory or an old spreadsheet.</li>
+    <li><strong>Caller ID as the phone number:</strong> a caller is only asked for their name, and a returning caller is asked whether it's about their upcoming booking.</li>
+    <li><strong>Spoken replies:</strong> "three p.m.", "Friday the thirtieth", a reference read letter by letter, at most three options.</li>
+    <li><strong>No silence, no dropped calls:</strong> a short filler if the reply takes over 1.5 s, the handover message if a turn would pass 8 s, and never an empty reply.</li>
+    <li><strong>Callers who keep talking:</strong> ElevenLabs sends a longer version of the same turn; we run one turn at a time and undo the replaced one, so Pebby never remembers a reply the caller didn't hear.</li>
   </ul>
-  <p>Automation only helps if it can be trusted. So Pebby only says what the spa has written down, shows where each answer came from, and says "I don't know" when the answer isn't there. For the owner, every figure comes straight from the booking records; Pebby never estimates a number.</p>
 </section>
 
+<section aria-labelledby="fb-h">
+  <p class="eyebrow">Last week's review</p>
+  <h2 class="big" id="fb-h">What we did with the feedback</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Suggestion</th><th>Status</th><th>What we did</th></tr></thead>
+    <tbody>
+      <tr><td>Explicit access checks for customers and owners</td><td><span class="status done">Done</span></td>
+        <td>A table of roles and permissions; owner sign-in with a signed, expiring cookie; each role is only offered its own tools; every owner page and data route requires its permission; a customer's tools only ever reach bookings on their own number. All covered by tests.</td></tr>
+      <tr><td>Compare fixed-size, overlapping chunks with other chunking choices</td><td><span class="status next">Next</span></td>
+        <td>Not done this week: the week went to acting safely. Planned with the existing golden set, so each choice is scored on the same 61 questions.</td></tr>
+      <tr><td>Test whether hybrid retrieval improves the answers</td><td><span class="status next">Next</span></td>
+        <td>Not done this week. Planned: keyword and vector search together, measured the same way. Casual questions like "u guys open sat?" are the case to watch.</td></tr>
+    </tbody>
+  </table></div>
+</section>
 
-<section aria-labelledby="arch-h">
-  <p class="eyebrow">Architecture</p>
-  <h2 class="big" id="arch-h">From question to trusted answer</h2>
-  <p>Both sides share the same guide, search and Claude model. What each side is allowed to reach is different.</p>
-
-  <h3>Customer side</h3>
-  <div class="diagram">
-<pre class="mermaid">
-flowchart TD
-  Q([Customer asks Pebby]) --> S["<b>Search</b><br/>find the 20 closest pieces of the guide"]
-  S --> R["<b>Rerank</b><br/>keep the best 7"]
-  R --> P["<b>Context window</b><br/>rules, current time, the 7 pieces, the question"]
-  P --> C["<b>Claude</b><br/>writes a structured answer"]
-  C --> K["<b>Check</b><br/>real sources only"]
-  K --> A([Answer with its sources])
-  C -.-> L[(LangSmith traces)]
-</pre>
-  </div>
-  <p><strong>The context window</strong> is everything Claude reads for one question. Claude remembers nothing about the spa between questions, so the server packs it fresh each time: the rules Pebby follows, the spa's current date and time (Claude has no clock), the 7 pieces of the guide, and the customer's question. Claude answers from this alone. Sending 7 pieces instead of the whole guide keeps it small, which is why RAG costs less.</p>
-  <p class="soft">Runs on the LangChain pipeline. No tools and no booking data, so revenue and other customers' visits are out of reach.</p>
-
-  <h3>Owner side: a LangGraph graph</h3>
-  <div class="diagram">
-<pre class="mermaid">
-flowchart TD
-  START([Owner asks Pebby]) --> prepare
-  prepare["<b>prepare</b><br/>find the best 7 pieces,<br/>build the context window"] --> agent
-  agent["<b>agent</b><br/>Claude reads everything so far"] --> next{"<b>next_step</b><br/>did Claude ask<br/>for a report?"}
-  next -->|"yes, and rounds left (max 4)"| tools["<b>tools</b><br/>run get_report<br/>for the dates asked"]
-  tools <--> B[(Booking records)]
-  tools -->|"figures go back"| agent
-  next -->|"no: it answered"| END([Answer with figures,<br/>insights and the period used])
-  agent -.-> L[(LangSmith traces)]
-</pre>
-  </div>
-  <p class="soft">The step names are the ones in the LangSmith trace: <code>prepare</code>, <code>agent</code>, <code>next_step</code>, <code>tools</code>. A profile question goes prepare → agent → answer; "last month" goes round the loop once.</p>
-  <p><strong>Why the owner side is a graph:</strong> the figures aren't in the context window yet. Claude asks for a report, the app runs it, and Claude answers, and Claude decides how many times: none for a profile question, one for "last month". A fixed chain calls Claude once and stops, so this loop runs as a LangGraph graph, with at most 4 rounds of tools.</p>
-  <p class="soft">Claude only asks; the app runs the report, using the same code that fills the dashboard.</p>
-  <p class="soft">Made with FastAPI, plain JavaScript, Claude Opus 5.5, Chroma, the all-MiniLM-L6-v2 embedding model, a small cross-encoder reranker, LangChain, LangGraph and LangSmith.</p>
+<section aria-labelledby="rules-h">
+  <p class="eyebrow">How it behaves</p>
+  <h2 class="big" id="rules-h">Six principles, enforced in code</h2>
+  <p>Every rule lives in one file, <code>rules.py</code>, and is enforced by code, not by asking the model nicely. A new situation fits one of these instead of getting a rule of its own.</p>
+  <ol class="principles">
+    <li><h3>Nothing the customer says is dropped</h3><p>Name and phone first; anything asked meanwhile is answered right after.</p></li>
+    <li><h3>Every detail is the customer's own</h3><p>A service, day, time, therapist or booking a model filled in is dropped, and the customer is asked.</p></li>
+    <li><h3>No change without a yes</h3><p>Code writes each question: the details read back, the plan found, what a change cancels.</p></li>
+    <li><h3>All or nothing, never twice</h3><p>A plan is re-checked at the yes and booked whole or not at all.</p></li>
+    <li><h3>Bounded work, then a person</h3><p>Loops, failures, bulk or recurring requests: the staff are told, and the customer always gets an answer.</p></li>
+    <li><h3>A model only where thinking is needed</h3><p>Pebby and the Feedback agent read language; dates, times and booking are code.</p></li>
+  </ol>
 </section>
 
 <section aria-labelledby="done-h">
   <p class="eyebrow">What's done so far</p>
-  <h2 class="big" id="done-h">From a working chatbot to measured, trusted answers</h2>
+  <h2 class="big" id="done-h">From answering to acting, one problem at a time</h2>
   <ol class="timeline">
     <li>
-      <span class="when">Week 1</span>
-      <h3>Vibe-coded app and chatbot</h3>
-      <ul><li>Built the customer site, owner dashboard and Pebby</li><li>Pebby was sent the whole guide with every question</li></ul>
+      <span class="when">Step 1</span>
+      <h3>Pebby books, with tools</h3>
+      <ul><li>A booking agent (LangGraph) with tools to find times, book, list and cancel</li><li>Bookings on Google Calendar, one calendar per therapist</li></ul>
       <dl class="oif">
-        <div><dt>Observation</dt><dd>Highly accurate answers</dd></div>
-        <div><dt>Issue</dt><dd>High cost: every question pays for the whole guide, and bigger documents won't fit<p class="eg"><strong>Example:</strong> "What time do you open?" sent the whole 4,000-token guide to answer a one-line question.</p></dd></div>
-        <div class="fix"><dt>Fix</dt><dd>Introduce RAG</dd></div>
+        <div><dt>Observation</dt><dd>Booking from the chat worked</dd></div>
+        <div><dt>Issue</dt><dd>The AI picked the exact time itself, and booked one service at a time<p class="eg"><strong>Example:</strong> a three-service package needed three separate yeses, and could end half-booked.</p></dd></div>
+        <div class="fix"><dt>Fix</dt><dd>Booking rules in code, and the customer's yes before anything is booked or cancelled</dd></div>
       </dl>
     </li>
     <li>
-      <span class="when">Week 2 (This week) · Step 1</span>
-      <h3>Introduced RAG, cut by section</h3>
-      <ul><li>Cut the guide by its own layout: one piece per heading or service</li><li>Each piece turned into a vector and stored in Chroma</li></ul>
+      <span class="when">Step 2</span>
+      <h3>The phone line</h3>
+      <ul><li>Twilio number → ElevenLabs voice agent → our server, running the same Pebby</li></ul>
       <dl class="oif">
-        <div><dt>Observation</dt><dd>Every piece fit, the largest at about 140 tokens</dd></div>
-        <div><dt>Issue</dt><dd>The embedding model reads only the first 256 tokens of a piece and silently drops the rest. A long section would become unsearchable, with no error<p class="eg"><strong>Example:</strong> our largest piece, "About", was already 140 of the 256 tokens. One long policy added later would have been cut off without any warning.</p></dd></div>
-        <div class="fix"><dt>Fix</dt><dd>Cut by fixed size instead</dd></div>
+        <div><dt>Observation</dt><dd>Real calls worked end to end, with caller ID</dd></div>
+        <div><dt>Issue</dt><dd>ElevenLabs waits 10 seconds for a reply, and a caller who keeps talking sends overlapping turns<p class="eg"><strong>Example:</strong> an early reply the caller never heard was still remembered, and led to an offer for the wrong day.</p></dd></div>
+        <div class="fix"><dt>Fix</dt><dd>One turn at a time, replaced turns undone, a filler, never an empty reply, the handover on any failure</dd></div>
       </dl>
     </li>
     <li>
-      <span class="when">Week 2 (This week) · Step 2</span>
-      <h3>Switched to fixed-size pieces with overlap</h3>
-      <ul><li>Fixed 150-token pieces, each repeating the last 30 tokens of the one before, so no fact is lost at a cut</li><li>Each piece stores its section names as metadata, used to show the answer's source</li><li>Send Pebby only the 7 pieces closest to the question</li><li>Added a switch to toggle RAG on and off, to see the difference</li></ul>
+      <span class="when">Step 3</span>
+      <h3>Access checks</h3>
+      <ul><li>Roles, permissions, owner sign-in, tools offered by role</li></ul>
       <dl class="oif">
-        <div><dt>Observation</dt><dd>Answers looked right when tried by hand</dd></div>
-        <div><dt>Issue</dt><dd>No way to see which pieces were picked, or what each question cost<p class="eg"><strong>Example:</strong> to see what "What are your hours?" picked, we had to run a script by hand. It showed the hours split across two pieces.</p></dd></div>
-        <div class="fix"><dt>Fix</dt><dd>Add LangSmith</dd></div>
+        <div><dt>Observation</dt><dd>The two chats were kept apart only by what each could search</dd></div>
+        <div><dt>Issue</dt><dd>Nothing in code stopped a role reaching another's data</dd></div>
+        <div class="fix"><dt>Fix</dt><dd>Explicit permissions on every tool and route, with tests</dd></div>
       </dl>
     </li>
     <li>
-      <span class="when">Week 2 (This week) · Step 3</span>
-      <h3>Onboarded LangSmith</h3>
-      <ul><li>Every question is traced: pieces picked and their scores, the exact prompt, the reply, tokens and time</li><li>Added the owner's report tool: Pebby asks for figures instead of guessing</li></ul>
+      <span class="when">Step 4</span>
+      <h3>A second AI to plan bookings</h3>
+      <ul><li>A Planner AI turned a request into a plan; one yes booked it all, or none</li></ul>
       <dl class="oif">
-        <div><dt>Observation</dt><dd>We could see exactly what Pebby read for each answer</dd></div>
-        <div><dt>Issue</dt><dd>Checking answers one by one doesn't scale<p class="eg"><strong>Example:</strong> after every change we re-asked questions in the chat by hand, with nothing to compare against.</p></dd></div>
-        <div class="fix"><dt>Fix</dt><dd>Build a golden test set</dd></div>
+        <div><dt>Observation</dt><dd>One yes for a whole package</dd></div>
+        <div><dt>Issue</dt><dd>It invented services and picked days on its own, and took 8 to 20 model calls<p class="eg"><strong>Example:</strong> asked for the Bridal Glow Prep Package, it planned a Signature facial and a body scrub, on a day the customer never chose. One plan took 11.7 s: too slow for the phone.</p></dd></div>
+        <div class="fix"><dt>Fix</dt><dd>Fitting services into a day is arithmetic, so it became code: instant, and it cannot invent anything</dd></div>
       </dl>
     </li>
     <li>
-      <span class="when">Week 2 (This week) · Step 4</span>
-      <h3>Built evals: a golden set of 61 questions</h3>
-      <ul><li>Prices, hours, safety, privacy and owner questions, each with its expected answer</li><li>Every question asked with RAG on and off</li><li>Code checks the facts; a second Claude call grades yes/no and safety answers</li><li>Each run labelled in LangSmith, to compare runs</li></ul>
+      <span class="when">Step 5</span>
+      <h3>Every detail is the customer's own</h3>
+      <ul><li>Pebby passes the customer's own words; code checks they were said, then reads them into dates and times</li><li>The details are read back before any times are looked for</li></ul>
       <dl class="oif">
-        <div><dt>Observation</dt><dd><ul><li>RAG got 54/60, the whole guide 59/60</li><li>RAG used half the tokens and cost 43% less</li><li>Our first retrieval score said 92%, yet answers were missing</li></ul></dd></div>
-        <div><dt>Issue</dt><dd><ul><li>The piece with the answer fell outside the top 7. The yoga studio's Sunday hours sit at the start of a piece that's mostly about facials, so the search ranked it 21st</li><li>The score checked the topic, not the exact answer</li></ul><p class="eg"><strong>Example:</strong> any yoga piece coming back counted as a hit for a yoga question, even when the piece with the answer was missing. It counted 3 of the failed answers as successes.</p></dd></div>
-        <div class="fix"><dt>Fix</dt><dd><ul><li><strong>Reranker</strong> (next step)</li><li><strong>Exact-line check:</strong> each question names the line holding its answer; an honest 83% that predicts failures for free</li></ul></dd></div>
+        <div><dt>Observation</dt><dd>The AI kept filling in what the customer hadn't given</dd></div>
+        <div><dt>Issue</dt><dd>Instructions alone didn't stop it<p class="eg"><strong>Examples:</strong> "today, after 09:34" copied from the clock; all five facials for "a facial"; a therapist nobody asked for; the name "answer".</p></dd></div>
+        <div class="fix"><dt>Fix</dt><dd>One check in code, "picked out by the customer's words", for services, bookings, therapists, days, times and the name</dd></div>
       </dl>
     </li>
     <li>
-      <span class="when">Week 2 (This week) · Step 5</span>
-      <h3>Added reranking</h3>
-      <ul><li>Fetch the 20 closest pieces</li><li>A small model on our machine reads each one with the question and keeps the best 7</li></ul>
+      <span class="when">Step 6</span>
+      <h3>Making the open model reliable</h3>
+      <ul><li>Pebby runs on a cheaper open model (Qwen) or Claude, by one setting</li></ul>
       <dl class="oif">
-        <div><dt>Observation</dt><dd><ul><li>RAG 54 → 56 of 60; answer piece in the top 7: 24 → 26 of 29</li><li>Same cost: Pebby still reads 7 pieces</li></ul></dd></div>
-        <div><dt>Issue</dt><dd>It fixed 4 questions whose answer ranked just outside the top 7 (8th to 13th), but made 2 worse, and 1 is still missed:<ul><li><strong>Made worse: "u guys open sat?"</strong> The reranker reads text like full sentences, so slang like "sat" for Saturday gave it little to match, and the hours piece dropped out of the 7.</li><li><strong>Made worse: "List the yoga classes".</strong> The timetable is spread over several pieces. The reranker kept only the pieces that scored best, so some classes were left out of the answer.</li><li><strong>Still missed: the yoga studio's Sunday hours.</strong> That line sits at the start of a piece that's mostly about facials, so both the search and the reranker treat the piece as a facials piece.</li></ul></dd></div>
-        <div class="fix"><dt>Fix</dt><dd>Planned next: write each piece's section name into its text before it's turned into a vector, so a piece that starts with yoga hours is seen as yoga. It found 27 of 29 answers in a test</dd></div>
+        <div><dt>Observation</dt><dd>Qwen repeated the same tool call, then the staff took over</dd></div>
+        <div><dt>Issue</dt><dd>It was forced to call a tool on every turn; its replies were stored as unanswered tool calls; sometimes it wrote a tool call as text<p class="eg"><strong>Example:</strong> the same guide search three times in one turn, for "facial hair wax".</p></dd></div>
+        <div class="fix"><dt>Fix</dt><dd>No forced tool call; an answer is required only when there is nothing else to call; written tool calls are read; replies are stored as text</dd></div>
       </dl>
     </li>
     <li>
-      <span class="when">Week 2 (This week) · Step 6</span>
-      <h3>Checked the answers, and our tests</h3>
-      <ul><li>Read every failing answer</li></ul>
+      <span class="when">Step 7</span>
+      <h3>Simplified</h3>
+      <ul><li>The Planner and a second booking AI removed: booking is code</li><li>One folder of 13 files, read in the order a turn runs</li></ul>
       <dl class="oif">
-        <div><dt>Observation</dt><dd><ul><li>"Can I bring my kid?" got a list of kids' services, not a yes or no</li><li>Some failures were correct answers</li></ul></dd></div>
-        <div><dt>Issue</dt><dd><ul><li>Pebby answered nearby facts instead of the question</li><li>Our tests looked for exact words, like "phone" when the answer said "call us"</li></ul><p class="eg"><strong>Example:</strong> the grader (a second Claude call) doesn't see the guide. It failed a correct answer that suggested the Bridal Glow Prep Package, because it couldn't tell the package was real.</p></dd></div>
-        <div class="fix"><dt>Fix</dt><dd><ul><li><strong>New rule:</strong> answer what was asked first</li><li><strong>Fixed tests:</strong> grade the answer, not the wording</li></ul></dd></div>
-      </dl>
-    </li>
-    <li>
-      <span class="when">Week 2 (This week) · Step 7</span>
-      <h3>Onboarded LangChain</h3>
-      <ul><li>The same pipeline rebuilt with LangChain parts</li><li>A setting switches between the hand-built and LangChain pipelines</li></ul>
-      <dl class="oif">
-        <div><dt>Observation</dt><dd>Our hand-built pipeline worked well</dd></div>
-        <div><dt>Issue</dt><dd>Swapping a provider, like Chroma for Pinecone, meant writing our own adapter<p class="eg"><strong>Example:</strong> our vector store worked only with Chroma. Moving to Pinecone meant writing and testing a new store ourselves.</p></dd></div>
-        <div class="fix"><dt>Fix</dt><dd>LangChain parts: every provider is a setting, with the same results (RAG 57/61, whole guide 61/61)</dd></div>
-      </dl>
-    </li>
-    <li>
-      <span class="when">Week 2 (This week) · Step 8</span>
-      <h3>Owner chat on LangGraph</h3>
-      <ul><li>The owner's tool loop rebuilt as a graph: prepare, agent, tools, back to agent</li><li>The same setting switches both chats between hand-built and LangChain</li></ul>
-      <dl class="oif">
-        <div><dt>Observation</dt><dd>The customer chat moved to a LangChain chain, but the owner chat couldn't</dd></div>
-        <div><dt>Issue</dt><dd>A chain calls Claude once. The owner chat needs a loop, because Claude decides how many reports it needs<p class="eg"><strong>Example:</strong> "How did we do last month?" took two Claude calls: the first asked for two reports at once, the second answered from them.</p></dd></div>
-        <div class="fix"><dt>Fix</dt><dd>A LangGraph graph with a limit of 4 tool rounds. The trace shows every step: prepare 0.15 s, agent 3 s, two reports in 0.01 s, agent 12 s</dd></div>
+        <div><dt>Observation</dt><dd>20 files in three folders, and a booking AI that almost never ran</dd></div>
+        <div><dt>Issue</dt><dd>Hard to follow and hard to monitor</dd></div>
+        <div class="fix"><dt>Fix</dt><dd>Six principles in one file, and a debug panel that shows every step as a flow</dd></div>
       </dl>
     </li>
     <li class="now">
-      <span class="when">Week 3 · Now</span>
-      <h3>Contextual chunk headers</h3>
-      <ul><li>Each piece gets its place in the guide written above it, as a path from the top, e.g. "Location and Hours &gt; Yoga Studio Hours"</li><li>Used for search only: embedded and reranked with the piece, never sent to Claude</li><li>Guards: a 50-token budget, and a check that piece + header fit what the embedding model reads (256 tokens)</li></ul>
+      <span class="when">Step 8 · Now</span>
+      <h3>The Feedback agent</h3>
+      <ul><li>Reads feedback, writes the reply, asks once when it is too brief, files a card the owner closes</li></ul>
       <dl class="oif">
-        <div><dt>Observation</dt><dd>"What are the yoga studio hours on Sunday?" failed with RAG in all three paid runs. Pebby gave the opening time but not the closing time</dd></div>
-        <div><dt>Issue</dt><dd>The cut fell in the middle of the Sunday line. One piece had the "Yoga Studio Hours" title but stopped at "8:00 AM –"; the next had the full line but no title and was mostly about facials, so it ranked 21st<p class="eg"><strong>Example:</strong> putting the header in the embedding alone changed nothing (26 of 29). The search found the piece, but the reranker, reading plain text, dropped it again.</p></dd></div>
-        <div class="fix"><dt>Fix</dt><dd>Headers in both the embedding and the reranker: the answer's piece now reaches the top 7 for 28 of 29 questions, and the Sunday piece ranks 2nd. The paid run fixed the Sunday hours and the yoga class list</dd></div>
+        <div><dt>Observation</dt><dd>Feedback is real language work: "the massage was great but the room was freezing" is mixed, about the facilities, and worth a call</dd></div>
+        <div class="fix"><dt>Result</dt><dd>A second agent with a job of its own, and a Feedback tab for the owner</dd></div>
       </dl>
     </li>
   </ol>
-  <h3>Two switches to compare</h3>
-  <div class="switches">
-    <div class="card"><h3>RAG on / off</h3><p class="soft">A toggle in the chat. Off sends the whole guide; on sends the best 7 pieces. Shows what RAG gains and costs.</p></div>
-    <div class="card"><h3>Hand-built / LangChain</h3><p class="soft">A server setting (<code>SPADESK_RAG_ENGINE</code>) for both chats: a chain for customers, a graph for the owner. Same steps; tests prove they match.</p></div>
-  </div>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Version</th><th>Correct answers with RAG</th><th>Right passage found</th></tr></thead>
-    <tbody>
-      <tr><td>RAG on, first version</td><td class="n">54 of 60 (90%)</td><td class="n">24 of 29 (83%)</td></tr>
-      <tr><td>+ reranker</td><td class="n better">56 of 60 (93%)</td><td class="n better">26 of 29 (90%)</td></tr>
-      <tr><td>+ LangChain and "answer what was asked"</td><td class="n better">57 of 61 (93%)</td><td class="n">26 of 29 (90%)</td></tr>
-      <tr><td>+ contextual chunk headers</td><td class="n">57 of 60 graded*</td><td class="n better">28 of 29 (97%)</td></tr>
-    </tbody>
-  </table></div>
-  <p class="soft">* The API credit ran out on the last grading call, so one answer that passed in every earlier run wasn't graded. Two of the three failures were grading criteria stricter than the guide (Botox, acne), loosened since.</p>
-  <p><strong>The trade-off:</strong> RAG costs 43% less and uses half the tokens. Reading the whole guide scored a perfect 61 of 61 in the latest run, because this guide is still small enough to fit.</p>
 </section>
 
-<section aria-labelledby="ls-h">
-  <p class="eyebrow">Measured in LangSmith</p>
-  <h2 class="big" id="ls-h">What Pebby costs, and how fast it answers</h2>
-  <p>LangSmith records every question Pebby answers: what it read, how much text it used, what it cost and how long it took. We used it to measure every test run. A test run asks all 61 questions twice, once with RAG on and once with it off, plus the grading.</p>
-  <div class="stats">
-    <div class="stat"><span class="num">43%</span><span>cheaper with RAG on</span></div>
-    <div class="stat"><span class="num">~5 s</span><span>typical answer time</span></div>
-    <div class="stat"><span class="num">$5</span><span>for a full test run</span></div>
-    <div class="stat"><span class="num">0</span><span>errors</span></div>
-  </div>
-  <h3>RAG on vs off, for the same 60 questions</h3>
-  <div class="table-wrap"><table>
-    <thead><tr><th></th><th>RAG off<br>(whole guide)</th><th>RAG on<br>(7 pieces)</th></tr></thead>
-    <tbody>
-      <tr><td>Cost</td><td class="n">$3.12</td><td class="n better">$1.79</td></tr>
-      <tr><td>Text Pebby reads per question</td><td class="n">about 9,000 tokens</td><td class="n better">about 4,000 tokens</td></tr>
-      <tr><td>Typical answer time</td><td class="n better">4.0 s</td><td class="n">5.4 s</td></tr>
-    </tbody>
-  </table></div>
-  <h3>What it tells us</h3>
-  <ul>
-    <li><strong>RAG halves the text Pebby reads,</strong> so it costs less. The saving grows as the guide grows.</li>
-    <li><strong>RAG isn't faster.</strong> Finding the pieces adds a step, and writing the answer takes most of the time.</li>
-    <li><strong>Our improvements were free.</strong> Each full test run cost about the same: $4.90 at the start, $4.95 with the reranker, $5.07 with LangChain. The reranker runs on our own machine, and Pebby still reads 7 pieces.</li>
-    <li><strong>The next saving is caching.</strong> Every question resends the same instructions, and none of it is reused today.</li>
-  </ul>
-</section>
 
-<section aria-labelledby="learn-h">
-  <p class="eyebrow">What we learned</p>
-  <h2 class="big" id="learn-h">Six lessons worth keeping</h2>
-  <ul class="lessons">
-    <li><h3>It's usually the search, not the AI</h3><p>When an answer was wrong, the right passage almost never reached the model. How the guide is cut matters as much as the model.</p></li>
-    <li><h3>"I don't know" is a feature</h3><p>Every time the search missed, Pebby said it couldn't find the answer instead of guessing.</p></li>
-    <li><h3>Measure the exact thing</h3><p>A precise score made every later decision easy, and cost nothing to run.</p></li>
-    <li><h3>Every fix has a side effect</h3><p>The reranker rescued four answers and hurt two, including the casual "u guys open sat?".</p></li>
-    <li><h3>Frameworks don't decide for you</h3><p>LangChain brought ready-made parts, but the key choices stayed ours. Building it by hand first made the LangChain version easy to trust.</p></li>
-    <li><h3>Tools need a loop</h3><p>If everything Claude needs is in the prompt, one call is enough. If Claude must ask for data, the app needs a loop, and that's when a graph earns its place.</p></li>
-  </ul>
-</section>
 
 <section aria-labelledby="next-h">
   <p class="eyebrow">What's next</p>
-  <h2 class="big" id="next-h">Getting Spa Desk ready for real spas</h2>
+  <h2 class="big" id="next-h">Next steps</h2>
   <ul>
-    <li><strong>Headers for Claude too:</strong> show each piece's place in the guide in the context window, measured with a paid run</li>
-    <li><strong>Casual questions:</strong> "u guys open sat?" is still missed; rewriting slang before searching is one option</li>
-    <li><strong>Pebby searches only when needed:</strong> today the guide is searched even for report questions; as a tool, Claude would decide</li>
-    <li><strong>Leaner reports:</strong> send Claude only the figures it needs, to cut the answer time and tokens</li>
-    <li><strong>A graceful limit:</strong> when tool rounds run out, answer from what's been found instead of an error</li>
-    <li><strong>Remembers the conversation</strong>, so follow-up questions just work</li>
-    <li><strong>Hands off to the front desk</strong> when it can't help</li>
-    <li><strong>Lower cost:</strong> cache the instructions that every question repeats</li>
-    <li><strong>Always up to date:</strong> the guide moves to cloud storage and refreshes when the owner edits it</li>
-    <li><strong>Ready to go live:</strong> an owner login, then public hosting</li>
+    <li><strong>Run the new eval</strong> on the open model and on Claude, to choose the right model for Pebby on numbers</li>
+    <li><strong>Bookings for a group:</strong> each person's name and services, starting together, up to three people</li>
+    <li><strong>Chunking comparison and hybrid retrieval</strong>, scored on the golden set</li>
+    <li><strong>Faster calls:</strong> keep every phone turn well inside its time limit</li>
+    <li><strong>Lower cost:</strong> cache the instructions every message repeats</li>
+    <li><strong>Go live:</strong> hosting with its secrets, and the phone number pointed at it</li>
   </ul>
 </section>
 
-<footer>Spa Desk · Pebble Spa is a fictional business and all data is generated. Results are from test runs on 18 October 2026. The full history is in <code>docs/evolution.md</code>, and every measurement is in <code>docs/eval-report.md</code>.</footer>
+<footer>Spa Desk · Pebble Spa is a fictional business and all data is generated. Results are from test runs and traces on 25 October 2026. Last week's brief: <a href="week-2.html">answering questions</a>.</footer>
 </main>
-<!-- Draws the <pre class="mermaid"> diagrams; until it loads they show as text. -->
+
 <script type="module">
-  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-  mermaid.initialize({ startOnLoad: false, theme: "base", securityLevel: "strict",
-    flowchart: { htmlLabels: true, curve: "basis" },
-    themeVariables: { fontFamily: "Figtree, sans-serif", primaryColor: "#f6f4fa", primaryBorderColor: "#bc269b",
-                      primaryTextColor: "#191e49", lineColor: "#4f5680", fontSize: "15px" } });
-  await mermaid.run({ querySelector: "pre.mermaid" });
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+const dark = document.documentElement.dataset.theme === "dark";
+mermaid.initialize({ startOnLoad: true, securityLevel: "strict", theme: "base", themeVariables: {
+  fontFamily: "Figtree, system-ui, sans-serif", fontSize: "15px",
+  primaryColor: dark ? "#1f2244" : "#f6f4fa", primaryBorderColor: "#bc269b",
+  primaryTextColor: dark ? "#eceaf6" : "#191e49", lineColor: dark ? "#b3b6d6" : "#4f5680" } });
 </script>
+
 </body>
 </html>
