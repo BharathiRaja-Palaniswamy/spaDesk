@@ -28,6 +28,7 @@ from ..config import HOURS_BLOCK, TEAM_SECTION
 
 # The days of the week in Python's order: datetime.weekday() is the position here.
 DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+ADD_ONS = "Add-Ons"  # the heading the add-ons are listed under, one "Name — $price" per line
 CLOCK = "%I:%M %p"  # how the document writes a time: "10:00 AM"
 DASH = re.compile(r"\s+[–-]\s+")  # "10:00 AM – 8:00 PM"
 # "7:00 AM – Sunrise Hatha Flow with Maya Chen"
@@ -72,6 +73,7 @@ class Schedule:
     therapists: dict[str, Therapist]  # by name
     hours: dict[int, tuple[time, time]]  # weekday -> (opens, closes); a missing day is closed
     lessons: tuple[Lesson, ...]
+    add_ons: dict[str, int]  # extras added to a service, by name -> price in dollars: {"Scalp massage": 20}
 
     def therapists_for(self, service: str) -> list[Therapist]:
         """Who offers `service`, in the document's order."""
@@ -141,9 +143,16 @@ def _lessons(kb: KnowledgeBase) -> tuple[Lesson, ...]:
     return tuple(lessons)
 
 
+def _add_ons(kb: KnowledgeBase) -> dict[str, int]:
+    """'Scalp massage — $20', one per line under the Add-Ons heading -> {"Scalp massage": 20}."""
+    chunk = kb.find(ADD_ONS)
+    lines = (re.split(r"\s+[–—-]\s+", line, maxsplit=1) for line in chunk.lines) if chunk else ()
+    return {parts[0].strip(): _numbers(parts[1])[0] for parts in lines if len(parts) == 2}
+
+
 def read_schedule(kb: KnowledgeBase) -> Schedule:
     """The booking schedule described by the parsed business document."""
     services = _services(kb)
     therapists = {item.name: _therapist(item, services) for item in kb.items
                   if item.category == TEAM_SECTION and item.get("works")}
-    return Schedule(services, therapists, _hours(kb), _lessons(kb))
+    return Schedule(services, therapists, _hours(kb), _lessons(kb), _add_ons(kb))

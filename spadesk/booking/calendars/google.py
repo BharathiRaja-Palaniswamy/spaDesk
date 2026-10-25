@@ -19,8 +19,9 @@ text, or the path to the file). It owns the calendars it creates, so no
 person has to sign in from the server.
 
 How the Calendar interface (base.py) maps onto Google:
-  busy      Google's free/busy query: every event on the therapist's
-            calendar, ours or not, so time off added by hand counts too
+  busy      every event on the therapist's calendar, ours or not, so time
+            off added by hand counts too; each event on its own (two events
+            at the same times are two periods), skipping events marked "free"
   add       a new event, with our reference and the customer's details in
             its private properties, which the app searches by, and in its
             description, for whoever opens it in Google Calendar
@@ -33,7 +34,7 @@ as CalendarUnavailable (errors.py).
 """
 
 import json
-from datetime import datetime
+from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -101,24 +102,27 @@ class GoogleCalendar:
         self.api, self.calendars, self.zone = api, calendars, zone
 
     def busy(self, therapist: str, start: datetime, end: datetime) -> list[tuple[datetime, datetime]]:
-        """Everything on the therapist's calendar between `start` and `end`."""
-        calendar = self.calendars[therapist]
-        found = run(self.api.freebusy().query(body={
-            "timeMin": start.isoformat(), "timeMax": end.isoformat(), "items": [{"id": calendar}]}))
-        return [(self._time(period["start"]), self._time(period["end"]))
-                for period in found["calendars"][calendar]["busy"]]
+        """Every event on the therapist's calendar between `start` and `end`, one period each.
+        (Google's free/busy query would merge neighbouring events into one period, which
+        could not tell a booking from another event right next to it.)"""
+        events = self._events(therapist, timeMin=start.isoformat(), timeMax=end.isoformat())
+        return [(self._moment(event["start"]), self._moment(event["end"])) for _, event in events
+                if event.get("transparency") != "transparent" and event.get("status") != "cancelled"]
 
     def add(self, booking: Booking) -> None:
         """A new event on the therapist's calendar."""
         zone = str(self.zone)
         run(self.api.events().insert(calendarId=self.calendars[booking.therapist], body={
             "summary": f"{booking.service} – {booking.name}",
-            "description": f"Booked through the spa's site.\nReference: {booking.id}\nPhone: {booking.phone}",
+            "description": f"Booked through the spa's site.\nReference: {booking.id}\nPhone: {booking.phone}"
+                           + (f"\nAdd-ons: {', '.join(booking.add_ons)}" if booking.add_ons else ""),
             "start": {"dateTime": booking.start.isoformat(), "timeZone": zone},
             "end": {"dateTime": booking.end.isoformat(), "timeZone": zone},
             "extendedProperties": {"private": {
                 MARK[0]: MARK[1], "reference": booking.id, "service": booking.service,
-                "customer": booking.name, "phone": booking.phone}},
+                "customer": booking.name, "phone": booking.phone,
+                **({"package": booking.package} if booking.package else {}),
+                **({"add_ons": "; ".join(booking.add_ons)} if booking.add_ons else {})}},
         }))
 
     def find(self, booking_id: str) -> Booking | None:
@@ -161,11 +165,18 @@ class GoogleCalendar:
         private = event["extendedProperties"]["private"]
         return Booking(private["reference"], private["service"], therapist,
                        self._time(event["start"]["dateTime"]), self._time(event["end"]["dateTime"]),
-                       private["customer"], private["phone"])
+                       private["customer"], private["phone"], private.get("package", ""),
+                       tuple(a for a in private.get("add_ons", "").split("; ") if a))
 
     def _time(self, text: str) -> datetime:
         """A time from Google ('2026-10-23T17:00:00Z') in the spa's time zone."""
         return datetime.fromisoformat(text).astimezone(self.zone)
+
+    def _moment(self, when: dict[str, str]) -> datetime:
+        """An event's start or end: a time ("dateTime"), or a whole day ("date", e.g. a day off) from midnight."""
+        if "dateTime" in when:
+            return self._time(when["dateTime"])
+        return datetime.combine(date.fromisoformat(when["date"]), time(0), self.zone)
 
 
 def share(api: Any, calendar: str, person: str) -> None:

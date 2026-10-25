@@ -2,9 +2,9 @@
 
 Until both are known, every message goes through this step, not to the
 agent: it is a fixed step of the graph, so the model cannot skip it. A
-small, fast model reads the message for a name, a phone number, and whether
-the customer also asked for something (so that question can be answered
-once they have given their details).
+small, fast model reads the message for a name, a phone number, and what
+the customer asked for besides (`asked`): telling Pebby that is its job, so
+the request is answered once they have given their details.
 
 On a phone call the number calling (caller ID) is taken as the phone
 number, so only the name is asked for, and the caller is told which number
@@ -16,17 +16,14 @@ one of them or about something new, before anything else. The phone number is ta
 it only has to have at least 7 digits.
 """
 
-import re
-
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
-from ..booking.appointments import digits, get_appointments
-from ..booking.errors import BookingError, CalendarUnavailable
-from ..models import structured
-from .confirm import when
-
-PROFILE = "cheap-router"  # a small, fast model: this is a quick reading job
+from ...booking.appointments import digits, get_appointments
+from ...booking.errors import BookingError, CalendarUnavailable
+from ...models import structured
+from ..booking.yes import when
+from ..rules import READER_MODEL
 
 READ = """You read one message a customer sent to a spa's website chat, which asked for \
 their name and phone number. Take out what the message gives. Do not guess."""
@@ -38,13 +35,15 @@ class Details(BaseModel):
     name: str = Field(description="The customer's name, as they wrote it, if the message gives it; otherwise "
                                   "empty.")
     phone: str = Field(description="The phone number, as written, if the message gives one; otherwise empty.")
-    asks: bool = Field(description="True if the message also asks a question or asks for something (e.g. a "
-                                   "booking, prices, hours), beyond giving a name or number.")
+    asked: str = Field(default="", description="What the message asks for besides a greeting, a name or a "
+                                               "phone number, in the customer's own words, even a few words "
+                                               "(e.g. 'silent facial', 'what time do you open?'); empty if "
+                                               "it is only a greeting, a name or a number.")
 
 
 def read_details(message: str) -> Details:
     """The name, phone number and request in one message, read by the model."""
-    return structured(PROFILE, [SystemMessage(READ), HumanMessage(message)], Details).reply
+    return structured(READER_MODEL, [SystemMessage(READ), HumanMessage(message)], Details).reply
 
 
 def valid_phone(phone: str) -> bool:

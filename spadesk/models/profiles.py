@@ -42,7 +42,8 @@ DEFAULT_PROVIDER = "anthropic"
 # Profile -> the tier of its model in the chosen set, or a fixed model.
 PROFILES: dict[str, str] = {
     "chat-default": "high",  # the owner chat, and the question-and-answer chat the evals use
-    "booking-agent": "high",  # the customer chat's booking agent (spadesk/agent/)
+    "booking-agent": "high",  # Pebby, the front agent that talks to customers (spadesk/agent/)
+    "booking-team": "low",  # the Booking agent behind Pebby: small, fast reasoning (spadesk/agent/booking/agent.py)
     "cheap-router": "low",  # small reading jobs, e.g. a name and number from a message
     "voice-ready": "low",  # short answers that must start fast, for speech
     "judge": JUDGE_MODEL,  # grades eval answers (evals/judge.py)

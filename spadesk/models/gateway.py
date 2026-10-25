@@ -120,17 +120,18 @@ def chat(profile: str, messages: LanguageModelInput) -> Reply:
 
 
 def structured(profile: str, messages: LanguageModelInput, shape: type[BaseModel],
-               tools: list[Tool] | None = None) -> Structured:
+               tools: list[Tool] | None = None, answer_now: bool = False) -> Structured:
     """Ask for an answer in `shape`, with `tools` on offer. One call ends
     either in the answer or in requests for tools; the caller runs those
     (tools.run_requests), adds them to the conversation and asks again.
     A reply that does not fit `shape` counts as a failure, so the fallback
-    model is tried."""
+    model is tried. With `answer_now`, the model must answer this time, not
+    ask for a tool (structured.prepare)."""
     offered = tools or []
 
     def attempt(spec: ModelSpec, labels: RunnableConfig) -> tuple[AIMessage, tuple[BaseModel | None, list[dict], AIMessage]]:
         method = STRUCTURED.get(spec.provider, "answer-tool")
-        message = shapes.prepare(build(spec), method, shape, offered).invoke(messages, config=labels)
+        message = shapes.prepare(build(spec), method, shape, offered, answer_now).invoke(messages, config=labels)
         reply, requests = shapes.read(message, method, shape, str(spec))
         return message, (reply, requests, message)
 

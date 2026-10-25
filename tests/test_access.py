@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from spadesk.access import session
 from spadesk.access.permissions import PERMISSIONS, Role, allowed
-from spadesk.agent.tools import NEEDS, agent_tools
+from spadesk.agent.pebby.tools import NEEDS, agent_tools
 from spadesk.app import app
 
 OWNER_ONLY = ["/api/report/options", "/api/report", "/api/voice-widget"]

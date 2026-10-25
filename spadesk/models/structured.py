@@ -7,11 +7,15 @@ names one of two methods (providers.STRUCTURED):
   native       the shape is sent as the reply format, and the model's text
                is JSON in that shape. Claude does this, also while offering
                tools: one call ends either in a tool request or in the reply.
-  answer-tool  the shape is offered as one more tool, "answer", and the model
-               must call a tool (tool_choice "required"): another tool when it
-               needs one, "answer" when it is ready. Tool calling is the most
-               widely supported way to get exact JSON from OpenAI-compatible
-               providers, so this works where a reply format may not.
+  answer-tool  the shape is offered as one more tool, "answer": the model calls
+               another tool when it needs one, and "answer" when it is ready.
+               Tool calling is the most widely supported way to get exact JSON
+               from OpenAI-compatible providers, so this works where a reply
+               format may not. A tool call is not required (tool_choice "auto"):
+               made to call one every time, a model with nothing left to look
+               up tends to repeat a call instead of answering. So it may also
+               reply in text: JSON in the shape, or plain sentences, which
+               become the shape's text with nothing else (_from_text).
 
 Either way the caller gets the same thing back: the reply, or the model's
 requests for other tools. A reply that does not fit the shape raises
@@ -42,16 +46,37 @@ def _answer_tool(schema: type[BaseModel]) -> dict[str, Any]:
         "parameters": schema.model_json_schema()}}
 
 
-def prepare(model: BaseChatModel, method: str, schema: type[BaseModel], tools: list[Tool]) -> Runnable:
-    """`model` set up to reply in `schema`'s shape, with `tools` on offer."""
+def prepare(model: BaseChatModel, method: str, schema: type[BaseModel], tools: list[Tool],
+            answer_now: bool = False) -> Runnable:
+    """`model` set up to reply in `schema`'s shape, with `tools` on offer. With
+    `answer_now`, it must reply this time and cannot ask for another tool: for a
+    model that keeps asking for tools (repeating one it already had)."""
     offered = [tool.description_for_model() for tool in tools]
     if method == "native":
         # Claude's reply format, the same setting the Anthropic library's messages.parse uses.
+        # The tools stay described (the conversation holds earlier tool calls), but none may be called.
         reply_format = {"type": "json_schema", "schema": transform_schema(schema)}
-        return (model.bind_tools(offered) if offered else model).bind(output_config={"format": reply_format})
+        bound = model.bind_tools(offered, tool_choice={"type": "none"} if answer_now else None) if offered else model
+        return bound.bind(output_config={"format": reply_format})
     if method == "answer-tool":
-        return model.bind_tools([*offered, _answer_tool(schema)], tool_choice="required")
+        # With answer_now, the only call allowed is the reply's; otherwise the model chooses.
+        return model.bind_tools([*offered, _answer_tool(schema)], tool_choice=ANSWER if answer_now else "auto")
     raise ValueError(f"Unknown structured-output method: {method!r}.")
+
+
+def _from_text(schema: type[BaseModel], text: str) -> BaseModel:
+    """A reply written as text: JSON in `schema`'s shape, or else plain sentences,
+    which become its first text field, with every list in it empty. Raises
+    ValidationError when the text is neither."""
+    try:
+        return schema.model_validate_json(text)
+    except ValidationError:
+        fields = schema.model_fields
+        first = next((name for name, f in fields.items() if f.annotation is str), None)
+        if first is None or not text.strip():
+            raise
+        lists = {name: [] for name, f in fields.items() if getattr(f.annotation, "__origin__", None) is list}
+        return schema.model_validate({**lists, first: text.strip()})
 
 
 def read(message: AIMessage, method: str, schema: type[BaseModel], model: str) -> tuple[BaseModel | None, list[dict]]:
@@ -66,8 +91,8 @@ def read(message: AIMessage, method: str, schema: type[BaseModel], model: str) -
                 return schema.model_validate(answers[0]["args"]), requests
             if requests:
                 return None, requests
-            # Some models write the JSON as text instead of calling the tool; accept it if it fits.
-            return schema.model_validate_json(message.text), []
+            # A reply written as text instead of the tool: JSON in the shape, or plain sentences.
+            return _from_text(schema, message.text), []
         if message.tool_calls:
             return None, list(message.tool_calls)
         return schema.model_validate_json(message.text), []

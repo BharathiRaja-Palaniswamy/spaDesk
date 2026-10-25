@@ -7,7 +7,7 @@
 
 import { $, el } from "../dom.js";
 import { askAssistant } from "./assistant.js";
-import { showReply, suggestionChips } from "./reply.js";
+import { debugPanel, showReply, suggestionChips } from "./reply.js";
 import { greeting } from "./welcome.js";
 
 /**
@@ -68,6 +68,7 @@ export function initChat(business) {
       // list in the bubble, then the replies to tap (a yes and a no when
       // Pebby is asking the customer to confirm a booking).
       showReply(bubble, reply);
+      if (reply.debug) messages.append(debugPanel(reply.debug)); // debug mode only (SPADESK_DEBUG)
       addSuggestions(reply.suggestions);
     } catch {
       bubble.textContent = "Sorry, something went wrong. Please try again.";

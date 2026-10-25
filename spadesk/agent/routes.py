@@ -6,6 +6,11 @@ The browser makes up a thread id when the chat opens and sends it with every
 message; the agent keeps each thread's conversation (graph.py). The id is
 not a secret: it only joins the messages of one chat.
 
+In debug mode (SPADESK_DEBUG=true), every reply also carries `debug`: the
+steps between the agents in that turn (debug.py), shown under the reply.
+It is for testing: anyone using the chat sees it, so keep it off on a
+site customers use.
+
 When a turn fails (a model cannot be reached, an unexpected error), the
 customer gets Pebby's handover message, and the staff a handoff to act on
 (agent.hand_over), rather than an error.
@@ -21,6 +26,7 @@ from langsmith import get_current_run_tree, traceable
 from pydantic import BaseModel, Field
 
 from ..assistant.replies import ReplyItem
+from ..config import get_settings
 from ..models import ModelError
 from ..rag.errors import ModelUnavailable
 from . import hand_over, respond
@@ -43,9 +49,10 @@ class Reply(BaseModel):
     items: list[ReplyItem]
     suggestions: list[str]
     confirming: bool  # the customer is being asked to confirm a booking or cancellation
+    debug: list[dict] | None = None  # debug mode only: the steps between the agents
 
 
-@router.post("/assistant")
+@router.post("/assistant", response_model_exclude_none=True)  # no `debug` at all when it is not shown
 @traceable  # the whole turn is the top step of the trace
 def assistant(body: Message) -> Reply:
     """Run one turn of the conversation."""
@@ -63,4 +70,5 @@ def assistant(body: Message) -> Reply:
         turn = hand_over(body.thread, "The assistant hit an unexpected error.", body.message)
     if turn is None:  # a newer message of the same chat arrived while this one ran
         raise HTTPException(status_code=409, detail="A newer message replaced this one.")
-    return Reply(answer=turn.answer, items=turn.items, suggestions=turn.suggestions, confirming=turn.confirming)
+    return Reply(answer=turn.answer, items=turn.items, suggestions=turn.suggestions, confirming=turn.confirming,
+                 debug=turn.debug if get_settings().debug else None)

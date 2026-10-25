@@ -1,0 +1,449 @@
+[
+  {
+    "id": "words-before-the-details-are-answered",
+    "turns": [
+      "silent facial",
+      "raj 47586869"
+    ],
+    "routing": {
+      "not_tools": [
+        "booking",
+        "hand_off"
+      ]
+    },
+    "downstream": {
+      "confirming": false,
+      "answer_has": [
+        "facial"
+      ]
+    }
+  },
+  {
+    "id": "question-opening-hours",
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "What time do you open on Sunday?"
+    ],
+    "routing": {
+      "tool": "search_guide",
+      "not_tools": [
+        "booking"
+      ]
+    },
+    "downstream": {
+      "confirming": false
+    }
+  },
+  {
+    "id": "question-facial-prices",
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "How much do you charge for a facial?"
+    ],
+    "routing": {
+      "tool": "search_guide",
+      "not_tools": [
+        "booking"
+      ]
+    },
+    "downstream": {
+      "confirming": false,
+      "answer_has": [
+        "$"
+      ]
+    }
+  },
+  {
+    "id": "feedback-praise",
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "I had a massage with Priya last week and it was wonderful, thank you!"
+    ],
+    "routing": {
+      "tool": "record_feedback",
+      "not_tools": [
+        "booking"
+      ]
+    },
+    "downstream": {
+      "confirming": false
+    }
+  },
+  {
+    "id": "feedback-complaint",
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "My massage room was freezing cold yesterday, not happy."
+    ],
+    "routing": {
+      "tool": "record_feedback",
+      "not_tools": [
+        "booking"
+      ]
+    },
+    "downstream": {
+      "confirming": false
+    }
+  },
+  {
+    "id": "a-person",
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "I'd like to speak to a real person please"
+    ],
+    "routing": {
+      "tool": "hand_off",
+      "not_tools": [
+        "booking"
+      ]
+    },
+    "downstream": {
+      "confirming": false
+    }
+  },
+  {
+    "id": "vague-service-is-asked-not-chosen",
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "want to book facial"
+    ],
+    "routing": {
+      "not_tools": [
+        "hand_off",
+        "record_feedback"
+      ]
+    },
+    "extraction": {
+      "only_named_services": true,
+      "no_day_said": true,
+      "no_time_said": true
+    },
+    "downstream": {
+      "confirming": false,
+      "answer_has": [
+        "facial"
+      ]
+    }
+  },
+  {
+    "id": "no-day-is-asked-not-guessed",
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "book prenatal"
+    ],
+    "routing": {
+      "not_tools": [
+        "hand_off",
+        "record_feedback"
+      ]
+    },
+    "extraction": {
+      "only_named_services": true,
+      "no_day_said": true,
+      "no_time_said": true
+    },
+    "downstream": {
+      "confirming": false,
+      "answer_has": [
+        "day"
+      ]
+    }
+  },
+  {
+    "id": "no-time-is-asked-not-guessed",
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "A prenatal massage on Friday please"
+    ],
+    "routing": {
+      "not_tools": [
+        "hand_off",
+        "record_feedback"
+      ]
+    },
+    "extraction": {
+      "no_time_said": true
+    },
+    "downstream": {
+      "confirming": false,
+      "answer_has": [
+        "time"
+      ]
+    }
+  },
+  {
+    "id": "package-without-a-day",
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "Do you have a bridal package?",
+      "Book it please"
+    ],
+    "routing": {
+      "not_tools": [
+        "hand_off",
+        "record_feedback"
+      ]
+    },
+    "extraction": {
+      "no_day_said": true,
+      "no_time_said": true
+    },
+    "downstream": {
+      "confirming": false,
+      "answer_has": [
+        "day"
+      ]
+    }
+  },
+  {
+    "id": "package-on-a-day",
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "I'd like to book the Bridal Glow Prep Package",
+      "Thursday please, any time",
+      "Yes, that's right"
+    ],
+    "routing": {
+      "tool": "booking",
+      "intent": [
+        "new"
+      ]
+    },
+    "extraction": {
+      "services": [
+        "Brightening Vitamin C Facial",
+        "Glow Express Facial",
+        "Eyebrow Wax"
+      ],
+      "package": true,
+      "day_said_has": "thursday"
+    },
+    "downstream": {
+      "confirming": true,
+      "answer_has": [
+        "Shall I book",
+        "Brightening Vitamin C Facial",
+        "Glow Express Facial",
+        "Eyebrow Wax"
+      ]
+    }
+  },
+  {
+    "id": "one-service-day-and-time",
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "A prenatal massage on Friday, after 3pm",
+      "Yes, that's right"
+    ],
+    "routing": {
+      "tool": "booking",
+      "intent": [
+        "new"
+      ]
+    },
+    "extraction": {
+      "services": [
+        "Prenatal Massage"
+      ],
+      "day_said_has": "friday",
+      "time_said_has": "3",
+      "only_named_services": true
+    },
+    "downstream": {
+      "confirming": true,
+      "answer_has": [
+        "Shall I book",
+        "Prenatal Massage",
+        "Priya Nair"
+      ]
+    }
+  },
+  {
+    "id": "therapist-and-morning",
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "Can I get a Swedish massage with Priya on Friday morning?"
+    ],
+    "routing": {
+      "tool": "booking",
+      "intent": [
+        "new"
+      ]
+    },
+    "extraction": {
+      "services": [
+        "Swedish Massage"
+      ],
+      "day_said_has": "friday",
+      "time_said_has": "morning",
+      "therapist": "Priya Nair"
+    },
+    "downstream": {
+      "confirming": true,
+      "answer_has": [
+        "Just to check",
+        "Priya Nair"
+      ]
+    }
+  },
+  {
+    "id": "two-services-in-order",
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "On Saturday morning I'd like a Swedish massage and then a Signature Radiance Facial",
+      "Yes, that's right"
+    ],
+    "routing": {
+      "tool": "booking",
+      "intent": [
+        "new"
+      ]
+    },
+    "extraction": {
+      "services": [
+        "Swedish Massage",
+        "Signature Radiance Facial"
+      ],
+      "day_said_has": "saturday"
+    },
+    "downstream": {
+      "confirming": true,
+      "answer_has": [
+        "1. Swedish Massage",
+        "2. Signature Radiance Facial"
+      ]
+    }
+  },
+  {
+    "id": "which-days-are-free",
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "When is Priya free on Friday for a prenatal massage?"
+    ],
+    "routing": {
+      "tool": "booking",
+      "intent": [
+        "availability"
+      ]
+    },
+    "extraction": {
+      "services": [
+        "Prenatal Massage"
+      ],
+      "day_said_has": "friday"
+    },
+    "downstream": {
+      "confirming": false
+    }
+  },
+  {
+    "id": "my-bookings",
+    "seed": [
+      {
+        "service": "Prenatal Massage",
+        "therapist": "Priya Nair",
+        "weekday": "Friday",
+        "time": "15:00"
+      }
+    ],
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "No, something else: what bookings do I have?"
+    ],
+    "routing": {
+      "tool": "booking",
+      "intent": [
+        "my_bookings"
+      ]
+    },
+    "downstream": {
+      "confirming": false,
+      "answer_has": [
+        "Prenatal Massage"
+      ]
+    }
+  },
+  {
+    "id": "cancel-a-booking",
+    "seed": [
+      {
+        "service": "Prenatal Massage",
+        "therapist": "Priya Nair",
+        "weekday": "Friday",
+        "time": "15:00"
+      }
+    ],
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "Yes, that one. Please cancel it."
+    ],
+    "routing": {
+      "tool": "booking",
+      "intent": [
+        "cancel"
+      ]
+    },
+    "extraction": {
+      "references": true
+    },
+    "downstream": {
+      "confirming": true,
+      "answer_has": [
+        "cancel"
+      ]
+    }
+  },
+  {
+    "id": "move-a-booking",
+    "seed": [
+      {
+        "service": "Prenatal Massage",
+        "therapist": "Priya Nair",
+        "weekday": "Friday",
+        "time": "15:00"
+      }
+    ],
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "Yes, that one: please move it to Saturday, any time"
+    ],
+    "routing": {
+      "tool": "booking",
+      "intent": [
+        "change"
+      ]
+    },
+    "extraction": {
+      "references": true,
+      "day_said_has": "saturday"
+    },
+    "downstream": {
+      "confirming": true,
+      "answer_has": [
+        "instead of your booking"
+      ]
+    }
+  },
+  {
+    "id": "a-yes-books-once",
+    "turns": [
+      "Asha Rao, 408 555 0101",
+      "A prenatal massage on Friday after 3pm",
+      "Yes, that's right",
+      "Yes, book it"
+    ],
+    "routing": {
+      "tool": "booking",
+      "intent": [
+        "new"
+      ]
+    },
+    "downstream": {
+      "confirming": false,
+      "answer_has": [
+        "BK-"
+      ],
+      "booked": 1
+    }
+  }
+]

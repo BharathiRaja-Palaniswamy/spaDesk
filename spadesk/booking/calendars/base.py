@@ -28,6 +28,8 @@ class Booking:
     end: datetime
     name: str  # the customer's
     phone: str
+    package: str = ""  # the package it was booked as part of, e.g. "Bridal Glow Prep Package"; "" for none
+    add_ons: tuple[str, ...] = ()  # extras the customer asked for with it, e.g. ("Scalp massage",)
 
 
 class Calendar(Protocol):

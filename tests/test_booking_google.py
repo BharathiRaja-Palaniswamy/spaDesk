@@ -2,8 +2,8 @@
 with a stand-in for Google's Calendar API: no account, no network.
 
 The stand-in keeps calendars and their events and answers the requests the
-adapter sends (calendar list, calendar insert, sharing, free/busy, events
-insert, list and delete), so the booking rules can run on it end to end,
+adapter sends (calendar list, calendar insert, sharing, events insert, list
+and delete), so the booking rules can run on it end to end,
 including an event added by hand in Google Calendar (time off), which has
 none of our marks.
 
@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from googleapiclient.errors import HttpError
 
-from spadesk.agent.tools import agent_tools
+from spadesk.agent.booking.agent import free_times_tool
 from spadesk.booking import actions
 from spadesk.booking.appointments import Appointments
 from spadesk.booking.calendars import google
@@ -75,15 +75,6 @@ class FakeApi:
         items = [{"summary": name, "id": cid} for name, cid in self.names.items()]
         return SimpleNamespace(list=lambda pageToken=None: Request({"items": items}))
 
-    # api.freebusy().query(body=...)
-    def freebusy(self):
-        def query(body):
-            start, end = (datetime.fromisoformat(body[k]) for k in ("timeMin", "timeMax"))
-            return Request(lambda: {"calendars": {item["id"]: {"busy": [
-                {"start": e["start"]["dateTime"], "end": e["end"]["dateTime"]}
-                for e in self._overlapping(item["id"], start, end)]} for item in body["items"]}})
-        return SimpleNamespace(query=query)
-
     # api.events().insert / list / delete
     def events(self):
         def insert(calendarId, body):
@@ -101,7 +92,12 @@ class FakeApi:
                 found = self._overlapping(calendarId, datetime.fromisoformat(timeMin), datetime.fromisoformat(timeMax))
             if key:
                 found = [e for e in found if e.get("extendedProperties", {}).get("private", {}).get(key) == value]
-            return Request({"items": found})
+
+            def run():
+                if self.fail:
+                    raise HttpError(SimpleNamespace(status=503, reason="Unavailable"), b"")
+                return {"items": found}
+            return Request(run)
 
         def delete(calendarId, eventId):
             return Request(lambda: self.stored[calendarId].remove(
@@ -109,9 +105,14 @@ class FakeApi:
         return SimpleNamespace(insert=insert, list=list_, delete=delete)
 
     def _overlapping(self, calendar, start, end):
-        return [e for e in self.stored[calendar]
-                if datetime.fromisoformat(e["start"]["dateTime"]) < end
-                and datetime.fromisoformat(e["end"]["dateTime"]) > start]
+        return [e for e in self.stored[calendar] if moment(e["start"]) < end and moment(e["end"]) > start]
+
+
+def moment(when: dict) -> datetime:
+    """An event's start or end as Google writes it: a time, or a whole day (from midnight at the spa)."""
+    if "dateTime" in when:
+        return datetime.fromisoformat(when["dateTime"])
+    return datetime.combine(date.fromisoformat(when["date"]), datetime.min.time(), SPA)
 
 
 TEAM = list(read_schedule(get_knowledge()).therapists)
@@ -148,6 +149,15 @@ def test_bookings_read_back_as_they_were_made_and_can_be_cancelled(api, desk):
     assert priya(api) == [] and desk.day_bookings(FRIDAY) == []
 
 
+def test_a_bookings_package_and_add_ons_are_kept_on_its_event(api, desk):
+    booking = desk.book("Prenatal Massage", "Priya Nair", at("10:00"), "Asha", "(408) 555-0101",
+                        package="Mom & Me Relax Package", add_ons=("Scalp massage",))
+    found = desk.calendar.find(booking.id)
+    assert (found.package, found.add_ons) == ("Mom & Me Relax Package", ("Scalp massage",))
+    [event] = [e for events in api.stored.values() for e in events]
+    assert "Add-ons: Scalp massage" in event["description"]  # what the staff see in Google Calendar
+
+
 def test_time_off_added_in_google_calendar_blocks_those_times_but_is_not_a_booking(api, desk):
     # The owner adds "Priya – dentist" from 12:00 to 14:00 directly in Google Calendar.
     priya(api).append({"id": "by-hand", "summary": "Priya – dentist",
@@ -163,8 +173,7 @@ def test_google_failing_is_reported_as_calendar_unavailable_and_the_tool_says_so
         desk.book("Prenatal Massage", "Priya Nair", at("10:00"), "Asha", "(408) 555-0101")
     # Through the tool, the model gets a message it can pass on, not the reason.
     monkeypatch.setattr(actions, "get_appointments", lambda: desk)
-    book = next(t for t in agent_tools("Asha", "4085550101") if t.name == "book_appointment")
-    reply = book.run({"service": "Prenatal Massage", "therapist": "Priya Nair", "start": "2026-10-23T10:00"})
+    reply = free_times_tool().run({"service": "Prenatal Massage", "date": "2026-10-23"})
     assert reply == {"error": actions.UNAVAILABLE}
 
 
@@ -205,3 +214,13 @@ def test_there_is_no_other_place_for_bookings_without_google(monkeypatch):
     with pytest.raises(CalendarUnavailable, match="GOOGLE_SERVICE_ACCOUNT is not set"):
         get_calendar()
     get_calendar.cache_clear()
+
+
+def test_a_day_off_blocks_the_day_and_an_event_marked_free_does_not(api, desk):
+    priya(api).append({"id": "off", "summary": "Priya – day off", "start": {"date": "2026-10-23"},
+                       "end": {"date": "2026-10-24"}})
+    assert desk.free_slots("Prenatal Massage", FRIDAY) == []
+    priya(api).clear()
+    priya(api).append({"id": "note", "summary": "Reminder", "transparency": "transparent",
+                       "start": {"dateTime": at("10:00").isoformat()}, "end": {"dateTime": at("11:00").isoformat()}})
+    assert "10:00" in [s.start.strftime("%H:%M") for s in desk.free_slots("Prenatal Massage", FRIDAY)]
