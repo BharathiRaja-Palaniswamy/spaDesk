@@ -71,7 +71,8 @@ export function initChat(business) {
       if (reply.debug) messages.append(debugPanel(reply.debug)); // debug mode only (SPADESK_DEBUG)
       addSuggestions(reply.suggestions);
     } catch {
-      bubble.textContent = "Sorry, something went wrong. Please try again.";
+      // Only when the spa's server could not be reached at all: it answers every request it gets.
+      bubble.textContent = "Sorry, I couldn't reach the spa just now. Please try again in a moment, or call us.";
     }
     bubble.classList.remove("pending");
     scrollToEnd();

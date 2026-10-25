@@ -6,7 +6,7 @@ signed in on the manage page with the owner's password (session.py).
 
 Each role has a fixed set of permissions. A route that needs one says so
 (`require` in session.py), and a tool the model may be offered names the
-permission it needs (agent/pebby/tools.py), so an action is allowed only when the
+permission it needs (agent/pebby.py), so an action is allowed only when the
 table below allows it, not because of which page or route happened to
 offer it.
 
@@ -20,6 +20,7 @@ What each permission covers:
   reports        revenue, bookings, channels and feedback figures, and the
                  owner's assistant that reads them
   voice_test     the phone-line test widget on the manage page
+  feedback       the customers' feedback cards, and closing them
 """
 
 from enum import Enum
@@ -34,7 +35,7 @@ class Role(str, Enum):
 
 PERMISSIONS: dict[Role, frozenset[str]] = {
     Role.CUSTOMER: frozenset({"search_guide", "contact_staff", "book"}),
-    Role.OWNER: frozenset({"search_guide", "contact_staff", "book", "reports", "voice_test"}),
+    Role.OWNER: frozenset({"search_guide", "contact_staff", "book", "reports", "voice_test", "feedback"}),
 }
 
 

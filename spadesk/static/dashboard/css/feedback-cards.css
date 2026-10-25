@@ -1,0 +1,36 @@
+/* The Feedback tab: one card per piece of customer feedback, open ones first. */
+
+.feedback-cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+
+.feedback-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px;
+  display: grid; gap: 8px; align-content: start;
+}
+.feedback-card.complaint { border-color: var(--sentiment-unhappy); }
+.feedback-card.closed { opacity: 0.6; }
+
+.feedback-card header { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.78rem; }
+.feedback-card .feeling, .feedback-card .topic, .feedback-card .flag {
+  border-radius: 999px; padding: 2px 10px; font-weight: 600;
+}
+.feedback-card .feeling { color: var(--surface); background: var(--sentiment-neutral); }
+.feedback-card .feeling.positive { background: var(--sentiment-happy); }
+.feedback-card .feeling.negative { background: var(--sentiment-unhappy); }
+.feedback-card .feeling.mixed { background: var(--series-2); }
+.feedback-card .topic { background: var(--tint); color: var(--text-secondary); text-transform: capitalize; }
+.feedback-card .flag { border: 1px solid var(--sentiment-unhappy); color: var(--bad-text); }
+.feedback-card .card-id { margin-left: auto; color: var(--text-muted); font-family: "DM Mono", monospace; }
+
+.feedback-card .summary { margin: 0; font-weight: 600; color: var(--text-primary); }
+.feedback-card blockquote { margin: 0; color: var(--text-secondary); font-style: italic; }
+.feedback-card .who, .feedback-card .closed-note { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
+
+.close-form { display: flex; gap: 8px; margin-top: 4px; }
+.close-form input {
+  flex: 1; min-width: 0; border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; font: inherit;
+}
+.close-form .close-card {
+  border: 0; border-radius: 999px; padding: 6px 16px; font: 600 0.85rem var(--font);
+  background: var(--accent); color: var(--on-accent); cursor: pointer;
+}
+.close-form .close-card:disabled { opacity: 0.6; cursor: default; }

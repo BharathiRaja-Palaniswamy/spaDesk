@@ -8,24 +8,24 @@ asks the question written here, and goes ahead only if the customer's
 next message is a yes.
 
 Three things wait for a yes:
-  details   the details Pebby collected, read back before the Booking agent
+  details   the details Pebby collected, read back before booking (code)
             looks for times (`details_question`), so a wrong detail is fixed
             before anything is planned
   plan      the times found, every item of the plan (`plan_question`); for a
             change, which booking is cancelled and what is booked instead
   cancel    the booking to cancel (`cancel_question`)
-The Booking agent checked the plan against the calendar (booking/plan.py) and
+Booking (code) checked the plan against the calendar (booking.py) and
 the cancellation against the 30-minute rule before asking, so the customer
 is never asked to confirm something that would then fail.
 """
 
+import calendar
 from datetime import datetime
 from typing import Any
 
-from ...booking.appointments import get_appointments
-from ..rules import BUT, YES
-from .plan import Plan
-from .when_words import DAYS, MONTHS
+from ..booking.appointments import get_appointments
+from .booking import Plan
+from .rules import BUT, YES
 
 # The replies to tap, by what is waiting for the yes.
 CHOICES = {"details": ["Yes, that's right", "Change something"], "plan": ["Yes, book it", "No"],
@@ -62,7 +62,7 @@ PARTS_OF_DAY = {"morning", "afternoon", "evening"}
 
 
 def details_question(request: dict[str, Any], said: dict[str, str], spoken: bool = False) -> str:
-    """What to ask before the Booking agent looks for times: the details collected
+    """What to ask before booking (code) looks for times: the details collected
     (a BookingRequest's fields), so the customer can correct them. The day and
     the time are in the customer's own words (`said`: "tomorrow", "morning"),
     with the date code worked out from them, so it can be checked; the times
@@ -71,7 +71,8 @@ def details_question(request: dict[str, Any], said: dict[str, str], spoken: bool
     day = day_words(datetime.fromisoformat(request["day"]), spoken)
     def lower(words: str) -> str:  # mid-sentence: "Today" -> "today"; a name ("Friday", "October") keeps its capital
         first = words.split()[0].lower() if words.split() else ""
-        return words if first in DAYS or first[:3] in {m[:3] for m in MONTHS} else words[:1].lower() + words[1:]
+        names = {d.lower() for d in calendar.day_name} | {m.lower()[:3] for m in calendar.month_name if m}
+        return words if first in names or first[:3] in names else words[:1].lower() + words[1:]
     their_day, their_time = lower(said.get("day", "").strip()), lower(said.get("time", "").strip())
     if their_time == their_day:  # "same day and time" said once, for both
         their_time = ""

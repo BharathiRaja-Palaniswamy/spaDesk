@@ -23,7 +23,7 @@ So, per conversation:
     listening on it hears what the newest turn says).
 
 The numbers and locks are kept in this server's memory, as the
-conversations are (graph.py).
+conversations are (flow.py).
 """
 
 import threading

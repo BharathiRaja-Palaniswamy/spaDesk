@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="/static/dashboard/css/bar-list.css">
   <link rel="stylesheet" href="/static/dashboard/css/table.css">
   <link rel="stylesheet" href="/static/dashboard/css/feedback.css">
+  <link rel="stylesheet" href="/static/dashboard/css/feedback-cards.css">
   <link rel="stylesheet" href="/static/dashboard/css/profile.css">
   <link rel="stylesheet" href="/static/dashboard/css/chat.css">
 </head>
@@ -46,6 +47,7 @@
     <nav class="tabs" role="tablist" aria-label="Sections">
       <button class="tab" type="button" role="tab" id="tab-profile" data-tab="profile" aria-controls="panel-profile">Business profile</button>
       <button class="tab" type="button" role="tab" id="tab-reports" data-tab="reports" aria-controls="panel-reports">Reports</button>
+      <button class="tab" type="button" role="tab" id="tab-feedback" data-tab="feedback" aria-controls="panel-feedback">Feedback</button>
     </nav>
 
     <!-- Tab 1: the business profile (read-only). -->
@@ -53,6 +55,13 @@
       <p class="profile-note">Read from the business document. This view is read-only.</p>
       <!-- Filled by js/profile.js: one card per section of the document. -->
       <div class="cards" id="profile"></div>
+    </section>
+
+    <!-- Tab 3: customers' feedback, as the Feedback agent filed it: open cards first, each closable. -->
+    <section id="panel-feedback" role="tabpanel" aria-labelledby="tab-feedback" hidden>
+      <p class="profile-note">What customers told Pebby about their visits. Close a card once it is dealt with.</p>
+      <!-- Filled by js/feedback-cards.js. -->
+      <div class="feedback-cards" id="feedback-cards"></div>
     </section>
 
     <!-- Tab 2: reports. -->

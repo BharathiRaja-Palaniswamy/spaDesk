@@ -1,27 +1,35 @@
-"""The booking agent's steps, and the choices between them.
+"""The booking agent as a LangGraph graph.
 
-Each step is a plain function: it takes the state and returns what it
-changed. The choices (`first_step`, `after_identify`, ...) are not steps:
-they read the state and name the step to go to next.
+                 +--> identify --(details complete and a question waiting)--> agent
+                 |        +--(otherwise: ask, or thank them)--> END
+    START -------+--> decide (a yes or no was waited for) ---------------> agent
+                 |        +--(yes to the details, and a plan to approve)--> END
+                 +--> agent <------------------------------------+
+                        |                                         |
+                        +--(asked for tools)--> tools --(ran them)+
+                        |                         +--(a booking to confirm)--> END
+                        +--(too many rounds, or a request repeated)--> give_up --> END
+                        +--(replied)--> END
 
-  identify  name and phone, before anything else (identify.py)
-  agent     one model call: it replies, or asks for tools
-  tools     runs the tools it asked for. A booking request with all its
-            details is held, and the customer is asked to confirm the
-            details first; a cancellation is held for their yes (booking/yes.py)
-  decide    the customer's answer to that question. Yes to the details: the
-            Booking agent looks for times, and its plan is held for a second
-            yes. Yes to a plan or a cancellation: it is carried out
-            (booking/executor.py). Anything else goes back to the agent with
-            their reply
-  give_up   too many tool rounds in one turn, or the same request again
-            and again: hand off to the staff
+It runs once per customer message. The checkpointer keeps each conversation's
+state between messages, by thread id: that is the agent's memory. It is kept
+in this server's memory, so a restart starts every conversation afresh.
 
-AgentState, what the conversation remembers between and within turns, is
-here too.
+The steps (plain functions: the state in, what changed out):
+  identify  name and phone first (pebby.py reads them)
+  agent     one call to Pebby: a reply, or tool requests
+  tools     runs them; a booking request with all its details is read back
+            for the customer's yes (yes.py), a cancellation held for theirs
+  decide    their answer: yes to the details -> booking.py finds times, held
+            for a second yes; yes to a plan or cancellation -> executor.py;
+            anything else back to Pebby with their reply
+  give_up   too many rounds or repeats: the staff take over (staff.py)
+AgentState, what a conversation remembers, is defined here too.
 """
 
 import json
+import re
+from functools import lru_cache
 from typing import Annotated, TypedDict
 
 from langchain_core.messages import (
@@ -32,23 +40,48 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage,
 )
-from langgraph.graph import END
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
+from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel
 
-from ...booking.actions import guarded
-from ...models import run_requests, structured
-from ..booking import executor as approved
-from ..booking.agent import BookingRequest, describe, handle
-from ..booking.collect import customer_words
-from ..booking.plan import Plan
-from ..booking.yes import cancel_question, details_question, is_yes, plan_question
-from ..debug import brief, note, outcome
-from ..rules import MAX_REPEATS, MAX_TOOL_ROUNDS, PEBBY_MODEL
-from ..staff import HANDOVER, record_handoff
-from .identify import about_bookings, ask_for, read_details, valid_phone
-from .prompt import AgentReply, instructions
-from .tools import HELD, agent_tools
+from ..agent import executor as approved
+from ..booking.actions import guarded
+from ..booking.appointments import digits
+from ..models import run_requests, structured
+from .booking import BookingRequest, Plan, describe, handle
+from .debug import brief, note, outcome
+from .details import customer_words
+from .pebby import (
+    HELD,
+    AgentReply,
+    about_bookings,
+    agent_tools,
+    ask_for,
+    instructions,
+    read_details,
+    valid_phone,
+)
+from .rules import MAX_REPEATS, MAX_TOOL_ROUNDS, PEBBY_MODEL
+from .staff import HANDOVER, record_handoff
+from .yes import cancel_question, details_question, is_yes, plan_question
+
+
+@lru_cache  # one graph, and so one memory, for the whole server
+def get_graph() -> CompiledStateGraph:
+    """The booking agent, ready to run, with its memory."""
+    graph = StateGraph(AgentState)
+    for step in (identify, agent, tools, decide, give_up):
+        graph.add_node(step.__name__, step)
+    graph.add_conditional_edges(START, first_step, ["identify", "decide", "agent"])
+    graph.add_conditional_edges("identify", after_identify, ["agent", END])
+    graph.add_conditional_edges("agent", after_agent, ["tools", "give_up", END])
+    graph.add_conditional_edges("tools", after_tools, ["agent", "give_up", END])
+    graph.add_conditional_edges("decide", after_decide, ["agent", END])
+    graph.add_edge("give_up", END)
+    return graph.compile(checkpointer=InMemorySaver(), name="booking_agent")
+
 
 REPEATED = ("You already made this exact request this turn; its result is above and will not change. Do not "
             "repeat it: answer the customer, ask them what they meant, or use hand_off.")
@@ -94,6 +127,12 @@ def first_step(state: AgentState) -> str:
 
 # ---- identify ----------------------------------------------------------------
 
+def _said(name: str, message: str) -> bool:
+    """True when every word of `name` is in the customer's message."""
+    words = set(re.findall(r"\w+", message.lower()))
+    return bool(name.strip()) and set(re.findall(r"\w+", name.lower())) <= words
+
+
 def identify(state: AgentState) -> dict:
     """Read the name and phone number from the customer's message, and ask
     for whatever is still missing. Once both are known: what they asked
@@ -104,19 +143,26 @@ def identify(state: AgentState) -> dict:
     details = read_details(_latest(state).text, last)  # with the question it answers
     note("Identify", "Pebby", f"read name {details.name or '-'} · phone {details.phone or '-'}"
          + (f' · asked "{details.asked}"' if details.asked else ""), details.model_dump())
-    caller = state.get("caller", "")
-    name = state.get("name") or details.name.strip()
+    caller, said = state.get("caller", ""), _latest(state).text
+    # Their details are their own (rules.py, 2): a name or number the reader gave that is not
+    # in what they wrote is not taken, and is asked for again.
+    read = details.name.strip() if _said(details.name, said) else ""
+    name = state.get("name") or read
     # A number they give wins; on a call, the number calling is used until they do.
-    given = details.phone.strip() if valid_phone(details.phone) else ""
+    given = details.phone.strip() if valid_phone(details.phone) and digits(details.phone) in digits(said) else ""
     phone = given or state.get("phone") or caller
-    held = state.get("held", False) or bool(details.asked.strip())  # Pebby answers it once identified
+    # What they asked is theirs too: words not in their message are not kept (a model's guess).
+    held = state.get("held", False) or (bool(details.asked.strip()) and _said(details.asked, said))
     known = {"name": name, "phone": phone}
     if name and phone and held:
         return {**known, "held": False}  # on to the agent, which answers what they asked first
     if name and phone and (question := about_bookings(name, phone, state.get("channel") == "voice")):
         # Their reply goes to the agent, which sees the whole conversation.
         return {**known, "held": False, "say": question, "messages": [AIMessage(question)]}
-    say = f"Thank you, {name}! How can I help you today?" if name and phone else ask_for(name, phone, caller)
+    # A warm word back to what they said (the reader's, in place of code's opening), then what is
+    # still missing (code's).
+    opening, question = ask_for(name, phone, caller)
+    say = f"{details.reply.strip() or opening} {question}".strip()
     return {**known, "held": held, "say": say, "messages": [AIMessage(say)]}
 
 
@@ -148,7 +194,7 @@ def agent(state: AgentState) -> dict:
     if answer.reply is not None and message.tool_calls:
         # A reply given as the answer tool's call (open models), with or without other calls: it is
         # remembered as the reply's text, so no call is left without a result in the conversation,
-        # and the question Pebby asked can be read (a customer's yes to it: booking/collect.py).
+        # and the question Pebby asked can be read (a customer's yes to it: details.py).
         message = AIMessage(answer.reply.model_dump_json())
     return {"messages": [message], "requests": answer.tool_calls, "reply": answer.reply}
 
@@ -161,7 +207,7 @@ def after_agent(state: AgentState) -> str:
 
 
 def _offer(result: dict, request: dict, state: AgentState) -> dict:
-    """The state that asks the customer to approve the Booking agent's plan or
+    """The state that asks the customer to approve booking (code)'s plan or
     cancellation; {} when `result` is neither."""
     spoken = state.get("channel") == "voice"
     if result.get("status") == "plan_ready":
@@ -181,7 +227,7 @@ def _offer(result: dict, request: dict, state: AgentState) -> dict:
 
 def _hold(request: dict, state: AgentState, results: list) -> dict:
     """Run a booking request. Complete details for a new booking or a change are
-    held, and read back to the customer to confirm before the Booking agent looks
+    held, and read back to the customer to confirm before booking (code) looks
     for times; a cancellation is held for the customer's yes. Anything else (what
     is missing, the days that work, their bookings) goes back to the model, added
     to `results`. Returns the state to change."""
@@ -199,7 +245,7 @@ def _hold(request: dict, state: AgentState, results: list) -> dict:
 
 
 def _look_for_times(pending: dict, phone: str) -> dict:
-    """The Booking agent's answer to the details the customer confirmed."""
+    """Booking (code)'s answer to the details the customer confirmed."""
     return guarded(lambda request: describe(handle(BookingRequest.model_validate(request), phone)))(pending["request"])
 
 
@@ -241,13 +287,22 @@ def tools(state: AgentState) -> dict:
     # Rounds with a repeat, not repeated requests: two repeated at once are one round, and the
     # next call must answer (agent: answer_now) before the staff take over (MAX_REPEATS).
     repeats = state.get("repeats", 0) + repeated
+    # A tool whose answer is meant for the customer (the Feedback agent's reply) ends the turn with
+    # it: the customer hears it as Pebby's, and Pebby is not asked again.
+    spoken = next((json.loads(m.content)["reply_to_customer"] for m in results
+                   if "reply_to_customer" in json.loads(m.content)), None)
+    if spoken is not None:
+        reply = AgentReply(answer=spoken, items=[], suggestions=[])
+        update |= {"reply": reply, "messages": [*results, AIMessage(reply.model_dump_json())]}
+        return {**update, "asked": asked, "repeats": repeats}
     return {**update, "asked": asked, "repeats": repeats, "messages": results}
 
 
 def after_tools(state: AgentState) -> str:
-    """The turn ends while waiting for the customer's yes; the staff take over when
-    the model keeps repeating a request; otherwise back to the model."""
-    if state.get("confirming"):
+    """The turn ends while waiting for the customer's yes, or when a tool answered the
+    customer (the Feedback agent); the staff take over when the model keeps repeating
+    a request; otherwise back to the model."""
+    if state.get("confirming") or state.get("reply") is not None:  # asking for a yes, or already answered
         return END
     return "give_up" if state.get("repeats", 0) >= MAX_REPEATS else "agent"
 
@@ -257,7 +312,7 @@ def after_tools(state: AgentState) -> str:
 def decide(state: AgentState) -> dict:
     """The customer's answer to what is waiting for their yes.
 
-    Yes to the details: the Booking agent looks for times; a plan it offers
+    Yes to the details: booking (code) looks for times; a plan it offers
     is held for a second yes (the turn ends asking it). Yes to a plan or a
     cancellation: it is carried out. Either way the model is told what
     happened, in the request's result. After a yes, the customer's words go
@@ -272,7 +327,7 @@ def decide(state: AgentState) -> dict:
                  if any(call["id"] == pending["id"] for call in getattr(m, "tool_calls", None) or []))
     since = state["messages"][start + 1:]
     acted = is_yes(said.text)  # a yes asks for times, books or cancels: something that really happens
-    to = {"details": "Booking agent", "plan": "Executor", "cancel": "Approved"}[pending["kind"]] if acted else "Pebby"
+    to = {"details": "Booking", "plan": "Executor", "cancel": "Approved"}[pending["kind"]] if acted else "Pebby"
     note("Customer", "The yes", f'"{said.text}": ' + ("yes" if acted else "not a yes, so nothing is done"),
          {"to": pending["question"]})
     note("The yes", to, f"go ahead with the {pending['kind']}" if acted else "their reply goes back to Pebby")
@@ -290,7 +345,7 @@ def decide(state: AgentState) -> dict:
     removed = [RemoveMessage(id=message.id) for message in since]
     if acted:
         note("Executor" if pending["kind"] == "plan" else "Approved" if pending["kind"] == "cancel"
-             else "Booking agent", "Pebby", outcome(result), result)
+             else "Booking", "Pebby", outcome(result), result)
         told = {"customer_said_yes_to": pending["question"], "customer_said": said.text, "result": result}
         return {**update, "pending": None, "acted": pending["kind"] != "details", "messages": [
             *removed, ToolMessage(json.dumps(told), tool_call_id=pending["id"])]}

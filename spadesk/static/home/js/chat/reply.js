@@ -1,6 +1,6 @@
 /**
  * @file Turns one structured reply into what the chat shows. The model
- * returns data (see AgentReply in spadesk/agent/pebby/prompt.py); this file
+ * returns data (see AgentReply in spadesk/agent/pebby.py); this file
  * decides how each field looks.
  */
 

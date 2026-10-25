@@ -1,18 +1,13 @@
 """What is written down for the staff: handoffs, and the files they go in.
 
-A handoff is a request for a person to call a customer back. The agents
-hand off when they should not or cannot go on alone (the rules are in
-rules.py): the customer asks for a person, has a complaint or a health
-question the guide does not settle, wants something the tools cannot do,
-cancels part of a package, or booking keeps failing. The conversation never
-just stops: whenever something goes wrong (a model or the search cannot be
-reached, a turn takes too long, an unexpected error), the customer hears
-HANDOVER and the request is written down here.
+A handoff is a request for a person to call a customer back: when the
+customer asks for one, when something cannot be done online, or when
+anything fails (the customer hears HANDOVER, never an error).
 
-Handoffs (SPADESK_HANDOFFS) and feedback (feedback.py, SPADESK_FEEDBACK) are
-kept the same way: each is one JSON object per line, appended to its file
-and stamped with the spa's local time. Appending never rewrites what is
-there, and a person (or a dashboard, later) can read the file line by line.
+Handoffs (SPADESK_HANDOFFS) and feedback cards (feedback.py,
+SPADESK_FEEDBACK) are kept the same way: one JSON object per line, appended
+to the file and stamped with the spa's local time. Appending never rewrites
+what is there, and a person (or the dashboard) can read it line by line.
 """
 
 import json
@@ -24,6 +19,7 @@ from zoneinfo import ZoneInfo
 from ..config import get_settings
 
 log = logging.getLogger("spadesk.agent")
+
 
 # What the customer is told whenever their request goes to the staff.
 HANDOVER = "I need to hand this request over to our staff, and they will reach out to you shortly."

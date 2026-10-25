@@ -1,5 +1,5 @@
 """Tests for reading a booking's details from the customer's own words
-(spadesk/agent/booking/when_words.py, spadesk/agent/booking/collect.py). No model is called.
+(spadesk/agent/details.py, spadesk/agent/details.py). No model is called.
 
 Run with:  .venv/bin/python -m pytest tests/test_agent_collect.py
 """
@@ -9,9 +9,8 @@ from datetime import date, time
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from spadesk.agent.booking.collect import collect, customer_words
-from spadesk.agent.booking.when_words import day_from, times_from
-from spadesk.agent.pebby.prompt import TIME_NOTE
+from spadesk.agent.details import collect, customer_words, day_from, times_from
+from spadesk.agent.pebby import TIME_NOTE
 
 SUNDAY = date(2026, 10, 25)
 

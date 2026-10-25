@@ -49,14 +49,14 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from spadesk.agent import booking as booking_agent
+from spadesk.agent import executor as approved
+from spadesk.agent import pebby as identify
+from spadesk.agent import pebby as tools
 from spadesk.agent import respond
-from spadesk.agent.booking import agent as booking_agent
-from spadesk.agent.booking import executor as approved
-from spadesk.agent.booking import yes as confirm
-from spadesk.agent.booking.collect import named_services
-from spadesk.agent.pebby import identify, tools
-from spadesk.agent.pebby.graph import get_graph
-from spadesk.booking import actions
+from spadesk.agent import yes as confirm
+from spadesk.agent.details import named_services
+from spadesk.agent.flow import get_graph
 from spadesk.booking.schedule import read_schedule
 from spadesk.business.store import get_knowledge
 from spadesk.config import get_settings
@@ -78,7 +78,7 @@ def _desk(seed: list[dict], phone: str):
         hour, minute = map(int, booking["time"].split(":"))
         desk.book(booking["service"], booking["therapist"], datetime(day.year, day.month, day.day, hour, minute),
                   "Asha Rao", phone)
-    for module in (tools, confirm, identify, actions, approved, booking_agent):
+    for module in (tools, confirm, identify, approved, booking_agent):
         module.get_appointments = lambda: desk
     return desk
 
@@ -208,7 +208,7 @@ def main() -> None:
     folder = tempfile.mkdtemp(prefix="spadesk-booking-eval-")
     os.environ |= {"SPADESK_MODELS": args.models, "SPADESK_MODEL_FALLBACK": "",
                    "SPADESK_HANDOFFS": f"{folder}/handoffs.jsonl", "SPADESK_FEEDBACK": f"{folder}/feedback.jsonl"}
-    print(f"Pebby: {get_profile('booking-agent').primary}    Booking agent: {get_profile('booking-team').primary}")
+    print(f"Pebby: {get_profile('booking-agent').primary}")
     cases = json.loads(CASES.read_text())
     if problems := stale(cases):  # stop before spending anything
         raise SystemExit("Update these cases first:\n  " + "\n  ".join(problems))

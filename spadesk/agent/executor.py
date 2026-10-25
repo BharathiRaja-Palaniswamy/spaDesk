@@ -10,7 +10,7 @@ to decide, only an exact action to do. Steps:
              spaDesk can take the same times meanwhile (one lock per
              therapist, for this server; several are taken in name order, so
              two plans never wait for each other forever)
-  2. check   check the Plan again (plan.py): it was free when drafted, but
+  2. check   check the Plan again (booking.py): it was free when drafted, but
              the customer may have taken a while to say yes
   3. book    book the items in order (the engine checks each one once more)
   4. verify  read the calendars back: did an event appear in one of the
@@ -19,7 +19,7 @@ to decide, only an exact action to do. Steps:
   6. undo    if any step fails, cancel what this Plan booked: all or none
 
 The answer says what was booked, or why nothing was, so Pebby can explain
-and ask the Booking agent for new times.
+and ask booking (code) for new times.
 
 A change books the new times first and cancels the old booking only once
 they are safely booked, so a customer is never left with neither. The old
@@ -41,13 +41,13 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
-from ...booking.actions import confirmation
-from ...booking.appointments import Appointments, get_appointments
-from ...booking.calendars import Booking
-from ...booking.errors import UNAVAILABLE, BookingError, CalendarUnavailable
-from ..rules import MAX_FAILED_PLANS
-from ..staff import record_handoff
-from .plan import Plan, check_plan
+from ..booking.actions import confirmation
+from ..booking.appointments import Appointments, get_appointments
+from ..booking.calendars import Booking
+from ..booking.errors import UNAVAILABLE, BookingError, CalendarUnavailable
+from .booking import Plan, check_plan
+from .rules import MAX_FAILED_PLANS
+from .staff import record_handoff
 
 _guard = threading.Lock()
 _locks: dict[str, threading.Lock] = {}  # therapist -> the lock for booking their times

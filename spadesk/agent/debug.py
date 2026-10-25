@@ -26,9 +26,8 @@ from typing import Any
 
 # What each actor is: "ai" (Pebby's model), "small-ai" (a small, fast model),
 # "tool" (a tool Pebby calls), "person" (the customer); anything else is "code".
-KINDS = {"Customer": "person", "Pebby": "ai", "Identify": "small-ai", "Booking agent's model": "small-ai",
-         "Feedback": "small-ai", "search_guide": "tool", "booking": "tool", "record_feedback": "tool",
-         "hand_off": "tool"}
+KINDS = {"Customer": "person", "Pebby": "ai", "Identify": "small-ai", "Feedback agent": "small-ai",
+         "search_guide": "tool", "booking": "tool", "record_feedback": "tool", "hand_off": "tool"}
 
 _steps: ContextVar[list[dict] | None] = ContextVar("debug_steps", default=None)
 
@@ -76,6 +75,8 @@ def outcome(result: Any) -> str:
     if cancelled := result.get("cancelled"):
         done = cancelled if isinstance(cancelled, list) else [cancelled]
         return "cancelled " + ", ".join(c["reference"] if isinstance(c, dict) else c for c in done)
+    if "card" in result:
+        return f"card {result['card']} filed" + (" · asked for more" if result.get("asked_for_more") else "")
     if "not_booked" in result:
         return "not booked: " + " ".join(result["not_booked"])
     parts = [result.get("status", "")]

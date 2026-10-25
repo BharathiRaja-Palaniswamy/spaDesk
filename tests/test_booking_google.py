@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from googleapiclient.errors import HttpError
 
-from spadesk.agent.booking.agent import free_times_tool
+from spadesk.agent import booking, pebby
 from spadesk.booking import actions
 from spadesk.booking.appointments import Appointments
 from spadesk.booking.calendars import google
@@ -172,8 +172,10 @@ def test_google_failing_is_reported_as_calendar_unavailable_and_the_tool_says_so
     with pytest.raises(CalendarUnavailable, match="could not be reached"):
         desk.book("Prenatal Massage", "Priya Nair", at("10:00"), "Asha", "(408) 555-0101")
     # Through the tool, the model gets a message it can pass on, not the reason.
-    monkeypatch.setattr(actions, "get_appointments", lambda: desk)
-    reply = free_times_tool().run({"service": "Prenatal Massage", "date": "2026-10-23"})
+    for module in (pebby, booking):
+        monkeypatch.setattr(module, "get_appointments", lambda: desk)
+    ask = next(t for t in pebby.agent_tools("Asha", "4085550101", words="prenatal friday") if t.name == "booking")
+    reply = ask.run({"intent": "availability", "services": ["Prenatal Massage"], "day_said": "friday"})
     assert reply == {"error": actions.UNAVAILABLE}
 
 

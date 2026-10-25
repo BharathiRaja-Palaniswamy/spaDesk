@@ -1,10 +1,9 @@
 """The booking engine's actions, in the shape a model's tool request takes.
 
-    find_free_times   free times for a service on a day, by therapist
 
 Booking and cancelling are not here: a model never books or cancels
-directly. The Booking agent offers a plan or a cancellation, and once the
-customer says yes, code carries it out (spadesk/agent/booking/executor.py).
+directly. Booking (code) offers a plan or a cancellation, and once the
+customer says yes, code carries it out (spadesk/agent/executor.py).
 
 Each takes the arguments of a model's request (a dict) and returns what the
 model is told (something JSON can hold). Every action goes through the
@@ -13,15 +12,15 @@ whatever the model asks. A broken rule comes back as {"error": "..."},
 written for the customer, so the model can pass it on or try again
 (`guarded`).
 
-How these are offered to a model, and to whom, is agent/pebby/tools.py.
+How these are offered to a model, and to whom, is agent/pebby.py.
 """
 
 import logging
 from collections.abc import Callable
-from datetime import date, datetime
+from datetime import datetime
 from typing import Any
 
-from .appointments import Slot, get_appointments
+from .appointments import Slot
 from .calendars import Booking
 from .errors import UNAVAILABLE, BookingError, CalendarUnavailable
 
@@ -62,11 +61,3 @@ def by_therapist(slots: list[Slot]) -> dict[str, list[str]]:
     for slot in slots:
         free.setdefault(slot.therapist, []).append(slot.start.strftime("%H:%M"))
     return free
-
-
-def find_free_times(args: dict[str, Any]) -> dict[str, Any]:
-    """Free start times on a day, by therapist."""
-    free = by_therapist(get_appointments().free_slots(args["service"], date.fromisoformat(args["date"]),
-                                                      args.get("therapist"), args.get("minutes")))
-    return {"service": args["service"], "date": args["date"], "free": free} if free else \
-        {"service": args["service"], "date": args["date"], "free": {}, "note": "No free times that day."}

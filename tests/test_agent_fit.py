@@ -1,4 +1,4 @@
-"""Tests for fit_plan (spadesk/agent/booking/plan.py): services fitted one after
+"""Tests for fit_plan (spadesk/agent/booking.py): services fitted one after
 another on a day, in code.
 
 The real document's schedule, an in-memory calendar and a fixed clock
@@ -11,7 +11,7 @@ from datetime import date, datetime, time
 
 from standin_calendar import standin_desk
 
-from spadesk.agent.booking.plan import Plan, check_plan, fit_plan
+from spadesk.agent.booking import Plan, check_plan, fit_plan
 
 THURSDAY = date(2026, 10, 29)
 BRIDAL = ["Brightening Vitamin C Facial", "Glow Express Facial", "Eyebrow Wax"]

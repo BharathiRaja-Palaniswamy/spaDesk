@@ -18,17 +18,16 @@ from langchain_core.messages import AIMessage
 from standin_calendar import standin_desk
 from standins import use_standin
 
-from spadesk.agent.booking import agent as booking_agent
-from spadesk.agent.booking import executor as approved
-from spadesk.agent.booking import yes as confirm
-from spadesk.agent.booking.plan import Plan, PlanItem
-from spadesk.agent.pebby import identify, tools
-from spadesk.agent.pebby.graph import get_graph
-from spadesk.agent.pebby.identify import Details
-from spadesk.agent.pebby.prompt import AgentReply
+from spadesk.agent import booking as booking_agent
+from spadesk.agent import executor as approved
+from spadesk.agent import pebby as identify
+from spadesk.agent import pebby as tools
+from spadesk.agent import yes as confirm
+from spadesk.agent.booking import Plan, PlanItem
+from spadesk.agent.flow import get_graph
+from spadesk.agent.pebby import AgentReply, Details
 from spadesk.agent.staff import HANDOVER
 from spadesk.app import app
-from spadesk.booking import actions
 from spadesk.models import ModelError
 from spadesk.voice import routes
 from spadesk.voice.call import read_call
@@ -44,7 +43,7 @@ def client(monkeypatch, tmp_path):
     monkeypatch.setenv("SPADESK_VOICE_SECRET", SECRET)
     monkeypatch.setenv("SPADESK_HANDOFFS", str(tmp_path / "handoffs.jsonl"))
     desk = standin_desk()
-    for module in (tools, confirm, identify, actions, approved, booking_agent):
+    for module in (tools, confirm, identify, approved, booking_agent):
         monkeypatch.setattr(module, "get_appointments", lambda: desk)
     get_graph.cache_clear()
     yield TestClient(app)
@@ -78,7 +77,7 @@ def test_only_elevenlabs_with_the_secret_may_call(client, monkeypatch):
 
 
 def test_a_caller_is_asked_only_for_their_name(client, monkeypatch):
-    use_standin(monkeypatch, [AIMessage(content=Details(name="", phone="", asked="I would like to book").model_dump_json())])
+    use_standin(monkeypatch, [AIMessage(content=Details(name="", phone="", asked="I'd like a massage").model_dump_json())])
     reply = turn(client, "Hi, I'd like a massage", stream=True)
     assert reply.headers["content-type"].startswith("text/event-stream")
     said = spoken(reply)
@@ -88,7 +87,7 @@ def test_a_caller_is_asked_only_for_their_name(client, monkeypatch):
 
 def test_once_named_pebby_answers_after_a_filler_using_the_caller_number(client, monkeypatch):
     sent = use_standin(monkeypatch, [
-        AIMessage(content=Details(name="", phone="", asked="I would like to book").model_dump_json()),
+        AIMessage(content=Details(name="", phone="", asked="I'd like a massage").model_dump_json()),
         AIMessage(content=Details(name="Asha", phone="").model_dump_json()),
         AIMessage(content=AgentReply(answer="Thanks Asha! We have Swedish and deep tissue.", items=[],
                                      suggestions=[]).model_dump_json()),

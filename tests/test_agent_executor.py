@@ -1,4 +1,4 @@
-"""Tests for the Plan, the plan check and the Executor (spadesk/agent/booking/):
+"""Tests for the Plan, the plan check and the Executor (spadesk/agent/booking.py, executor.py):
 a Plan is booked all or nothing, re-checked at the yes, never double-booked.
 
 The real document's schedule, a stand-in calendar and a fixed clock
@@ -12,8 +12,8 @@ from datetime import datetime
 
 from standin_calendar import SPA, standin_desk
 
-from spadesk.agent.booking.executor import execute
-from spadesk.agent.booking.plan import Plan, PlanItem, check_plan
+from spadesk.agent.booking import Plan, PlanItem, check_plan
+from spadesk.agent.executor import execute
 from spadesk.booking.calendars import Booking
 
 FRIDAY = datetime(2026, 10, 30).date()

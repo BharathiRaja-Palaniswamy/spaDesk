@@ -21,20 +21,19 @@ from standin_calendar import standin_desk
 from standins import use_standin
 
 from spadesk import agent
-from spadesk.agent import respond
-from spadesk.agent.booking import agent as booking_agent
-from spadesk.agent.booking import executor as approved
-from spadesk.agent.booking import yes as confirm
-from spadesk.agent.booking.collect import customer_words
-from spadesk.agent.pebby import identify, nodes, tools, turns
-from spadesk.agent.pebby.feedback import Reading
-from spadesk.agent.pebby.graph import get_graph
-from spadesk.agent.pebby.identify import Details
-from spadesk.agent.pebby.nodes import MAX_TOOL_ROUNDS
-from spadesk.agent.pebby.prompt import AgentReply
+from spadesk.agent import booking as booking_agent
+from spadesk.agent import executor as approved
+from spadesk.agent import flow as nodes
+from spadesk.agent import pebby as identify
+from spadesk.agent import pebby as tools
+from spadesk.agent import respond, turns
+from spadesk.agent import yes as confirm
+from spadesk.agent.details import customer_words
+from spadesk.agent.feedback import Reading
+from spadesk.agent.flow import MAX_TOOL_ROUNDS, get_graph
+from spadesk.agent.pebby import AgentReply, Details
 from spadesk.agent.staff import HANDOVER
 from spadesk.app import app
-from spadesk.booking import actions
 from spadesk.booking.errors import CalendarUnavailable
 from spadesk.models import ModelError
 
@@ -45,9 +44,9 @@ PRENATAL = {"intent": "new", "services": ["Prenatal Massage"], "day_said": "30 O
 FRIDAY = datetime(2026, 10, 30).date()
 
 
-def details(name="", phone="", asked="") -> AIMessage:
-    """The small model reading a message for a name and number."""
-    return AIMessage(content=Details(name=name, phone=phone, asked=asked).model_dump_json())
+def details(name="", phone="", asked="", reply="") -> AIMessage:
+    """The small model reading a message for a name and number (and answering it warmly)."""
+    return AIMessage(content=Details(name=name, phone=phone, asked=asked, reply=reply).model_dump_json())
 
 
 def says(answer: str) -> AIMessage:
@@ -61,13 +60,13 @@ def asks(name: str, args: dict, call_id: str = "call-1") -> AIMessage:
 
 
 def books(request: dict = PRENATAL, call_id: str = "call-1") -> AIMessage:
-    """Pebby passing a cleaned-up request to the Booking agent (which answers it in code)."""
+    """Pebby passing a cleaned-up request to booking (code) (which answers it in code)."""
     return asks("booking", request, call_id)
 
 
 def to_plan(thread: str, message: str):
     """Send a booking request: the customer is first asked to confirm the details;
-    their yes has the Booking agent find times. Returns the turn after that yes."""
+    their yes has booking (code) find times. Returns the turn after that yes."""
     details = respond(thread, message)
     assert details.confirming and details.answer.startswith("Just to check before I look for times")
     assert details.suggestions == ["Yes, that's right", "Change something"]
@@ -78,7 +77,7 @@ def to_plan(thread: str, message: str):
 def desk(monkeypatch, tmp_path):
     """One in-memory calendar with a fixed clock, for every part of the agent; a fresh memory."""
     desk = standin_desk()
-    for module in (tools, confirm, identify, actions, approved, booking_agent):
+    for module in (tools, confirm, identify, approved, booking_agent):
         monkeypatch.setattr(module, "get_appointments", lambda: desk)
     monkeypatch.setenv("SPADESK_HANDOFFS", str(tmp_path / "handoffs.jsonl"))
     monkeypatch.setenv("SPADESK_FEEDBACK", str(tmp_path / "feedback.jsonl"))
@@ -128,6 +127,31 @@ def test_the_name_reader_is_told_the_question_the_message_answers(desk, monkeypa
     assert sent[-1][0].content.endswith("The message answers this question: Thank you! And your name, please?")
 
 
+def test_a_greeting_is_answered_warmly_before_the_details_are_asked_for(desk, monkeypatch):
+    # As seen live: "How are you?" got "Before we start, may I have your name and phone number?" twice.
+    chat(monkeypatch, details(reply="Hi! I'm doing well, thank you for asking."))
+    assert respond("thread-warm", "How are you?").answer == (
+        "Hi! I'm doing well, thank you for asking. Before we start, may I have your name and phone number?")
+
+
+def test_a_name_or_number_the_customer_did_not_write_is_not_taken(desk, monkeypatch):
+    # As seen live: "what day is today?" was read as the name "answer", which went on the booking.
+    chat(monkeypatch, details(name="answer"), details(phone="4085550101"))
+    assert respond("thread-not-said", "what day is today?").answer == (
+        "Before we start, may I have your name and phone number?")
+    assert respond("thread-not-said", "hmm").answer == "Before we start, may I have your name and phone number?"
+    assert not memory("thread-not-said").get("name") and not memory("thread-not-said").get("phone")
+
+
+def test_what_the_reader_copied_rather_than_read_is_not_kept(desk, monkeypatch):
+    # As seen live: the small model copied example values from its own field descriptions.
+    copied = details(name="Raja", phone="819289282829", asked="silent facial")
+    chat(monkeypatch, copied)
+    turn = respond("thread-copied", "Hello This is raja 819289282829")
+    assert turn.answer == "Thank you, Raja! How can I help you today?"  # not on to Pebby with "silent facial"
+    assert memory("thread-copied")["held"] is False
+
+
 def test_only_what_is_missing_is_asked_for(desk, monkeypatch):
     chat(monkeypatch, details(name="Asha"), details(phone="12"))
     assert respond("thread-two", "I'm Asha").answer == "Thank you, Asha! And a phone number we can reach you on?"
@@ -148,7 +172,7 @@ def test_a_booking_is_made_only_after_the_customer_says_yes(desk, monkeypatch):
     assert turn.answer == ("Shall I book Prenatal Massage (60 minutes) with Priya Nair on Friday 30 October at "
                            "15:00, for Asha Rao ((408) 555-0101)?")
     assert desk.day_bookings(FRIDAY) == []  # nothing yet
-    assert len(sent) == 1  # a complete request: the Booking agent answered in code, with no model call
+    assert len(sent) == 1  # a complete request: booking (code) answered in code, with no model call
 
     assert respond("thread-book", "Yes, book it").answer == "You're booked!"
     [booking] = desk.day_bookings(FRIDAY)
@@ -220,7 +244,7 @@ def test_a_request_missing_details_is_answered_in_code_without_the_booking_agent
     no_day = {"intent": "new", "services": ["Prenatal Massage"], "notes": "Customer wants a prenatal massage."}
     sent = chat(monkeypatch, books(no_day), says("Which day would you like? Sunday or Friday?"))
     turn = respond("thread-missing", "book prenatal")
-    assert not turn.confirming and len(sent) == 2  # Pebby asked, then answered: no Booking agent model call
+    assert not turn.confirming and len(sent) == 2  # Pebby asked, then answered: no Booking model call
     told = json.loads(sent[-1][-1].content)
     assert told["status"] == "needs_info" and told["missing"] == ["day", "time"]
 
@@ -348,6 +372,40 @@ def test_an_add_on_is_added_to_an_existing_booking_keeping_everything_else(desk,
                                                                           ("Scalp massage",))
 
 
+def test_a_recurring_request_goes_to_the_staff(desk, monkeypatch, tmp_path):
+    # As seen live: "every friday 5pm for next 2 months" was read back as one Friday.
+    identified(monkeypatch, "thread-weekly")
+    weekly = {"intent": "new", "services": ["Glow Express Facial"], "day_said": "every friday", "time_said": "5pm"}
+    sent = chat(monkeypatch, books(weekly), says("Our staff will call you to set up your weekly facials."))
+    turn = respond("thread-weekly", "i want to book glow facial for every friday 5pm for next 2months")
+    assert not turn.confirming  # never read back as a single Friday
+    told = json.loads(sent[-1][-1].content)
+    assert told["status"] == "handoff" and told["handed_off"]
+    assert "Repeating appointments" in json.loads((tmp_path / "handoffs.jsonl").read_text())["reason"]
+
+
+def test_more_than_five_services_at_once_is_a_bulk_request_for_the_staff(desk, monkeypatch, tmp_path):
+    identified(monkeypatch, "thread-bulk")
+    six = ["Swedish Massage", "Deep Tissue Massage", "Aromatherapy Massage", "Glow Express Facial", "Lip Wax",
+           "Eyebrow Wax"]
+    sent = chat(monkeypatch, books({"intent": "new", "services": six, "day_said": "friday", "time_said": "any time"}),
+                says("That's a bulk booking: our staff will call you."))
+    respond("thread-bulk", "swedish, deep tissue, aromatherapy, glow express, lip wax and eyebrow wax on friday, "
+                           "any time")
+    assert json.loads(sent[-1][-1].content)["status"] == "handoff"
+    assert "bulk request" in json.loads((tmp_path / "handoffs.jsonl").read_text())["reason"]
+
+
+def test_cancelling_part_of_a_package_is_written_down_for_the_staff(desk, monkeypatch, tmp_path):
+    identified(monkeypatch, "thread-part")
+    made = [desk.book(service, "Hannah Lee", datetime(2026, 10, 29, hour, minute), "Asha Rao", "(408) 555-0101",
+                      package="Bridal Glow Prep Package")
+            for service, hour, minute in [("Glow Express Facial", 11, 0), ("Eyebrow Wax", 11, 30)]]
+    chat(monkeypatch, books({"intent": "cancel", "references": [made[1].id]}), says("Our staff will help."))
+    respond("thread-part", "cancel the eyebrow wax")
+    assert "part of your Bridal Glow Prep Package" in json.loads((tmp_path / "handoffs.jsonl").read_text())["reason"]
+
+
 def test_a_time_that_is_not_free_is_not_offered_for_a_yes(desk, monkeypatch):
     identified(monkeypatch, "thread-taken")
     desk.book("Prenatal Massage", "Priya Nair", datetime(2026, 10, 30, 15, 0), "Ben", "408 555 0102")
@@ -399,7 +457,7 @@ def test_several_bookings_are_cancelled_with_one_yes(desk, monkeypatch):
 def test_a_returning_customer_is_asked_about_their_upcoming_booking_first(desk, monkeypatch):
     desk.book("Prenatal Massage", "Priya Nair", datetime(2026, 10, 30, 15, 0), "Asha Rao", "(408) 555-0101")
     sent = chat(monkeypatch, details("Asha Rao", "408-555-0101"), says("Sure, let's move it."))
-    question = respond("thread-back", "Hi, it's Asha, 408-555-0101").answer  # no request yet: so they are asked
+    question = respond("thread-back", "Hi, it's Asha Rao, 408-555-0101").answer  # no request yet: so they are asked
     assert question == ("Thank you, Asha Rao! I can see your Prenatal Massage with Priya Nair on Friday 30 October "
                         "at 15:00. Is this about that booking, or something new?")
     assert len(sent) == 1  # asked by the graph itself: no call to Pebby's model yet
@@ -520,26 +578,31 @@ def test_the_agent_can_hand_off_when_asked_for_a_person(desk, monkeypatch, tmp_p
     assert json.loads((tmp_path / "handoffs.jsonl").read_text())["reason"].startswith("Wants to talk")
 
 
-def test_feedback_goes_to_the_feedback_agent_and_a_complaint_to_the_staff(desk, monkeypatch, tmp_path):
+def test_feedback_is_answered_by_the_feedback_agent_and_filed_as_a_card(desk, monkeypatch, tmp_path):
     identified(monkeypatch, "thread-feedback")
-    reading = Reading(sentiment="negative", topic="facilities", summary="The room was cold.", complaint=True)
-    sent = chat(monkeypatch, asks("record_feedback", {"words": "My massage room was freezing yesterday."}),
-                AIMessage(content=reading.model_dump_json()), says("I'm sorry. Our staff will call you."))
-    assert respond("thread-feedback", "My massage room was freezing yesterday.").answer == (
-        "I'm sorry. Our staff will call you.")
-    assert json.loads((tmp_path / "feedback.jsonl").read_text())["topic"] == "facilities"
-    assert "The room was cold." in json.loads((tmp_path / "handoffs.jsonl").read_text())["reason"]
-    # Pebby was told what to say.
-    assert "staff will call" in json.loads(sent[-1][-1].content)["next"]
+    reading = Reading(sentiment="mixed", topic="facilities", summary="Great massage; the room was cold.",
+                      complaint=True, reply="So glad you enjoyed your massage, and sorry the room was cold. "
+                                            "Our team will look into it.")
+    sent = chat(monkeypatch, asks("record_feedback", {"words": "Massage was great but the room was freezing."}),
+                AIMessage(content=reading.model_dump_json()))
+    turn = respond("thread-feedback", "Massage was great but the room was freezing.")
+    # The Feedback agent's reply is what the customer sees, and Pebby is not asked again.
+    assert turn.answer == reading.reply and len(sent) == 2  # Pebby once, the Feedback agent once
+    card = json.loads((tmp_path / "feedback.jsonl").read_text())
+    assert (card["event"], card["topic"], card["complaint"], card["name"]) == ("card", "facilities", True, "Asha Rao")
+    assert not (tmp_path / "handoffs.jsonl").exists()  # a card for the owner, not a call-back request
+
 
 
 def test_a_turn_that_fails_part_way_is_forgotten_so_the_next_one_works(desk, monkeypatch):
     identified(monkeypatch, "thread-broken")
-    asked = books({**PRENATAL, "notes": "after my yoga class"})
-    chat(monkeypatch, asked)  # after the yes, the Booking agent's model fails: the stand-in has no more replies
-    assert respond("thread-broken", SAYS + ", after my yoga class").confirming
+    chat(monkeypatch, asks("search_guide", {"question": "hours"}))
+
+    def broken(args):  # the guide search fails part way through the turn, after Pebby asked for it
+        raise RuntimeError("search down")
+    monkeypatch.setattr(tools, "search_guide", broken)
     with pytest.raises(Exception):
-        respond("thread-broken", "Yes, that's right")
+        respond("thread-broken", "When do you open?")
     # No tool request is left without its result, so the next turn is not refused.
     sent = chat(monkeypatch, says("How can I help?"))
     assert respond("thread-broken", "Hello?").answer == "How can I help?"
@@ -670,7 +733,19 @@ def test_debug_mode_shows_the_steps_between_the_agents_only_when_it_is_on(desk, 
     assert "debug" not in ask("thread-debug-off")
 
 
-# ---- turns replaced by newer ones (agent/pebby/turns.py) ---------------------------------------
+def test_every_request_is_answered_the_handover_at_worst(desk, monkeypatch, tmp_path):
+    client = TestClient(app)
+    monkeypatch.setattr("spadesk.agent.routes.CHAT_TURN_LIMIT", 0.2)
+    monkeypatch.setattr("spadesk.agent.routes.respond", lambda thread, message: time.sleep(1))  # far too slow
+    reply = client.post("/api/assistant", json={"thread": "thread-slow", "message": "Book me in"})
+    assert reply.status_code == 200 and reply.json()["answer"] == HANDOVER
+    monkeypatch.setattr("spadesk.agent.routes.respond", lambda thread, message: None)  # replaced, no newer reply
+    reply = client.post("/api/assistant", json={"thread": "thread-replaced", "message": "Hello"})
+    assert reply.status_code == 200 and reply.json()["answer"] == HANDOVER
+    assert len((tmp_path / "handoffs.jsonl").read_text().splitlines()) == 2  # both written down for the staff
+
+
+# ---- turns replaced by newer ones (agent/turns.py) ---------------------------------------
 
 @contextmanager
 def interrupted(module, name: str, thread: str):

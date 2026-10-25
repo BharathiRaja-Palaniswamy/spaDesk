@@ -14,6 +14,9 @@
  */
 
 const THREAD = crypto.randomUUID();
+// The server answers every request within its own limit (CHAT_TURN_LIMIT, 45 s), the handover at worst;
+// this is longer, for a server that cannot be reached at all. The chat then says so (chat.js).
+const WAIT_MS = 60_000;
 
 /**
  * Sends one message and returns Pebby's reply.
@@ -31,6 +34,7 @@ export async function askAssistant(message) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ thread: THREAD, message }),
+    signal: AbortSignal.timeout(WAIT_MS),
   });
   const body = await response.json();
   // On an error the server sends { detail } and no reply; throwing makes the

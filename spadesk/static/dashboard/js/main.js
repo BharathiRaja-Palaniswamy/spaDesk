@@ -19,6 +19,7 @@ import { initSignOut } from "./session.js";
 import { initVoiceWidget } from "./voice.js";
 import { $ } from "./dom.js";
 import { initFilters } from "./filters.js";
+import { showFeedbackCards } from "./feedback-cards.js";
 import { showProfile } from "./profile.js";
 import { dateRange } from "./format.js";
 import { renderCategoryRevenue } from "./sections/category-revenue.js";
@@ -139,6 +140,7 @@ window.addEventListener("resize", () => {
 // measure, so they are redrawn each time that tab is shown.
 initTabs((name) => {
   if (name === "profile") showProfile($("#profile"));
+  if (name === "feedback") showFeedbackCards($("#feedback-cards"));
   if (name === "reports" && latestReport) draw(latestReport);
 });
 

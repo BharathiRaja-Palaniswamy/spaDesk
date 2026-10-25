@@ -1,34 +1,28 @@
-"""Two agents behind the customer chat (and phone line): Pebby, who talks to
-the customer, and the Booking agent, who works out what can be booked.
+"""Pebby, the customer chat (and phone line): two agents, and booking in code.
 
-    rules.py    how they behave: six principles, and their settings (read this first)
-    routes.py   POST /api/assistant
-    staff.py    handoffs: what is written down for the staff
-    debug.py    debug mode: the steps between the agents, under each reply
+Read in this order; each file is one step of the flow:
 
-    pebby/      Agent 1, Pebby: the only one who talks to the customer
-      prompt.py     its instructions and the shape of its replies
-      tools.py      what it can do: search the guide, ask the Booking agent, record feedback, hand off
-      identify.py   name and phone first
-      feedback.py   reading feedback (a small model); a complaint goes to the staff
-      nodes.py      the conversation's steps, and what it remembers (AgentState)
-      graph.py      how the steps are joined, and the memory between messages
-      turns.py      one turn at a time per conversation; undoing replaced turns
+    rules.py     how it behaves: six principles, and their settings
+    flow.py      a turn, step by step: identify -> Pebby -> tools -> the yes
+    pebby.py     Pebby, the AI: its instructions, its tools, name and phone first
+    details.py   a booking's details from the customer's own words; what is missing
+    yes.py       the questions for the customer's yes: details, plan, cancellation
+    booking.py   what can be booked (code): the request, the plan, fitting times
+    executor.py  booking the approved plan, all or none; cancelling
+    feedback.py  the Feedback agent: reads feedback, answers it, files a card for the owner
+    staff.py     what is written down for the staff: handoffs, and the files they go in
+    turns.py     one turn at a time per conversation
+    debug.py     debug mode: every step of a turn, under the reply
+    routes.py    POST /api/assistant
 
-    booking/    Agent 2, the Booking agent: everything about bookings
-      collect.py    the details from the customer's own words; what is missing
-      when_words.py days and times from their words
-      yes.py        the questions for the customer's yes
-      agent.py      the Booking agent: a BookingRequest in, a BookingResult out
-      plan.py       the Plan, its check, and fitting services into a day
-      executor.py   booking a plan all or none; carrying out what was approved
-
-An agent (an LLM) only where thinking is needed; everything exact is code.
+An AI only where thinking is needed: Pebby talks and decides; the Feedback
+agent reads and answers feedback; a small model reads a name. Everything
+exact is code.
 
 `respond` runs one turn: the customer's message in, Pebby's reply out.
 `hand_over` is what a route says instead when a turn fails: the request goes
 to the staff (staff.py), so the conversation never just stops. The same
-agents answer the website chat and phone calls (spadesk/voice/); the channel
+agent answers the website chat and phone calls (spadesk/voice/); the channel
 only changes how replies are phrased, and on a call the caller's number
 stands in for the phone number.
 """
@@ -39,11 +33,12 @@ from dataclasses import dataclass, field, replace
 from langchain_core.messages import HumanMessage
 
 from ..assistant.replies import MAX_SUGGESTIONS, ReplyItem
-from .booking.yes import CHOICES
 from .debug import steps
-from .pebby.graph import get_graph
-from .pebby.prompt import answer_text, time_note
-from .pebby.turns import (
+from .flow import get_graph
+from .pebby import answer_text, time_note
+from .rules import WAIT_FOR_NEWER
+from .staff import HANDOVER, record_handoff
+from .turns import (
     KEEP,
     answered,
     arrive,
@@ -53,8 +48,7 @@ from .pebby.turns import (
     take_restore,
     undo_later,
 )
-from .rules import WAIT_FOR_NEWER
-from .staff import HANDOVER, record_handoff
+from .yes import CHOICES
 
 log = logging.getLogger("spadesk.agent")
 
