@@ -25,6 +25,7 @@ from spadesk.agent import respond
 from spadesk.agent.booking import agent as booking_agent
 from spadesk.agent.booking import executor as approved
 from spadesk.agent.booking import yes as confirm
+from spadesk.agent.booking.collect import customer_words
 from spadesk.agent.pebby import identify, nodes, tools, turns
 from spadesk.agent.pebby.feedback import Reading
 from spadesk.agent.pebby.graph import get_graph
@@ -117,6 +118,14 @@ def test_a_question_waits_until_the_customer_gives_their_details(desk, monkeypat
     agent_call = sent[-1]
     assert "Asha Rao, phone (408) 555-0101" in agent_call[0].content
     assert any(m.content == "What time do you open?" for m in agent_call)
+
+
+def test_the_name_reader_is_told_the_question_the_message_answers(desk, monkeypatch):
+    # As seen live: "poiqwe", the reply to "your name?", was not taken as a name.
+    sent = chat(monkeypatch, details(phone="9282838292"), details(name="poiqwe"))
+    assert respond("thread-q", "9282838292").answer == "Thank you! And your name, please?"
+    respond("thread-q", "poiqwe")
+    assert sent[-1][0].content.endswith("The message answers this question: Thank you! And your name, please?")
 
 
 def test_only_what_is_missing_is_asked_for(desk, monkeypatch):
@@ -569,6 +578,56 @@ def test_a_list_written_into_the_answer_is_shown_once_under_it(desk, monkeypatch
     chat(monkeypatch, AIMessage(content=reply.model_dump_json()))
     turn = respond("thread-list", "How much is a facial?")
     assert turn.answer == "We offer several facials:" and len(turn.items) == 2
+
+
+def test_markdown_never_reaches_the_customer(desk, monkeypatch):
+    identified(monkeypatch, "thread-md")
+    chat(monkeypatch, says("Your appointment is confirmed!\n- **Lip Wax** with **Hannah Lee**\n- **Time**: 14:00"))
+    assert respond("thread-md", "thanks").answer == ("Your appointment is confirmed!\nLip Wax with Hannah Lee\n"
+                                                     "Time: 14:00")
+
+
+# ---- a clarifying question, on either way of replying (models/structured.py) ----------------------
+
+def answered(answer: str) -> AIMessage:
+    """An open model's reply, given as the answer tool's call."""
+    reply = AgentReply(answer=answer, items=[], suggestions=[])
+    return AIMessage(content="", tool_calls=[{"name": "answer", "args": reply.model_dump(), "id": "answer-1"}])
+
+
+@pytest.mark.parametrize("method, reply", [("native", says("Which facial would you like?")),
+                                           ("answer-tool", answered("Which facial would you like?")),
+                                           ("answer-tool", AIMessage(content="Which facial would you like?"))])
+def test_pebby_asks_a_clarifying_question_in_one_model_call_and_no_tool(desk, monkeypatch, tmp_path, method, reply):
+    identified(monkeypatch, f"thread-ask-{method}-{bool(reply.tool_calls)}")
+    sent = use_standin(monkeypatch, [reply], method=method)
+    used = []
+    monkeypatch.setattr(nodes, "run_requests", lambda requests, offered: used.extend(requests) or [])
+    turn = respond(f"thread-ask-{method}-{bool(reply.tool_calls)}", "want to book facial")
+    assert turn.answer == "Which facial would you like?" and not turn.confirming
+    assert len(sent) == 1 and used == []  # one model call; no booking, no hand_off, no other tool
+    assert not (tmp_path / "handoffs.jsonl").exists()
+    # What is remembered is the question as text, with no tool call left without its result.
+    last = memory(f"thread-ask-{method}-{bool(reply.tool_calls)}")["messages"][-1]
+    assert not last.tool_calls and "Which facial would you like?" in last.text
+
+
+def test_a_reply_that_comes_with_another_tool_request_ends_the_turn_without_running_it(desk, monkeypatch):
+    identified(monkeypatch, "thread-both")
+    both = answered("Which day suits you?")
+    both.tool_calls.append({"name": "hand_off", "args": {"reason": "?"}, "id": "extra-1"})
+    sent = use_standin(monkeypatch, [both], method="answer-tool")
+    assert respond("thread-both", "a lip wax please").answer == "Which day suits you?"
+    assert len(sent) == 1  # the reply ends the turn: no further model round
+    assert not memory("thread-both")["messages"][-1].tool_calls  # and nothing is left unanswered
+
+
+def test_on_an_open_model_a_yes_to_pebbys_question_counts_as_the_customers_words(desk, monkeypatch):
+    identified(monkeypatch, "thread-yes-open")
+    use_standin(monkeypatch, [answered("Would that be the Signature Radiance Facial?")], method="answer-tool")
+    respond("thread-yes-open", "i want a facial")
+    words = customer_words([*memory("thread-yes-open")["messages"], HumanMessage("yes")])
+    assert "signature radiance facial" in words
 
 
 # ---- the route --------------------------------------------------------------------------

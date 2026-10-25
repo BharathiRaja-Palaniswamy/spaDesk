@@ -19,6 +19,7 @@ SUNDAY = date(2026, 10, 25)
 @pytest.mark.parametrize("words, day", [
     ("Thursday", date(2026, 10, 29)), ("thu", date(2026, 10, 29)), ("next friday", date(2026, 10, 30)),
     ("Sunday", SUNDAY), ("today", SUNDAY), ("tomorrow", date(2026, 10, 26)),
+    ("Thurday 9PM", date(2026, 10, 29)), ("tuesdy", date(2026, 10, 27)), ("next month", None), ("sunny", None),
     ("30 October", date(2026, 10, 30)), ("Oct 30th", date(2026, 10, 30)), ("30/10", date(2026, 10, 30)),
     ("28th of october", date(2026, 10, 28)), ("1 January", date(2027, 1, 1)), ("soon", None), ("", None)])
 def test_the_day_from_the_customers_words(words, day):
@@ -157,3 +158,18 @@ def test_an_add_on_counts_only_when_the_customer_named_it():
     args = {"intent": "new", "services": ["Prenatal Massage"], "add_ons": ["Scalp massage", "Hot stone enhancement"]}
     request, _, _ = collect(args, "a prenatal massage with a scalp massage", SUNDAY)
     assert request.add_ons == ["Scalp massage"]  # the hot stone was not asked for
+
+
+def test_a_yes_to_pebbys_question_makes_its_words_the_customers_but_not_a_list():
+    # As seen live: "a facial" ... "would that be the Signature Radiance Facial?" "yes": the facial was dropped.
+    asked = AIMessage(content='{"answer": "Would that be the Signature Radiance Facial?", "items": [], "suggestions": []}')
+    words = customer_words([HumanMessage("i want a facial"), asked, HumanMessage("yes")])
+    request, missing, _ = collect({"intent": "new", "services": ["Signature Radiance Facial"]}, words, SUNDAY)
+    assert request.services == ["Signature Radiance Facial"] and "services" not in missing
+    listed = AIMessage(content='{"answer": "We offer these facials. Which would you like?", "items": '
+                               '[{"name": "Deep Renewal Facial", "detail": "$150"}], "suggestions": []}')
+    words = customer_words([HumanMessage("i want a facial"), listed, HumanMessage("yes")])
+    assert collect({"intent": "new", "services": ["Deep Renewal Facial"]}, words, SUNDAY)[0].services == []
+    # Something other than a yes does not make the question theirs.
+    words = customer_words([HumanMessage("a facial"), asked, HumanMessage("not sure")])
+    assert collect({"intent": "new", "services": ["Signature Radiance Facial"]}, words, SUNDAY)[0].services == []

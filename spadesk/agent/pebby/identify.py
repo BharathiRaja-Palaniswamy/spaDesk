@@ -41,9 +41,12 @@ class Details(BaseModel):
                                                "it is only a greeting, a name or a number.")
 
 
-def read_details(message: str) -> Details:
-    """The name, phone number and request in one message, read by the model."""
-    return structured(READER_MODEL, [SystemMessage(READ), HumanMessage(message)], Details).reply
+def read_details(message: str, asked: str = "") -> Details:
+    """The name, phone number and request in one message, read by the model.
+    `asked`: the question the message answers, so a reply to "your name?" is
+    read as the name, however unusual."""
+    context = f"\n\nThe message answers this question: {asked}" if asked else ""
+    return structured(READER_MODEL, [SystemMessage(READ + context), HumanMessage(message)], Details).reply
 
 
 def valid_phone(phone: str) -> bool:

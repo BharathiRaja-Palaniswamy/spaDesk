@@ -26,12 +26,13 @@ The result is a BookingRequest for the Booking agent (booking/agent.py),
 with the day and times as code worked them out.
 """
 
+import json
 import re
 from collections import Counter
 from datetime import date
 from typing import Any
 
-from langchain_core.messages import AnyMessage, HumanMessage
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 
 from ...booking.calendars import Booking
 from ...booking.schedule import read_schedule
@@ -40,12 +41,31 @@ from ..pebby.prompt import TIME_NOTE
 from ..rules import EVERYTHING, NAMED_BY, NEEDS
 from .agent import BookingRequest
 from .when_words import day_from, times_from
+from .yes import is_yes
+
+
+def _spoken(text: str) -> str:
+    """What Pebby said in a reply: its `answer`, not the list under it (a yes to
+    "which of these?" names none of them)."""
+    try:
+        reply = json.loads(text)
+    except ValueError:
+        return text
+    return reply.get("answer", "") if isinstance(reply, dict) else text
 
 
 def customer_words(messages: list[AnyMessage]) -> str:
-    """Everything the customer wrote in the conversation (not the time notes), in lower case."""
-    return " ".join(m.text.lower() for m in messages if isinstance(m, HumanMessage)
-                    and not m.text.startswith(TIME_NOTE))
+    """Everything the customer said in the conversation, in lower case: what they
+    wrote (not the time notes), and a question of Pebby's they said yes to ("would
+    that be the Signature Radiance Facial?" "yes"): agreeing to it makes it theirs."""
+    said, question = [], ""
+    for message in messages:
+        if isinstance(message, AIMessage) and message.text:
+            question = _spoken(message.text)
+        elif isinstance(message, HumanMessage) and not message.text.startswith(TIME_NOTE):
+            said.append(message.text + (f" {question}" if question and is_yes(message.text) else ""))
+            question = ""
+    return " ".join(said).lower()
 
 
 def _said(value: str, words: str) -> bool:

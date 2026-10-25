@@ -152,6 +152,14 @@ def _availability(request: BookingRequest, day: date, desk: Appointments) -> Boo
     return BookingResult(status="options", options=options)
 
 
+def _open(day: date, desk: Appointments) -> str:
+    """The day's opening hours, said with every "nothing fits", so Pebby has the fact
+    and nothing to guess: 'We are open 10:00 to 20:30 on Thursdays.'"""
+    if (hours := desk.schedule.hours.get(day.weekday())) is None:
+        return f"We are closed on {day:%A}s."
+    return f"We are open {hours[0]:%H:%M} to {hours[1]:%H:%M} on {day:%A}s."
+
+
 def _fast(request: BookingRequest, desk: Appointments, replaces: Booking | None) -> BookingResult:
     """Answer a request for new times in code: the days that fit, or a plan on the day."""
     if not request.day:  # only an availability question comes without a day
@@ -166,7 +174,8 @@ def _fast(request: BookingRequest, desk: Appointments, replaces: Booking | None)
     if isinstance(fitted, Plan):
         fitted = fitted.model_copy(update={"package": request.package, "add_ons": request.add_ons})
         return BookingResult(status="plan_ready", plan=fitted, replaces=confirmation(replaces) if replaces else None)
-    return BookingResult(status="not_possible", reason=fitted[0], options=_days(request.services, desk))
+    return BookingResult(status="not_possible", reason=f"{fitted[0]} {_open(day, desk)}",
+                         options=_days(request.services, desk))
 
 
 def _tools(request: BookingRequest, desk: Appointments, made: list[Plan], replaces: Booking | None) -> list[Tool]:

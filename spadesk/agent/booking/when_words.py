@@ -21,6 +21,7 @@ so the customer is asked again rather than a guess being made.
 
 import re
 from datetime import date, time, timedelta
+from difflib import SequenceMatcher
 
 from ..rules import ANY_TIME, PARTS_OF_DAY
 
@@ -36,6 +37,17 @@ def _month(word: str) -> int | None:
     return next((n for n, name in enumerate(MONTHS, 1) if name.startswith(word[:3])), None) if len(word) >= 3 else None
 
 
+def _day_number(word: str) -> int | None:
+    """The day `word` names (0 = Monday): one it starts ("thu", "thurs", "wednes"),
+    or else the closest by spelling, as a typo is ("thurday"); None for a word that
+    only shares its first letters ("month")."""
+    for n, name in enumerate(DAYS):
+        if name.startswith(word):
+            return n
+    score, n = max((SequenceMatcher(None, word, name).ratio(), n) for n, name in enumerate(DAYS))
+    return n if score >= 0.8 else None
+
+
 def day_from(words: str, today: date) -> date | None:
     """The day `words` name, or None when they name none (or one that cannot be read)."""
     said = words.lower().strip()
@@ -45,8 +57,8 @@ def day_from(words: str, today: date) -> date | None:
         return today + timedelta(days=1)
     if "today" in said or "tonight" in said:
         return today
-    for n, name in enumerate(DAYS):
-        if re.search(rf"\b{name[:3]}(?:{name[3:]})?\b", said):
+    for word in re.findall(r"[a-z]{3,}", said):
+        if (n := _day_number(word)) is not None:
             return today + timedelta(days=(n - today.weekday()) % 7)
     if found := re.search(r"\b(\d{4})-(\d{2})-(\d{2})\b", said):
         return _real(int(found[1]), int(found[2]), int(found[3]))

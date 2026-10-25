@@ -11,11 +11,14 @@ names one of two methods (providers.STRUCTURED):
                another tool when it needs one, and "answer" when it is ready.
                Tool calling is the most widely supported way to get exact JSON
                from OpenAI-compatible providers, so this works where a reply
-               format may not. A tool call is not required (tool_choice "auto"):
-               made to call one every time, a model with nothing left to look
-               up tends to repeat a call instead of answering. So it may also
-               reply in text: JSON in the shape, or plain sentences, which
-               become the shape's text with nothing else (_from_text).
+               format may not. With other tools on offer, a call is not required
+               (tool_choice "auto"): made to call one every time, a model with
+               nothing left to look up tends to repeat a call instead of
+               answering. So it may also reply in text: JSON in the shape, or
+               plain sentences, which become the shape's text (_from_text). With
+               no other tools, the reply's call is required: there is nothing
+               else to call. A call some models write as text,
+               "<tool_call>{...}</tool_call>", is read as the call it is.
 
 Either way the caller gets the same thing back: the reply, or the model's
 requests for other tools. A reply that does not fit the shape raises
@@ -23,6 +26,8 @@ ModelError("bad_output"), which the gateway treats like any failure: it
 tries the fallback model.
 """
 
+import json
+import re
 from typing import Any
 
 from anthropic import transform_schema
@@ -59,9 +64,29 @@ def prepare(model: BaseChatModel, method: str, schema: type[BaseModel], tools: l
         bound = model.bind_tools(offered, tool_choice={"type": "none"} if answer_now else None) if offered else model
         return bound.bind(output_config={"format": reply_format})
     if method == "answer-tool":
-        # With answer_now, the only call allowed is the reply's; otherwise the model chooses.
-        return model.bind_tools([*offered, _answer_tool(schema)], tool_choice=ANSWER if answer_now else "auto")
+        # The reply's call is required when it is the only choice (no other tools: nothing
+        # to repeat) or with answer_now; otherwise the model chooses.
+        only_answer = answer_now or not offered
+        return model.bind_tools([*offered, _answer_tool(schema)], tool_choice=ANSWER if only_answer else "auto")
     raise ValueError(f"Unknown structured-output method: {method!r}.")
+
+
+WRITTEN_CALL = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.S)
+
+
+def _written_calls(text: str) -> list[dict]:
+    """Tool calls a model wrote as text, '<tool_call>{"name": ..., "arguments": {...}}</tool_call>',
+    as the calls they are ({"name", "args", "id"}); none when it wrote none."""
+    calls = []
+    for n, block in enumerate(WRITTEN_CALL.findall(text or "")):
+        try:
+            call = json.loads(block)
+        except ValueError:
+            continue
+        if isinstance(call, dict) and "name" in call:
+            calls.append({"name": call["name"], "args": call.get("arguments") or call.get("args") or {},
+                          "id": f"written-{n}"})
+    return calls
 
 
 def _from_text(schema: type[BaseModel], text: str) -> BaseModel:
@@ -85,8 +110,9 @@ def read(message: AIMessage, method: str, schema: type[BaseModel], model: str) -
     reply does not fit the shape."""
     try:
         if method == "answer-tool":
-            answers = [call for call in message.tool_calls if call["name"] == ANSWER]
-            requests = [call for call in message.tool_calls if call["name"] != ANSWER]
+            calls = message.tool_calls or _written_calls(message.text)
+            answers = [call for call in calls if call["name"] == ANSWER]
+            requests = [call for call in calls if call["name"] != ANSWER]
             if answers:
                 return schema.model_validate(answers[0]["args"]), requests
             if requests:

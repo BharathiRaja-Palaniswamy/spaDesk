@@ -84,13 +84,17 @@ def time_note() -> str:
 
 # A line of a list written into the answer: "- Glow Express Facial: ...", "* ...", "1. ...".
 LIST_LINE = re.compile(r"^\s*(?:[-*\u2022]|\d+[.)])\s+")
+MARKDOWN = re.compile(r"\*\*|__|`")  # bold and code marks
 
 
 def answer_text(reply: AgentReply) -> str:
-    """The reply's answer as the chat shows it. A list belongs in `items`, shown
-    under the answer; when the model also wrote it into the answer, those lines
-    are left out, so the customer does not read the list twice."""
-    if not reply.items:
-        return reply.answer
-    kept = [line for line in reply.answer.splitlines() if not LIST_LINE.match(line)]
-    return "\n".join(kept).strip()
+    """The reply's answer as the chat shows it: plain sentences. Markdown a model
+    wrote anyway (**bold**, list marks) is taken out; and a list belongs in `items`,
+    shown under the answer, so when the model also wrote it into the answer, those
+    lines are left out and the customer does not read the list twice."""
+    lines = reply.answer.splitlines()
+    if reply.items:
+        lines = [line for line in lines if not LIST_LINE.match(line)]
+    else:
+        lines = [LIST_LINE.sub("", line) for line in lines]
+    return MARKDOWN.sub("", "\n".join(lines)).strip()

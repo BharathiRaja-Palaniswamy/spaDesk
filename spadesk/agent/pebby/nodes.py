@@ -100,7 +100,8 @@ def identify(state: AgentState) -> dict:
     before giving them goes straight on to the agent (they have said what
     they want); otherwise, if the number has upcoming bookings, ask whether
     this is about one of them or something new; otherwise thank them."""
-    details = read_details(_latest(state).text)
+    last = next((m.text for m in reversed(state["messages"]) if isinstance(m, AIMessage)), "")
+    details = read_details(_latest(state).text, last)  # with the question it answers
     note("Identify", "Pebby", f"read name {details.name or '-'} · phone {details.phone or '-'}"
          + (f' · asked "{details.asked}"' if details.asked else ""), details.model_dump())
     caller = state.get("caller", "")
@@ -143,7 +144,13 @@ def agent(state: AgentState) -> dict:
             note("Pebby", call["name"], brief(call["args"]), call["args"])
     elif answer.reply is not None:
         note("Pebby", "Customer", answer.reply.answer, answer.reply.model_dump())
-    return {"messages": [answer.message], "requests": answer.tool_calls, "reply": answer.reply}
+    message = answer.message
+    if answer.reply is not None and message.tool_calls:
+        # A reply given as the answer tool's call (open models), with or without other calls: it is
+        # remembered as the reply's text, so no call is left without a result in the conversation,
+        # and the question Pebby asked can be read (a customer's yes to it: booking/collect.py).
+        message = AIMessage(answer.reply.model_dump_json())
+    return {"messages": [message], "requests": answer.tool_calls, "reply": answer.reply}
 
 
 def after_agent(state: AgentState) -> str:

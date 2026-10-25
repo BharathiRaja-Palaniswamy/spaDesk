@@ -80,6 +80,7 @@ def test_a_package_on_a_day_gets_a_plan_of_exactly_its_services(desk):
 def test_a_day_that_does_not_work_says_why_and_offers_other_days(desk):
     result = handle(request(services=BRIDAL, day="2026-10-27"), ASHA, desk)  # Hannah is off on Tuesdays
     assert result.status == "not_possible" and "Glow Express Facial" in result.reason
+    assert result.reason.endswith("We are open 10:00 to 20:00 on Tuesdays.")  # the fact, so nothing is guessed
     assert "Wednesday 2026-10-28" in result.options
 
 

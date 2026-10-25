@@ -146,6 +146,24 @@ def test_answer_tool_method_takes_plain_sentences_as_the_reply(plays):
         structured("chat-default", "Open Sunday?", Shape, [OPENING])
 
 
+def test_a_tool_call_written_as_text_is_read_as_the_call(plays):
+    # As seen live: the small model wrote <tool_call>{...}</tool_call> as text; the turn failed.
+    written = '<tool_call>\n{"name": "answer", "arguments": {"answer": "We open at 9.", "covered": true}}\n</tool_call>'
+    plays("open-like:m", {"open-like": AIMessage(content=written)})
+    assert structured("chat-default", "When?", Shape).reply == Shape(answer="We open at 9.", covered=True)
+    other = '<tool_call>{"name": "opening_hours", "arguments": {"day": "Sun"}}</tool_call>'
+    plays("open-like:m", {"open-like": AIMessage(content=other)})
+    result = structured("chat-default", "Sunday?", Shape, [OPENING])
+    assert result.reply is None and result.tool_calls[0]["args"] == {"day": "Sun"}
+
+
+def test_with_no_other_tool_the_reply_must_be_called():
+    open_model = ChatOpenAI(model="Qwen/x", api_key="test", base_url="https://nebius.example/v1/")
+    runnable = prepare(open_model, "answer-tool", Shape, [])
+    payload = runnable.bound._get_request_payload([HumanMessage("hi")], **runnable.kwargs)
+    assert payload["tool_choice"] == {"type": "function", "function": {"name": ANSWER}}
+
+
 def test_answer_tool_method_passes_other_tool_requests_back(plays):
     plays("open-like:m", {"open-like": AIMessage(content="", tool_calls=[request("opening_hours", {"day": "Sun"})])})
     result = structured("chat-default", "Open Sunday?", Shape, [OPENING])
