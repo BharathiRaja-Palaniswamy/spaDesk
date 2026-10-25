@@ -58,29 +58,37 @@ class Appointments:
         self.step, self.notice = timedelta(minutes=step), timedelta(minutes=notice)
         self._now = now or (lambda: datetime.now(zone))
 
+    def now(self) -> datetime:
+        """The current time in the spa's zone (fixed, in tests)."""
+        return self._now()
+
     # ---- what the customer can ask -----------------------------------------
 
     def free_slots(self, service: str, day: date, therapist: str | None = None,
-                   minutes: int | None = None) -> list[Slot]:
+                   minutes: int | None = None, ignoring: Booking | None = None) -> list[Slot]:
         """Every free time on `day` for `service` (of length `minutes`, its
         standard length if not given), with `therapist` or anyone who offers
-        it. Earliest first."""
+        it. Earliest first. `ignoring`: a booking whose time counts as free,
+        the one a change replaces (it is cancelled once the new one is made)."""
         chosen = self._service(service)
         length = timedelta(minutes=self._length(chosen, minutes))
         slots = [slot for person in self._therapists(chosen, therapist)
-                 for slot in self._free_for(person, day, length)]
+                 for slot in self._free_for(person, day, length, ignoring)]
         return sorted(slots, key=lambda slot: (slot.start, slot.therapist))
 
     def book(self, service: str, therapist: str, start: datetime, name: str, phone: str,
-             minutes: int | None = None) -> Booking:
-        """Book `service` with `therapist` at `start`, if that time is free.
+             minutes: int | None = None, ignoring: Booking | None = None, package: str = "",
+             add_ons: tuple[str, ...] = ()) -> Booking:
+        """Book `service` with `therapist` at `start`, if that time is free
+        (`ignoring` a booking this one replaces), as part of `package` if any,
+        with any `add_ons`.
         A time with no time zone is taken as the spa's."""
         if not name.strip():
             raise BookingError("Please give the name the booking is for.")
         if len(digits(phone)) < 7:
             raise BookingError("Please give a phone number the spa can reach you on.")
         start = start.astimezone(self.zone) if start.tzinfo else start.replace(tzinfo=self.zone)
-        free = self.free_slots(service, start.date(), therapist, minutes)
+        free = self.free_slots(service, start.date(), therapist, minutes, ignoring)
         slot = next((s for s in free if s.start == start), None)
         if slot is None:
             raise BookingError(f"{therapist} is not free for {service} at that time. Please choose a free time.")
@@ -88,7 +96,7 @@ class Appointments:
         # same time at the same moment could both pass the check. That is rare
         # for one small spa; a busier one would lock the time first.
         booking = Booking("BK-" + secrets.token_hex(3).upper(), service, therapist, slot.start, slot.end,
-                          name.strip(), phone.strip())
+                          name.strip(), phone.strip(), package, tuple(add_ons))
         self.calendar.add(booking)
         return booking
 
@@ -165,13 +173,16 @@ class Appointments:
 
     # ---- free time -----------------------------------------------------------
 
-    def _free_for(self, person: Therapist, day: date, length: timedelta) -> list[Slot]:
-        """The free start times for one therapist on one day."""
+    def _free_for(self, person: Therapist, day: date, length: timedelta,
+                  ignoring: Booking | None = None) -> list[Slot]:
+        """The free start times for one therapist on one day, with `ignoring`'s time counted as free."""
         hours = self.schedule.hours.get(day.weekday())
         if hours is None or day.weekday() not in person.days:
             return []
         opens, closes = (datetime.combine(day, t, self.zone) for t in hours)
         busy = self.calendar.busy(person.name, opens, closes) + self._teaching(person, day)
+        if ignoring and ignoring.therapist == person.name and (ignoring.start, ignoring.end) in busy:
+            busy.remove((ignoring.start, ignoring.end))  # one copy: anything else at that time still counts
         earliest, slots, start = self._now() + self.notice, [], opens
         while start + length <= closes:
             end = start + length

@@ -2,7 +2,7 @@
  * @file What the chat says before the customer has written anything.
  *
  * Pebby asks for the customer's name and phone number first: the server will
- * not go on without them (spadesk/agent/identify.py), so the greeting asks
+ * not go on without them (spadesk/agent/pebby.py), so the greeting asks
  * straight away. This is page wording, not business data, so it is written
  * here; change it freely.
  */

@@ -31,6 +31,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .access.routes import router as owner_sign_in
+from .agent.routes import owner as feedback_cards
 from .agent.routes import router as booking_agent
 from .assistant.customer import router as customer_chat
 from .booking.routes import router as booking
@@ -51,6 +52,7 @@ app.include_router(manage_page)
 # So do the customer site's chats (agent/routes.py, assistant/customer.py) and booking (booking/routes.py).
 app.include_router(customer_chat)
 app.include_router(booking_agent)
+app.include_router(feedback_cards)
 app.include_router(owner_sign_in)
 app.include_router(phone_line)
 app.include_router(booking)

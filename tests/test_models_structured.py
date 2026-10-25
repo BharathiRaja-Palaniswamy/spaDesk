@@ -16,8 +16,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
-from spadesk.models import ModelError, Tool, run_requests, structured
-from spadesk.models import providers
+from spadesk.models import ModelError, Tool, providers, run_requests, structured
 from spadesk.models.structured import ANSWER, prepare
 from spadesk.reports.routes import get_dataset
 from spadesk.reports.tools import report_tool
@@ -92,12 +91,24 @@ def test_requests_are_run_and_answered_by_id():
     assert unknown.tool_call_id == "call-2" and "no tool called get_weather" in json.loads(unknown.content)["error"]
 
 
-def test_the_answer_tool_method_offers_the_shape_as_a_required_tool():
+def test_the_answer_tool_method_offers_the_shape_as_a_tool_without_requiring_one():
     open_model = ChatOpenAI(model="Qwen/x", api_key="test", base_url="https://nebius.example/v1/")
     runnable = prepare(open_model, "answer-tool", Shape, [OPENING])
     payload = runnable.bound._get_request_payload([HumanMessage("hi")], **runnable.kwargs)
     assert [tool["function"]["name"] for tool in payload["tools"]] == ["opening_hours", ANSWER]
-    assert payload["tool_choice"] == "required"
+    assert payload["tool_choice"] == "auto"  # required, a model with nothing left to look up repeats a call
+
+
+def test_answer_now_lets_a_model_only_answer():
+    # A model that keeps asking for tools is made to answer: an open model may call only the answer tool,
+    # Claude may call none (its reply format still applies).
+    open_model = ChatOpenAI(model="Qwen/x", api_key="test", base_url="https://nebius.example/v1/")
+    runnable = prepare(open_model, "answer-tool", Shape, [OPENING], answer_now=True)
+    payload = runnable.bound._get_request_payload([HumanMessage("hi")], **runnable.kwargs)
+    assert payload["tool_choice"] == {"type": "function", "function": {"name": ANSWER}}
+    claude = ChatAnthropic(model="claude-opus-5-5", api_key="test")
+    runnable = prepare(claude, "native", Shape, [OPENING], answer_now=True)
+    assert runnable.kwargs["tool_choice"] == {"type": "none"}
 
 
 # ---- Fixed-shape replies ----
@@ -119,6 +130,38 @@ def test_answer_tool_method_reads_the_reply_from_the_answer_call(plays):
         request(ANSWER, {"answer": "We open at 9.", "covered": True})])})
     result = structured("chat-default", "When do you open?", Shape, [OPENING])
     assert result.reply == Shape(answer="We open at 9.", covered=True) and result.tool_calls == []
+
+
+def test_answer_tool_method_takes_plain_sentences_as_the_reply(plays):
+    # Not required to call a tool, an open model may simply answer in text.
+    class Reply(BaseModel):
+        answer: str
+        items: list[str]
+    plays("open-like:m", {"open-like": AIMessage(content="We open at 9 on Sundays.")})
+    result = structured("chat-default", "Open Sunday?", Reply, [OPENING])
+    assert result.reply == Reply(answer="We open at 9 on Sundays.", items=[])
+    # A shape plain sentences cannot fill (a required yes/no) is still a bad reply.
+    plays("open-like:m", {"open-like": AIMessage(content="We open at 9.")})
+    with pytest.raises(ModelError):
+        structured("chat-default", "Open Sunday?", Shape, [OPENING])
+
+
+def test_a_tool_call_written_as_text_is_read_as_the_call(plays):
+    # As seen live: the small model wrote <tool_call>{...}</tool_call> as text; the turn failed.
+    written = '<tool_call>\n{"name": "answer", "arguments": {"answer": "We open at 9.", "covered": true}}\n</tool_call>'
+    plays("open-like:m", {"open-like": AIMessage(content=written)})
+    assert structured("chat-default", "When?", Shape).reply == Shape(answer="We open at 9.", covered=True)
+    other = '<tool_call>{"name": "opening_hours", "arguments": {"day": "Sun"}}</tool_call>'
+    plays("open-like:m", {"open-like": AIMessage(content=other)})
+    result = structured("chat-default", "Sunday?", Shape, [OPENING])
+    assert result.reply is None and result.tool_calls[0]["args"] == {"day": "Sun"}
+
+
+def test_with_no_other_tool_the_reply_must_be_called():
+    open_model = ChatOpenAI(model="Qwen/x", api_key="test", base_url="https://nebius.example/v1/")
+    runnable = prepare(open_model, "answer-tool", Shape, [])
+    payload = runnable.bound._get_request_payload([HumanMessage("hi")], **runnable.kwargs)
+    assert payload["tool_choice"] == {"type": "function", "function": {"name": ANSWER}}
 
 
 def test_answer_tool_method_passes_other_tool_requests_back(plays):

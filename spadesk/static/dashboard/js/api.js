@@ -36,6 +36,28 @@ export const getOptions = () => getJson("/api/report/options");
 export const getProfile = () => getJson("/api/profile");
 
 /**
+ * Fetches the customers' feedback cards for the "Feedback" tab, open ones first.
+ * @returns {Promise<object[]>} see spadesk/agent/feedback.py (cards)
+ */
+export const getFeedbackCards = () => getJson("/api/feedback");
+
+/**
+ * Closes a feedback card, with the owner's note.
+ * @param {string} id the card's reference, e.g. "FB-1A2B3C"
+ * @param {string} note what was done (may be empty)
+ * @returns {Promise<object>} the card, now closed
+ */
+export async function closeFeedbackCard(id, note) {
+  const response = await fetch(`/api/feedback/${encodeURIComponent(id)}/close`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note }),
+  });
+  checkSignedIn(response);
+  const body = await response.json();
+  if (!response.ok) throw new Error(typeof body.detail === "string" ? body.detail : "The card could not be closed.");
+  return body;
+}
+
+/**
  * Fetches the report for a set of filters. Empty values are left out of the
  * request, which the server reads as "no filter".
  * @param {{start: string, end: string, category: string, channel: string}} filters

@@ -9,6 +9,7 @@ Run with:  .venv/bin/python -m pytest tests/test_voice.py
 
 import json
 import time
+from datetime import datetime
 
 import pytest
 from conftest import signed_in
@@ -17,13 +18,16 @@ from langchain_core.messages import AIMessage
 from standin_calendar import standin_desk
 from standins import use_standin
 
-from spadesk.agent import confirm, identify, tools
-from spadesk.agent.graph import get_graph
-from spadesk.agent.handoffs import HANDOVER
-from spadesk.agent.identify import Details
-from spadesk.agent.prompt import AgentReply
+from spadesk.agent import booking as booking_agent
+from spadesk.agent import executor as approved
+from spadesk.agent import pebby as identify
+from spadesk.agent import pebby as tools
+from spadesk.agent import yes as confirm
+from spadesk.agent.booking import Plan, PlanItem
+from spadesk.agent.flow import get_graph
+from spadesk.agent.pebby import AgentReply, Details
+from spadesk.agent.staff import HANDOVER
 from spadesk.app import app
-from spadesk.booking import actions
 from spadesk.models import ModelError
 from spadesk.voice import routes
 from spadesk.voice.call import read_call
@@ -39,7 +43,7 @@ def client(monkeypatch, tmp_path):
     monkeypatch.setenv("SPADESK_VOICE_SECRET", SECRET)
     monkeypatch.setenv("SPADESK_HANDOFFS", str(tmp_path / "handoffs.jsonl"))
     desk = standin_desk()
-    for module in (tools, confirm, identify, actions):
+    for module in (tools, confirm, identify, approved, booking_agent):
         monkeypatch.setattr(module, "get_appointments", lambda: desk)
     get_graph.cache_clear()
     yield TestClient(app)
@@ -73,7 +77,7 @@ def test_only_elevenlabs_with_the_secret_may_call(client, monkeypatch):
 
 
 def test_a_caller_is_asked_only_for_their_name(client, monkeypatch):
-    use_standin(monkeypatch, [AIMessage(content=Details(name="", phone="", asks=True).model_dump_json())])
+    use_standin(monkeypatch, [AIMessage(content=Details(name="", phone="", asked="I'd like a massage").model_dump_json())])
     reply = turn(client, "Hi, I'd like a massage", stream=True)
     assert reply.headers["content-type"].startswith("text/event-stream")
     said = spoken(reply)
@@ -83,8 +87,8 @@ def test_a_caller_is_asked_only_for_their_name(client, monkeypatch):
 
 def test_once_named_pebby_answers_after_a_filler_using_the_caller_number(client, monkeypatch):
     sent = use_standin(monkeypatch, [
-        AIMessage(content=Details(name="", phone="", asks=True).model_dump_json()),
-        AIMessage(content=Details(name="Asha", phone="", asks=False).model_dump_json()),
+        AIMessage(content=Details(name="", phone="", asked="I'd like a massage").model_dump_json()),
+        AIMessage(content=Details(name="Asha", phone="").model_dump_json()),
         AIMessage(content=AgentReply(answer="Thanks Asha! We have Swedish and deep tissue.", items=[],
                                      suggestions=[]).model_dump_json()),
         AIMessage(content=AgentReply(answer="Sure.", items=[], suggestions=[]).model_dump_json())])
@@ -100,7 +104,7 @@ def test_once_named_pebby_answers_after_a_filler_using_the_caller_number(client,
 
 
 def test_a_quick_reply_has_no_filler_and_silence_gets_a_nudge(client, monkeypatch):
-    use_standin(monkeypatch, [AIMessage(content=Details(name="", phone="", asks=False).model_dump_json())])
+    use_standin(monkeypatch, [AIMessage(content=Details(name="", phone="").model_dump_json())])
     assert FILLER not in spoken(turn(client, "Hi", stream=True))  # the stand-in answers at once
     # Never an empty reply: ElevenLabs would take it as an error and drop the call.
     assert spoken(turn(client, "Hi", "May I have your name?", "...", stream=True)) == routes.NUDGE
@@ -111,12 +115,14 @@ def test_a_request_without_a_call_id_is_handed_over_not_dropped(client):
     assert reply.json()["choices"][0]["message"]["content"] == HANDOVER
 
 
-def test_the_confirmation_is_worded_to_be_spoken(client):
-    request = {"name": "book_appointment",
-               "args": {"service": "Prenatal Massage", "therapist": "Priya Nair", "start": "2026-10-30T15:00"}}
-    question, problem = confirm.problem_with(request, "Asha", "+1 408 555 0101", spoken=True)
-    assert problem == "" and question == ("Just to confirm: a 60-minute Prenatal Massage with Priya Nair on "
-                                          "Friday the 30th of October at 3 PM, for Asha. Shall I book it?")
+def test_the_plan_to_confirm_is_worded_to_be_spoken(client):
+    plan = Plan(summary="", items=[
+        PlanItem(service="Prenatal Massage", therapist="Priya Nair", start=datetime(2026, 10, 30, 15, 0)),
+        PlanItem(service="Signature Radiance Facial", therapist="Sofia Martinez", start=datetime(2026, 10, 30, 16, 30))])
+    assert confirm.plan_question(plan, "Asha", "+1 408 555 0101", spoken=True) == (
+        "Just to confirm: a 60-minute Prenatal Massage with Priya Nair on Friday the 30th of October at 3 PM, "
+        "then a 60-minute Signature Radiance Facial with Sofia Martinez on Friday the 30th of October at 4:30 PM, "
+        "for Asha. Shall I book them?")
 
 
 def test_the_voice_widget_is_the_owners_and_shows_only_when_an_agent_is_set(monkeypatch):
@@ -145,3 +151,14 @@ def test_a_turn_that_takes_too_long_is_handed_over_before_the_line_drops(client,
     monkeypatch.setattr(routes, "TURN_LIMIT", 0.2)
     assert spoken(turn(client, "Book Friday", stream=True)) == FILLER + HANDOVER
     assert "took too long" in json.loads((tmp_path / "handoffs.jsonl").read_text())["reason"]
+
+
+def test_a_change_is_said_as_what_is_cancelled_and_what_is_booked(client):
+    plan = Plan(summary="", items=[PlanItem(service="Deep Tissue Massage", therapist="Daniel Ruiz",
+                                            start=datetime(2026, 10, 26, 17, 0))])
+    old = {"reference": "BK-7B1DA6", "service": "Swedish Massage", "therapist": "Daniel Ruiz",
+           "start": "2026-10-26T17:00"}
+    assert confirm.plan_question(plan, "Asha", "+1 408 555 0101", spoken=True, replaces=old) == (
+        "Just to confirm: I'll cancel your Swedish Massage on Monday the 26th of October at 5 PM and book a "
+        "60-minute Deep Tissue Massage with Daniel Ruiz on Monday the 26th of October at 5 PM instead, for Asha. "
+        "Shall I go ahead?")

@@ -241,13 +241,16 @@ spadesk/
     engine.py                  which pipeline answers both chats: LangChain (default) or hand-built
   voice/                       the phone line: Pebby behind /v1/chat/completions, which ElevenLabs calls
   access/                      who may do what: roles and permissions, the owner's sign-in, /login
-  agent/                       Pebby, the booking agent: /api/assistant
-    identify.py                name and phone first
-    tools.py                   search the guide, find times, book, cancel, list, hand off
-    confirm.py                 the customer's yes before a booking is made or cancelled
-    handoffs.py                passing a conversation to the staff
-    prompt.py                  its instructions and the shape of its replies
-    nodes.py, graph.py         its steps, how they are joined, and its memory
+  agent/                       the customer chat: Pebby, the Feedback agent, and booking in code; /api/assistant,
+                               /api/feedback (the owner's feedback cards)
+    rules.py                   how it behaves: six principles, and their settings
+    flow.py                    a turn, step by step
+    pebby.py                   Pebby: instructions, tools, name and phone first
+    details.py, yes.py         the customer's own words -> details; the questions for their yes
+    booking.py, executor.py    what can be booked; booking it all or none
+    feedback.py                the Feedback agent: reads feedback, answers it, files a card the owner closes
+    staff.py                   handoffs: what is written down for the staff
+    debug.py                   debug mode: every step of a turn, under the reply
   lc/                          the same pipeline with LangChain; each provider a setting
     owner/                     the owner chat as a LangGraph graph: state, nodes, graph
   models/                      the model gateway: jobs -> models, providers, tools, fixed-shape replies, fallback, usage

@@ -1,5 +1,5 @@
 /**
- * @file The tabs at the top of the manage page ("Business profile", "Reports").
+ * @file The tabs at the top of the manage page ("Business profile", "Reports", "Feedback").
  *
  * The tab buttons and their panels are written in index.html. A button names
  * its tab in `data-tab`, and its panel has the id "panel-<name>". Exactly one

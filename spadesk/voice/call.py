@@ -10,7 +10,7 @@ ends with two lines that ElevenLabs fills in for each call:
 
 so this module can read them back. The call ID keeps one conversation per
 call in Pebby's memory; the caller's number stands in for the phone number
-(spadesk/agent/identify.py). Pebby's own instructions and memory do the
+(spadesk/agent/pebby.py). Pebby's own instructions and memory do the
 rest: of the lines sent, only the caller's latest one is used.
 """
 

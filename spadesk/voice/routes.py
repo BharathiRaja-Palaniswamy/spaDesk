@@ -37,7 +37,7 @@ from pydantic import BaseModel
 
 from ..access.session import require
 from ..agent import hand_over, respond
-from ..agent.handoffs import HANDOVER
+from ..agent.staff import HANDOVER
 from ..config import get_settings
 from ..models import ModelError
 from ..rag.errors import ModelUnavailable
@@ -47,7 +47,7 @@ from .stream import completion, sse
 router = APIRouter()
 log = logging.getLogger("spadesk.voice")
 
-FILLER = "Let me check... "  # said while Pebby thinks; ElevenLabs suggests ending a filler with "... "
+FILLER = "Please wait, we're working on your request... "  # said while Pebby and its agents work; ElevenLabs suggests ending a filler with "... "
 FILLER_AFTER = 1.5  # seconds: a reply ready sooner is said straight away, with no filler
 # Seconds a turn may take before the caller is handed over instead. Under ElevenLabs'
 # own wait for a reply (set to 10 s in the agent), so the caller hears the handover

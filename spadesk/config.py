@@ -68,6 +68,8 @@ class Settings:
     slot_minutes: int  # booking: appointments start on this grid, e.g. every 30 minutes from opening
     min_notice_minutes: int  # booking: the fewest minutes ahead a booking can be made, changed or cancelled
     handoffs_path: Path  # the chat: where requests for the staff to call a customer back are appended
+    feedback_path: Path  # the chat: where customers' feedback, as Pebby's feedback tool read it, is appended
+    debug: bool  # the chat: show what happened between the agents under each reply (for testing only)
     rag_engine: str  # which pipeline answers both chats: "langchain" (lc/) or the reference "handbuilt" (rag/)
     # The model gateway (spadesk/models/). A model is named "provider:model", e.g.
     # "nebius:Qwen/Qwen3-235B-A22B-Instruct-2507".
@@ -108,6 +110,8 @@ def get_settings() -> Settings:
         slot_minutes=int(os.getenv("SPADESK_SLOT_MINUTES", "30")),
         min_notice_minutes=int(os.getenv("SPADESK_MIN_NOTICE_MINUTES", "30")),
         handoffs_path=Path(os.getenv("SPADESK_HANDOFFS", ROOT / "storage" / "handoffs.jsonl")),
+        feedback_path=Path(os.getenv("SPADESK_FEEDBACK", ROOT / "storage" / "feedback.jsonl")),
+        debug=os.getenv("SPADESK_DEBUG", "false").lower() == "true",
         rag_engine=os.getenv("SPADESK_RAG_ENGINE", "langchain"),
         model_set=os.getenv("SPADESK_MODELS", "claude"),
         model_sets={name: {tier: os.getenv(variable, default) for tier, (variable, default) in tiers.items()}
