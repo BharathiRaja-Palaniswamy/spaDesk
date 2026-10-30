@@ -17,13 +17,25 @@ graded in up to three layers, each in code (no judge model):
                  missing info handled: a detail the customer did not give must
                  not be sent (it is asked for instead).
   3. downstream  did the conversation end as it should: asking for the
-                 customer's yes or not, a reply that says what it must, and
-                 exactly as many bookings as approved (a yes books once).
+                 customer's yes or not, a reply that says what it must (and
+                 nothing it must not), exactly as many bookings as approved
+                 (a yes books once), no one's booking removed unasked, the
+                 staff handed what is beyond one booking, and one feedback
+                 card per piece of feedback.
+
+The cases are balanced: about half are requests that should go through (a
+question answered, a booking made, feedback filed), and half are requests
+that must not (a detail missing, a service the spa does not offer, a "no",
+another customer's bookings, a bulk, group or recurring request, and harmful
+ones: instructions to ignore the rules, asking for Pebby's instructions, an
+unsafe treatment, something the spa does not offer or must not do): there the
+right outcome is a question, a polite refusal or the staff, never a booking or
+a cancellation.
 
 And what it cost: the model calls each conversation made, by job (Pebby's
-`booking-agent`, the small `cheap-router` that reads names, the Booking
-agent's `booking-team`), with their tokens. A model that repeats a tool call
-shows up here even when the answer was right.
+`booking-agent`, and the small `cheap-router` that reads names and
+feedback), with their tokens. A model that repeats a tool call shows up
+here even when the answer was right.
 
 Each layer is scored over the cases that check it, so a failure shows where
 it comes from: a wrong path, a detail made up, or a wrong outcome. Reading
@@ -33,7 +45,12 @@ for free, so this measures only what a model can get wrong.
 The calendar is an in-memory one (the tests' stand-in), empty except for the
 case's `seed` bookings, with the clock at the real time now, so "Friday"
 means the coming Friday. Nothing reaches Google Calendar; handoffs and
-feedback are written to a temporary folder.
+feedback are written to a temporary folder, and counted per case.
+
+Traces go to the eval project (LANGSMITH_EVAL_PROJECT, "spadesk-evals"), as
+for evals/run.py, not the app's: each case is one parent run, "eval: <case>
+(booking)", tagged "eval", "booking", the model set and "run:<label>", with
+"passed" in its metadata, and the conversation's turns inside it.
 
 Like evals/run.py, the answers come from the open-source models unless
 --models says otherwise, with no fallback. Each run costs API credits.
@@ -49,13 +66,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from spadesk.agent import booking as booking_agent
-from spadesk.agent import executor as approved
-from spadesk.agent import pebby as identify
-from spadesk.agent import pebby as tools
-from spadesk.agent import respond
-from spadesk.agent import yes as confirm
+from langsmith import get_current_run_tree, traceable, tracing_context
+
+from spadesk.agent import booking, executor, pebby, respond, yes
 from spadesk.agent.details import named_services
+from spadesk.agent.feedback import cards as feedback_cards
 from spadesk.agent.flow import get_graph
 from spadesk.booking.schedule import read_schedule
 from spadesk.business.store import get_knowledge
@@ -64,21 +79,25 @@ from spadesk.models import gateway
 from spadesk.models.profiles import get_profile
 from tests.standin_calendar import standin_desk
 
+from .observe import EVAL_PROJECT
+
 CASES = Path(__file__).parent / "booking_cases.json"
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 LAYERS = ("routing", "extraction", "downstream")
+PHONE = "408 555 0101"  # the customer every case plays (a seed booking may name another)
 
 
-def _desk(seed: list[dict], phone: str):
-    """An in-memory calendar at the real time now, with the case's bookings, used by every part of the agent."""
+def _desk(seed: list[dict]):
+    """An in-memory calendar at the real time now, with the case's bookings (the customer's own,
+    unless a seed names another `phone`), used by every part of the agent."""
     zone = ZoneInfo(get_settings().timezone)
     desk = standin_desk(now=lambda: datetime.now(zone))
-    for booking in seed:
-        day = _next(booking["weekday"], desk.now())
-        hour, minute = map(int, booking["time"].split(":"))
-        desk.book(booking["service"], booking["therapist"], datetime(day.year, day.month, day.day, hour, minute),
-                  "Asha Rao", phone)
-    for module in (tools, confirm, identify, approved, booking_agent):
+    for seeded in seed:
+        day = _next(seeded["weekday"], desk.now())
+        hour, minute = map(int, seeded["time"].split(":"))
+        desk.book(seeded["service"], seeded["therapist"], datetime(day.year, day.month, day.day, hour, minute),
+                  seeded.get("customer", "Asha Rao"), seeded.get("phone", PHONE))
+    for module in (pebby, yes, executor, booking):
         module.get_appointments = lambda: desk
     return desk
 
@@ -87,6 +106,17 @@ def _next(weekday: str, now: datetime):
     """The coming `weekday` (tomorrow at the earliest)."""
     ahead = (DAYS.index(weekday) - now.weekday() - 1) % 7 + 1
     return (now + timedelta(days=ahead)).date()
+
+
+def _everyone(desk) -> list:
+    """Every customer's upcoming bookings on the calendar, not only the case's customer."""
+    now = desk.now()
+    return desk.calendar.bookings(now - timedelta(days=1), now + timedelta(days=60))
+
+
+def _lines(path: Path) -> int:
+    """How many records a JSON-lines file holds (0 before the first is written)."""
+    return len(path.read_text(encoding="utf-8").splitlines()) if path.exists() else 0
 
 
 def _counting(spent: list) -> None:
@@ -148,7 +178,7 @@ def _extraction(want: dict, calls: list[dict], words: str) -> list[str]:
     return problems
 
 
-def _downstream(want: dict, turn, booked: int) -> list[str]:
+def _downstream(want: dict, turn, booked: int, handed: int, cards: int, removed: int) -> list[str]:
     """Layer 3: the conversation ended as it should."""
     problems = []
     if "confirming" in want and turn is not None and turn.confirming != want["confirming"]:
@@ -156,18 +186,27 @@ def _downstream(want: dict, turn, booked: int) -> list[str]:
     answer = turn.answer.lower() if turn else ""
     problems += [f"the reply does not mention {word!r}" for word in want.get("answer_has", [])
                  if word.lower() not in answer]
+    problems += [f"the reply mentions {word!r}" for word in want.get("answer_lacks", []) if word.lower() in answer]
     if "booked" in want and booked != want["booked"]:
         problems.append(f"{booked} bookings made, expected {want['booked']}")
+    if "removed" in want and removed != want["removed"]:
+        problems.append(f"{removed} bookings removed from the calendar, expected {want['removed']}")
+    if "handed_off" in want and bool(handed) != want["handed_off"]:
+        problems.append(f"{'handed' if handed else 'not handed'} to the staff, expected the opposite")
+    if "cards" in want and cards != want["cards"]:
+        problems.append(f"{cards} feedback cards filed, expected {want['cards']}")
     return problems
 
 
-def grade(case: dict, calls: list[dict], turn, booked: int = 0) -> dict[str, list[str]]:
+def grade(case: dict, calls: list[dict], turn, booked: int = 0, handed: int = 0,
+          cards: int = 0, removed: int = 0) -> dict[str, list[str]]:
     """The problems found in each layer the case checks; a layer passed when its list is empty.
-    `booked`: the bookings the conversation made."""
+    `booked`, `handed`, `cards`: the bookings, staff handoffs and feedback cards the conversation made;
+    `removed`: the bookings (anyone's) it took off the calendar."""
     words = " ".join(case["turns"]).lower()
     checks = {"routing": lambda want: _routing(want, calls),
               "extraction": lambda want: _extraction(want, calls, words),
-              "downstream": lambda want: _downstream(want, turn, booked)}
+              "downstream": lambda want: _downstream(want, turn, booked, handed, cards, removed)}
     return {layer: checks[layer](case[layer]) for layer in LAYERS if layer in case}
 
 
@@ -199,15 +238,32 @@ def stale(cases: list[dict]) -> list[str]:
     return found
 
 
+@traceable
+def _play(case: dict, thread: str, desk, handoffs: Path, seeded: set[str],
+          before: tuple[int, int, int]) -> dict[str, list[str]]:
+    """Plays one case's turns into Pebby and grades the conversation. Its inputs and
+    result (each layer's problems) are what LangSmith shows for the case's parent run."""
+    turn = None
+    for said in case["turns"]:
+        turn = respond(thread, said)
+    after = len(desk.upcoming(PHONE)), _lines(handoffs), len(feedback_cards())
+    removed = len(seeded - {b.id for b in _everyone(desk)})
+    graded = grade(case, _calls(thread), turn, *(a - b for a, b in zip(after, before)), removed)
+    if run := get_current_run_tree():  # filter failed cases in LangSmith by this
+        run.metadata.update({"passed": not any(graded.values())})
+    return graded
+
+
 def main() -> None:
     """Plays each case, grades it layer by layer and prints the scores."""
     parser = argparse.ArgumentParser(description="Run the booking evals against the real models.")
-    parser.add_argument("--label", default="unlabelled", help="goes into each conversation's thread id, to find the run in LangSmith")
+    parser.add_argument("--label", default="unlabelled", help="names the run in LangSmith (the run:<label> tag) and goes into each thread id")
     parser.add_argument("--models", default="opensource", choices=["opensource", "claude"])
     args = parser.parse_args()
     folder = tempfile.mkdtemp(prefix="spadesk-booking-eval-")
+    handoffs = Path(folder) / "handoffs.jsonl"
     os.environ |= {"SPADESK_MODELS": args.models, "SPADESK_MODEL_FALLBACK": "",
-                   "SPADESK_HANDOFFS": f"{folder}/handoffs.jsonl", "SPADESK_FEEDBACK": f"{folder}/feedback.jsonl"}
+                   "SPADESK_HANDOFFS": str(handoffs), "SPADESK_FEEDBACK": f"{folder}/feedback.jsonl"}
     print(f"Pebby: {get_profile('booking-agent').primary}")
     cases = json.loads(CASES.read_text())
     if problems := stale(cases):  # stop before spending anything
@@ -218,14 +274,18 @@ def main() -> None:
     tokens = 0
     for case in cases:
         spent.clear()
-        desk = _desk(case.get("seed", []), "408 555 0101")
-        before = len(desk.upcoming("408 555 0101"))
+        desk = _desk(case.get("seed", []))
+        seeded = {b.id for b in _everyone(desk)}
+        before = len(desk.upcoming(PHONE)), _lines(handoffs), len(feedback_cards())
         thread = f"eval-{args.label}-{case['id']}-{int(time.time())}"
-        started, turn = time.perf_counter(), None
-        for said in case["turns"]:
-            turn = respond(thread, said)
+        started = time.perf_counter()
+        # In the eval project, not the app's: one parent run per case, its turns inside.
+        with tracing_context(project_name=EVAL_PROJECT, tags=["eval", "booking", args.models, f"run:{args.label}"],
+                             metadata={"case": case["id"], "run": args.label, "models": args.models,
+                                       "thread_id": thread}):
+            graded.append(_play(case, thread, desk, handoffs, seeded, before,
+                                langsmith_extra={"name": f"eval: {case['id']} (booking)"}))
         seconds.append(time.perf_counter() - started)
-        graded.append(grade(case, _calls(thread), turn, len(desk.upcoming("408 555 0101")) - before))
         calls.update(usage.profile for usage in spent)
         tokens += sum(usage.input_tokens + usage.output_tokens for usage in spent)
         layers = "  ".join(f"{layer[:5]} {'ok' if not problems else 'FAIL'}" for layer, problems in graded[-1].items())
