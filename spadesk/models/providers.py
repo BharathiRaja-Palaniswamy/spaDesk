@@ -10,9 +10,9 @@ out, tool calls and token counts in the same fields, whichever provider ran.
              API copies OpenAI's, so LangChain's OpenAI chat model talks to
              it, pointed at Nebius's address (NEBIUS_API_KEY)
 
-To add a provider, write one function that returns its chat model, add a
-line to PROVIDERS, and, if it supports a JSON reply format alongside tools
-as Claude does, a line to STRUCTURED. Another OpenAI-compatible service
+To add a provider, write one function that returns its chat model and add a
+line to PROVIDERS; it needs tool calling, which is also how replies in a fixed
+shape are asked for (structured.py). Another OpenAI-compatible service
 (OpenRouter, Together, a local Ollama server) needs only its own address and
 key, like _nebius.
 """
@@ -57,13 +57,6 @@ PROVIDERS: dict[str, Callable[[str], BaseChatModel]] = {
 NAMES: dict[str, str] = {
     "anthropic": "Claude",
     "nebius": "Nebius",
-}
-
-# Provider -> how it is asked for a reply in a fixed shape (see structured.py).
-# A provider missing here uses "answer-tool", which any model with tool calling supports.
-STRUCTURED: dict[str, str] = {
-    "anthropic": "native",
-    "nebius": "answer-tool",
 }
 
 

@@ -42,8 +42,8 @@ def answers() -> AIMessage:
 def run(monkeypatch):
     """Runs the graph with a stand-in model that plays back `replies` in order.
     Returns the final state."""
-    def run_graph(*replies: AIMessage, rag: bool = False, method: str = "native") -> dict:
-        use_standin(monkeypatch, list(replies), method)
+    def run_graph(*replies: AIMessage, rag: bool = False) -> dict:
+        use_standin(monkeypatch, list(replies))
         return graph.build_graph(SYSTEM, ChatReply, get_dataset()).invoke(
             {"question": "How did facials do in September?", "rag": rag, "messages": [], "reports": []})
     return run_graph
@@ -87,10 +87,10 @@ def test_an_unknown_tool_gets_an_error_result(run):
     assert "no tool called get_weather" in json.loads(state["messages"][3].content)["error"]
 
 
-def test_the_graph_works_the_same_with_an_open_model(run):
-    # Open models give the reply by calling an "answer" tool (models/structured.py).
+def test_the_graph_takes_the_reply_from_the_answer_call(run):
+    # Every model gives the reply by calling an "answer" tool (models/structured.py).
     answer_call = AIMessage(content="", tool_calls=[{"name": ANSWER_TOOL, "args": ANSWER.model_dump(), "id": "a"}])
-    state = run(asks_for_report(), answer_call, method="answer-tool")
+    state = run(asks_for_report(), answer_call)
     assert state["reply"] == ANSWER and state["reports"] == ["2026-09-01 to 2026-09-30, Facials"]
 
 

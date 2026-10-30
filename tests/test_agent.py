@@ -521,24 +521,25 @@ def test_the_tools_only_reach_this_customers_bookings(desk, monkeypatch):
 
 def test_too_many_steps_hands_the_customer_to_the_staff(desk, monkeypatch, tmp_path):
     identified(monkeypatch, "thread-stuck")
-    looping = [asks("search_guide", {"question": "hours"}, f"call-{n}") for n in range(MAX_TOOL_ROUNDS + 1)]
+    # A new search each round (no repeats, which would make the next call answer).
+    looping = [asks("search_guide", {"question": f"hours {n}"}, f"call-{n}") for n in range(MAX_TOOL_ROUNDS + 1)]
     chat(monkeypatch, *looping)
     assert respond("thread-stuck", "Help me book").answer == HANDOVER
     handoff = json.loads((tmp_path / "handoffs.jsonl").read_text())
     assert handoff["name"] == "Asha Rao" and handoff["phone"] == "(408) 555-0101"
 
 
-def test_a_request_repeated_unchanged_is_not_run_again_and_goes_to_the_staff(desk, monkeypatch, tmp_path):
+def test_a_request_repeated_unchanged_is_not_run_again_and_pebby_must_answer(desk, monkeypatch, tmp_path):
     # As seen with an open model: a made-up reference, cancelled again and again.
     identified(monkeypatch, "thread-loop")
-    made_up = [books({"intent": "cancel", "references": ["BK789XYZ"]}, f"call-{n}") for n in range(1 + nodes.MAX_REPEATS)]
-    sent = chat(monkeypatch, *made_up)
-    assert respond("thread-loop", "3").answer == HANDOVER
-    assert len(sent) == 1 + nodes.MAX_REPEATS  # stopped before the round limit
+    made_up = [books({"intent": "cancel", "references": ["BK789XYZ"]}, f"call-{n}") for n in range(2)]
+    sent = chat(monkeypatch, *made_up, says("Which booking would you like to cancel?"))
+    assert respond("thread-loop", "3").answer == "Which booking would you like to cancel?"
+    assert len(sent) == 3  # after the repeat, the call could only answer
     # The first try ran: a reference that is not one of theirs is not named, so they are asked which booking.
     assert json.loads(sent[1][-1].content)["missing"] == ["references"]
     assert json.loads(sent[2][-1].content)["error"] == nodes.REPEATED  # the repeat did not
-    assert json.loads((tmp_path / "handoffs.jsonl").read_text())["phone"] == "(408) 555-0101"
+    assert not (tmp_path / "handoffs.jsonl").exists()
     # Every request has exactly one result, so the conversation can go on.
     results = [m.tool_call_id for m in memory("thread-loop")["messages"] if isinstance(m, ToolMessage)]
     assert sorted(results) == sorted(set(results))
@@ -582,8 +583,9 @@ def test_a_handoff_asked_for_again_in_the_same_turn_is_written_once(desk, monkey
     chat(monkeypatch, asks("hand_off", {"reason": "Bridal package."}), again, says("Our staff will call you."))
     assert respond("thread-six", "bridal").answer == "Our staff will call you."
     assert len((tmp_path / "handoffs.jsonl").read_text().splitlines()) == 1
-    # Repeated until the staff take over: still one handoff, not a second one for giving up.
-    chat(monkeypatch, *[asks("hand_off", {"reason": "Bridal again."}, f"call-{n}") for n in range(3)])
+    # Out of rounds after a hand_off: the staff take over with one handoff, not a second one for giving up.
+    searches = [asks("search_guide", {"question": f"bridal {n}"}, f"call-{n}") for n in range(MAX_TOOL_ROUNDS)]
+    chat(monkeypatch, asks("hand_off", {"reason": "Bridal again."}, "call-h"), *searches)
     assert respond("thread-six", "bridal?").answer == HANDOVER
     assert len((tmp_path / "handoffs.jsonl").read_text().splitlines()) == 2
 
@@ -668,28 +670,28 @@ def test_markdown_never_reaches_the_customer(desk, monkeypatch):
                                                      "Time: 14:00")
 
 
-# ---- a clarifying question, on either way of replying (models/structured.py) ----------------------
+# ---- a clarifying question, whichever way the reply comes (models/structured.py) ----------------
 
 def answered(answer: str) -> AIMessage:
-    """An open model's reply, given as the answer tool's call."""
+    """A reply given as the answer tool's call."""
     reply = AgentReply(answer=answer, items=[], suggestions=[])
     return AIMessage(content="", tool_calls=[{"name": "answer", "args": reply.model_dump(), "id": "answer-1"}])
 
 
-@pytest.mark.parametrize("method, reply", [("native", says("Which facial would you like?")),
-                                           ("answer-tool", answered("Which facial would you like?")),
-                                           ("answer-tool", AIMessage(content="Which facial would you like?"))])
-def test_pebby_asks_a_clarifying_question_in_one_model_call_and_no_tool(desk, monkeypatch, tmp_path, method, reply):
-    identified(monkeypatch, f"thread-ask-{method}-{bool(reply.tool_calls)}")
-    sent = use_standin(monkeypatch, [reply], method=method)
+@pytest.mark.parametrize("way, reply", [("json", says("Which facial would you like?")),
+                                        ("call", answered("Which facial would you like?")),
+                                        ("text", AIMessage(content="Which facial would you like?"))])
+def test_pebby_asks_a_clarifying_question_in_one_model_call_and_no_tool(desk, monkeypatch, tmp_path, way, reply):
+    identified(monkeypatch, f"thread-ask-{way}")
+    sent = use_standin(monkeypatch, [reply])
     used = []
     monkeypatch.setattr(nodes, "run_requests", lambda requests, offered: used.extend(requests) or [])
-    turn = respond(f"thread-ask-{method}-{bool(reply.tool_calls)}", "want to book facial")
+    turn = respond(f"thread-ask-{way}", "want to book facial")
     assert turn.answer == "Which facial would you like?" and not turn.confirming
     assert len(sent) == 1 and used == []  # one model call; no booking, no hand_off, no other tool
     assert not (tmp_path / "handoffs.jsonl").exists()
     # What is remembered is the question as text, with no tool call left without its result.
-    last = memory(f"thread-ask-{method}-{bool(reply.tool_calls)}")["messages"][-1]
+    last = memory(f"thread-ask-{way}")["messages"][-1]
     assert not last.tool_calls and "Which facial would you like?" in last.text
 
 
@@ -697,15 +699,15 @@ def test_a_reply_that_comes_with_another_tool_request_ends_the_turn_without_runn
     identified(monkeypatch, "thread-both")
     both = answered("Which day suits you?")
     both.tool_calls.append({"name": "hand_off", "args": {"reason": "?"}, "id": "extra-1"})
-    sent = use_standin(monkeypatch, [both], method="answer-tool")
+    sent = use_standin(monkeypatch, [both])
     assert respond("thread-both", "a lip wax please").answer == "Which day suits you?"
     assert len(sent) == 1  # the reply ends the turn: no further model round
     assert not memory("thread-both")["messages"][-1].tool_calls  # and nothing is left unanswered
 
 
-def test_on_an_open_model_a_yes_to_pebbys_question_counts_as_the_customers_words(desk, monkeypatch):
+def test_a_yes_to_pebbys_question_given_as_the_answer_call_counts_as_the_customers_words(desk, monkeypatch):
     identified(monkeypatch, "thread-yes-open")
-    use_standin(monkeypatch, [answered("Would that be the Signature Radiance Facial?")], method="answer-tool")
+    use_standin(monkeypatch, [answered("Would that be the Signature Radiance Facial?")])
     respond("thread-yes-open", "i want a facial")
     words = customer_words([*memory("thread-yes-open")["messages"], HumanMessage("yes")])
     assert "signature radiance facial" in words

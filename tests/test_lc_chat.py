@@ -93,13 +93,15 @@ def test_the_prompt_is_the_same_as_the_hand_built_one(rag):
 class Unreachable(GenericFakeChatModel):
     """A stand-in model whose provider cannot be reached."""
 
+    def bind_tools(self, tools, **kwargs):
+        return self
+
     def _generate(self, *args, **kwargs):
         raise anthropic.APIConnectionError(request=httpx.Request("POST", "https://api.example.com"))
 
 
 def test_the_route_reports_when_the_model_is_unavailable(monkeypatch):
     monkeypatch.setitem(providers.PROVIDERS, "down", lambda model: Unreachable(messages=iter([])))
-    monkeypatch.setitem(providers.STRUCTURED, "down", "native")
     monkeypatch.setenv("SPADESK_CLAUDE_HIGH", "down:any")
     reply = TestClient(app).post("/api/chat", json={"question": "Are you open today?"})
     assert reply.status_code == 503 and "unavailable" in reply.json()["detail"]

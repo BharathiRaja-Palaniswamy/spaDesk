@@ -37,7 +37,7 @@ from pydantic import BaseModel
 from . import structured as shapes
 from .errors import ModelError, normalize
 from .profiles import ModelSpec, Profile, get_profile
-from .providers import STRUCTURED, build
+from .providers import build
 from .tools import Tool
 from .usage import Usage, record, usage_of
 
@@ -126,13 +126,11 @@ def structured(profile: str, messages: LanguageModelInput, shape: type[BaseModel
     (tools.run_requests), adds them to the conversation and asks again.
     A reply that does not fit `shape` counts as a failure, so the fallback
     model is tried. With `answer_now`, the model must answer this time, not
-    ask for a tool (structured.prepare)."""
+    ask for a tool (structured.ask)."""
     offered = tools or []
 
     def attempt(spec: ModelSpec, labels: RunnableConfig) -> tuple[AIMessage, tuple[BaseModel | None, list[dict], AIMessage]]:
-        method = STRUCTURED.get(spec.provider, "answer-tool")
-        message = shapes.prepare(build(spec), method, shape, offered, answer_now).invoke(messages, config=labels)
-        reply, requests = shapes.read(message, method, shape, str(spec))
+        message, reply, requests = shapes.ask(build(spec), messages, shape, offered, answer_now, labels, str(spec))
         return message, (reply, requests, message)
 
     (reply, requests, message), usage = _first_that_works(profile, attempt)

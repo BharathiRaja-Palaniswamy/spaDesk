@@ -1,45 +1,47 @@
 """Replies in a fixed shape (a pydantic class), from any provider.
 
 Pebby's replies have a shape (answer, items, sections, ...), so the page can
-lay them out. Providers support that in different ways, so each provider
-names one of two methods (providers.STRUCTURED):
+lay them out. Every provider is asked the same way, by one of two rules,
+depending only on whether the model may still call a tool:
 
-  native       the shape is sent as the reply format, and the model's text
-               is JSON in that shape. Claude does this, also while offering
-               tools: one call ends either in a tool request or in the reply.
-  answer-tool  the shape is offered as one more tool, "answer": the model calls
-               another tool when it needs one, and "answer" when it is ready.
-               Tool calling is the most widely supported way to get exact JSON
-               from OpenAI-compatible providers, so this works where a reply
-               format may not. With other tools on offer, a call is not required
-               (tool_choice "auto"): made to call one every time, a model with
-               nothing left to look up tends to repeat a call instead of
-               answering. So it may also reply in text: JSON in the shape, or
-               plain sentences, which become the shape's text (_from_text). With
-               no other tools, the reply's call is required: there is nothing
-               else to call. A call some models write as text,
-               "<tool_call>{...}</tool_call>", is read as the call it is.
+  a tool may be called   the shape is offered as one more tool, "answer". The
+                         model calls another tool when it needs one, and
+                         "answer" when it is ready; its inputs are the reply.
+  no tool may be called  (no tools, or answer_now) the shape is sent as the
+                         reply format, and the provider makes the reply fit it.
+                         LangChain writes the format each provider's way.
 
-Either way the caller gets the same thing back: the reply, or the model's
-requests for other tools. A reply that does not fit the shape raises
-ModelError("bad_output"), which the gateway treats like any failure: it
-tries the fallback model.
+Why not the reply format every time? With tools on offer, an OpenAI-compatible
+host like Nebius forces every reply into the shape, so the model can no longer
+call a tool, and makes up what it should look up. And why not make the model
+call "answer" when it must answer? Some models (Claude Opus 5.5) refuse a
+forced tool choice. So a call is never forced: tool_choice is always "auto".
+That also suits the models: made to call a tool every time, a model with
+nothing left to look up tends to repeat a call instead of answering.
+
+Free to choose, a model may reply in text instead of calling "answer": JSON in
+the shape, or plain sentences, which become the shape's text (_from_text). A
+call some models write as text, "<tool_call>{...}</tool_call>", is read as the
+call it is.
+
+The caller gets the reply, or the model's requests for other tools. A reply
+that does not fit the shape raises ModelError("bad_output"), which the
+gateway treats like any failure: it tries the fallback model.
 """
 
 import json
 import re
 from typing import Any
 
-from anthropic import transform_schema
-from langchain_core.language_models import BaseChatModel
+from langchain_core.language_models import BaseChatModel, LanguageModelInput
 from langchain_core.messages import AIMessage
-from langchain_core.runnables import Runnable
+from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, ValidationError
 
 from .errors import ModelError
 from .tools import Tool
 
-ANSWER = "answer"  # the tool that carries the reply, in the answer-tool method
+ANSWER = "answer"  # the tool that carries the reply
 
 
 def _answer_tool(schema: type[BaseModel]) -> dict[str, Any]:
@@ -49,26 +51,6 @@ def _answer_tool(schema: type[BaseModel]) -> dict[str, Any]:
         "description": "Give your final reply to the user in this shape. Call it once, when you have "
                        "everything you need; call the other tools first if you need them.",
         "parameters": schema.model_json_schema()}}
-
-
-def prepare(model: BaseChatModel, method: str, schema: type[BaseModel], tools: list[Tool],
-            answer_now: bool = False) -> Runnable:
-    """`model` set up to reply in `schema`'s shape, with `tools` on offer. With
-    `answer_now`, it must reply this time and cannot ask for another tool: for a
-    model that keeps asking for tools (repeating one it already had)."""
-    offered = [tool.description_for_model() for tool in tools]
-    if method == "native":
-        # Claude's reply format, the same setting the Anthropic library's messages.parse uses.
-        # The tools stay described (the conversation holds earlier tool calls), but none may be called.
-        reply_format = {"type": "json_schema", "schema": transform_schema(schema)}
-        bound = model.bind_tools(offered, tool_choice={"type": "none"} if answer_now else None) if offered else model
-        return bound.bind(output_config={"format": reply_format})
-    if method == "answer-tool":
-        # The reply's call is required when it is the only choice (no other tools: nothing
-        # to repeat) or with answer_now; otherwise the model chooses.
-        only_answer = answer_now or not offered
-        return model.bind_tools([*offered, _answer_tool(schema)], tool_choice=ANSWER if only_answer else "auto")
-    raise ValueError(f"Unknown structured-output method: {method!r}.")
 
 
 WRITTEN_CALL = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.S)
@@ -104,23 +86,39 @@ def _from_text(schema: type[BaseModel], text: str) -> BaseModel:
         return schema.model_validate({**lists, first: text.strip()})
 
 
-def read(message: AIMessage, method: str, schema: type[BaseModel], model: str) -> tuple[BaseModel | None, list[dict]]:
-    """The reply in `message` (None while the model is asking for tools) and
-    its requests for other tools. Raises ModelError("bad_output") when the
-    reply does not fit the shape."""
+def _read(message: AIMessage, schema: type[BaseModel], model: str) -> tuple[BaseModel | None, list[dict]]:
+    """The reply in `message`, which had tools on offer (None while the model is
+    asking for tools), and its requests for other tools. Raises
+    ModelError("bad_output") when the reply does not fit the shape."""
     try:
-        if method == "answer-tool":
-            calls = message.tool_calls or _written_calls(message.text)
-            answers = [call for call in calls if call["name"] == ANSWER]
-            requests = [call for call in calls if call["name"] != ANSWER]
-            if answers:
-                return schema.model_validate(answers[0]["args"]), requests
-            if requests:
-                return None, requests
-            # A reply written as text instead of the tool: JSON in the shape, or plain sentences.
-            return _from_text(schema, message.text), []
-        if message.tool_calls:
-            return None, list(message.tool_calls)
-        return schema.model_validate_json(message.text), []
+        calls = message.tool_calls or _written_calls(message.text)
+        answers = [call for call in calls if call["name"] == ANSWER]
+        requests = [call for call in calls if call["name"] != ANSWER]
+        if answers:
+            return schema.model_validate(answers[0]["args"]), requests
+        if requests:
+            return None, requests
+        # A reply written as text instead of the tool: JSON in the shape, or plain sentences.
+        return _from_text(schema, message.text), []
     except ValidationError as error:
         raise ModelError("bad_output", model, f"the reply does not fit {schema.__name__}: {error}") from error
+
+
+def ask(model: BaseChatModel, messages: LanguageModelInput, schema: type[BaseModel], tools: list[Tool],
+        answer_now: bool = False, config: RunnableConfig | None = None, name: str = ""
+        ) -> tuple[AIMessage, BaseModel | None, list[dict]]:
+    """Ask `model` for a reply in `schema`'s shape, with `tools` on offer. With
+    `answer_now`, it must reply this time and cannot ask for another tool: for a
+    model that keeps asking for tools (repeating one it already had). Returns
+    the model's message, the reply (None while it asks for tools) and its
+    requests for tools. `name` ("provider:model") is for the error message."""
+    if tools and not answer_now:
+        offered = [tool.description_for_model() for tool in tools]
+        message = model.bind_tools([*offered, _answer_tool(schema)], tool_choice="auto").invoke(messages, config=config)
+        return message, *_read(message, schema, name)
+    # No tool may be called: the provider makes the reply fit the shape. The conversation may still
+    # hold earlier tool calls and their results; the model reads them, and calls nothing.
+    out = model.with_structured_output(schema, method="json_schema", include_raw=True).invoke(messages, config=config)
+    if out["parsed"] is None:
+        raise ModelError("bad_output", name, f"the reply does not fit {schema.__name__}: {out['parsing_error']}")
+    return out["raw"], out["parsed"], []

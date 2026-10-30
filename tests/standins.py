@@ -8,6 +8,8 @@ the messages it was sent, and never calls a real API.
 
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
+from langchain_core.runnables import RunnableLambda
+from pydantic import ValidationError
 
 from spadesk.models import providers
 
@@ -18,12 +20,23 @@ class StandIn(GenericFakeChatModel):
     def bind_tools(self, tools, **kwargs):
         return self
 
+    def with_structured_output(self, schema, **kwargs):
+        """Like a provider's reply format: the next reply read into `schema`, from its
+        text (JSON) or from an "answer" call, the way the replies are prepared."""
+        def parse(messages):
+            raw = self.invoke(messages)
+            calls = [call["args"] for call in raw.tool_calls if call["name"] == "answer"]
+            try:
+                parsed = schema.model_validate(calls[0]) if calls else schema.model_validate_json(raw.text)
+            except ValidationError as error:
+                return {"raw": raw, "parsed": None, "parsing_error": error}
+            return {"raw": raw, "parsed": parsed, "parsing_error": None}
+        return RunnableLambda(parse)
 
-def use_standin(monkeypatch, replies: list[AIMessage], method: str = "native") -> list:
+
+def use_standin(monkeypatch, replies: list[AIMessage]) -> list:
     """Make the gateway's models a stand-in that answers with `replies`.
-    `method` is how it gives fixed-shape replies ("native" like Claude, or
-    "answer-tool" like an open model). Returns the list each call's messages
-    are added to."""
+    Returns the list each call's messages are added to."""
     sent: list = []
     queue = iter(replies)  # shared, so each new model picks up where the last one stopped
 
@@ -35,7 +48,6 @@ def use_standin(monkeypatch, replies: list[AIMessage], method: str = "native") -
             return super()._generate(messages, *args, **kwargs)
 
     monkeypatch.setitem(providers.PROVIDERS, "standin", lambda model: Recording(messages=queue))
-    monkeypatch.setitem(providers.STRUCTURED, "standin", method)
     monkeypatch.setenv("SPADESK_CLAUDE_HIGH", "standin:any")
     monkeypatch.setenv("SPADESK_CLAUDE_LOW", "standin:any")
     return sent
