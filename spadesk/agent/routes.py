@@ -1,4 +1,4 @@
-"""The booking agent's route: the customer site's chat.
+"""Pebby's route (the customer site's chat), and the owner's feedback cards.
 
   POST /api/assistant   {"thread": "...", "message": "..."} -> Pebby's reply
 

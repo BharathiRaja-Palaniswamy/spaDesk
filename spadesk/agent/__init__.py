@@ -93,7 +93,7 @@ def _run(thread: str, number: int, message: str, channel: str, caller: str) -> T
             config["configurable"]["checkpoint_id"] = restore  # carry on from before the replaced turn
         before = graph.get_state(config).config["configurable"].get("checkpoint_id")
         # The per-turn fields start empty; the rest of the state comes from memory.
-        # The message goes in after a note of the time it was sent (see prompt.py).
+        # The message goes in after a note of the time it was sent (pebby.time_note).
         try:
             state = graph.invoke(
                 {"messages": [HumanMessage(time_note()), HumanMessage(message)], "channel": channel,

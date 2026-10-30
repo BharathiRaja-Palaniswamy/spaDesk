@@ -124,15 +124,29 @@ def _bookings():
 
 @pytest.mark.parametrize("said, picked, named", [
     ("cancel the massage", ["BK-A"], ["BK-A"]),            # their only massage
-    ("cancel the massage", ["BK-B"], []),                   # Pebby picked the facial: not what they named
+    ("cancel the massage", ["BK-B"], ["BK-A"]),             # Pebby picked the facial: what they named counts
+    ("cancel the massage", ["BK-63715A"], ["BK-A"]),        # a reference Pebby made up changes nothing
+    ("cancel the massage", [], ["BK-A"]),                   # nor does none
     ("cancel the 6pm one", ["BK-B"], ["BK-B"]),             # by its time
     ("cancel both please", ["BK-A", "BK-B"], ["BK-A", "BK-B"]),
-    ("cancel BK-B", ["BK-B"], ["BK-B"])])
-def test_a_booking_to_cancel_counts_only_when_the_customer_named_it(said, picked, named):
+    ("cancel BK-B", ["BK-B"], ["BK-B"]),
+    ("cancel my booking", ["BK-A"], [])])                   # which one? they have two: asked
+def test_the_booking_to_cancel_is_the_one_the_customer_named(said, picked, named):
     at = _bookings()
     upcoming = [at("BK-A", "Swedish Massage", 17), at("BK-B", "Signature Radiance Facial", 18)]
     request, missing, _ = collect({"intent": "cancel", "references": picked}, said, SUNDAY, upcoming)
-    assert request.references == named and (missing == [] if named == picked else missing == ["references"])
+    assert request.references == named and missing == ([] if named else ["references"])
+
+
+def test_a_change_is_of_one_booking_the_customer_named():
+    at = _bookings()
+    upcoming = [at("BK-A", "Swedish Massage", 17), at("BK-B", "Signature Radiance Facial", 18)]
+    _, missing, _ = collect({"intent": "change", "references": [], "day_said": "Saturday"},
+                            "move both to saturday", SUNDAY, upcoming)
+    assert "references" in missing  # two named for one change: which?
+    request, missing, _ = collect({"intent": "change", "references": ["BK-63715A"], "day_said": "Saturday"},
+                                  "move the facial to saturday", SUNDAY, upcoming)
+    assert request.references == ["BK-B"] and "references" not in missing
 
 
 def test_two_of_the_same_service_need_their_day_or_time():

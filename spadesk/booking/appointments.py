@@ -11,7 +11,7 @@ own interface (calendars/) rather than handing a model the calendar itself:
 a booking can only be made in a free time, with a therapist who offers the
 service, and a customer can only cancel a booking whose phone number they
 know, and not once it is less than SPADESK_MIN_NOTICE_MINUTES away (they
-call the spa instead). The model (and later a voice assistant) asks through tools.py, and
+call the spa instead). Pebby (in the chat and on the phone) asks through actions.py, and
 every request is checked here.
 
 Times are in the spa's time zone (SPADESK_TIMEZONE). Appointments start on a

@@ -11,7 +11,7 @@ The models come in sets, each with a high-end and a low-end model:
 One setting, SPADESK_MODELS, picks the set the whole app uses; each job asks
 for a tier, never a model:
 
-    high  jobs that need judgement: the chats, the booking agent
+    high  jobs that need judgement: the chats, Pebby
     low   quick, simple jobs: reading a name and number, short spoken answers
 
 So moving the app from Claude to open models is one line in `.env`, and

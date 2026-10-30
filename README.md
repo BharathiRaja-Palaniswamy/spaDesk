@@ -26,13 +26,15 @@ CSS and JavaScript in the browser, no build step.
   (who offers what, on which days, opening hours, classes taught) and the
   therapists' Google calendars (see [docs/google-calendar.md](docs/google-calendar.md)). If Google
   cannot be reached, booking says it is unavailable; bookings are never kept anywhere else.
-- **Pebby, the chat**: a booking agent (`spadesk/agent/`, a LangGraph graph
-  with memory per conversation). It asks for the customer's name and phone
-  first, answers from the guide, finds free times, and books or cancels, but
-  only after the customer says yes to exactly what will happen. When it
-  cannot help (a complaint, a person asked for, a class or package, repeated
-  failures) it hands the customer to the staff: the request is written to
-  `storage/handoffs.jsonl`.
+- **Pebby, the chat and the phone line**: the front AI agent (`spadesk/agent/`,
+  a LangGraph graph with memory per conversation). It asks for the customer's
+  name and phone first, answers from the guide, and books, changes or cancels
+  (packages and add-ons too), but only after the customer says yes to exactly
+  what will happen; the booking itself is code. Feedback goes to the
+  Feedback agent, which replies and files a card the owner closes on /manage.
+  When it cannot help (a person asked for, more than five services, a
+  recurring booking, repeated failures) it hands the customer to the staff:
+  the request is written to `storage/handoffs.jsonl`.
 
 ### Manage page (`/manage`)
 
@@ -101,7 +103,7 @@ duration and price per category, packages, offers, add-ons, FAQs and policies.
   the evals goes through `spadesk/models/`. One setting, `SPADESK_MODELS`,
   picks a set of models: `claude` (Opus and Haiku) or `opensource` (two Qwen3
   models hosted by Nebius). Each job asks for a tier, high-end for the chats
-  and the booking agent, low-end for quick jobs, so switching sets keeps a
+  and Pebby, low-end for quick jobs, so switching sets keeps a
   model of the right size for each. The evals always answer with
   `opensource` (if open models do well, Claude should too); their judge stays
   on Claude. The gateway also logs the tokens and time of each call.

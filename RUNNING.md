@@ -98,7 +98,7 @@ files, so after changing `.env`, stop the server and start it again.
 | Name | Default | Meaning |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | none | Your API key. Required for the dashboard assistant. |
-| `SPADESK_MODELS` | `claude` | Which models the app uses: `claude` or `opensource` (Nebius). Each set has a high-end model (chats, booking agent) and a low-end one (quick jobs). The evals always use `opensource`; the judge stays on Claude. |
+| `SPADESK_MODELS` | `claude` | Which models the app uses: `claude` or `opensource` (Nebius). Each set has a high-end model (chats, Pebby) and a low-end one (quick jobs). The evals always use `opensource`; the judge stays on Claude. |
 | `SPADESK_CLAUDE_HIGH`, `SPADESK_CLAUDE_LOW` | Claude Opus 5.5, Claude Haiku 4.5 | The two models of the `claude` set, as `provider:model`. |
 | `SPADESK_OPENSOURCE_HIGH`, `SPADESK_OPENSOURCE_LOW` | Qwen3 235B, Qwen3 30B (Nebius) | The two models of the `opensource` set. Needs `NEBIUS_API_KEY`. |
 | `LANGSMITH_TRACING` | off | Set to `true` to record each assistant question in LangSmith. |

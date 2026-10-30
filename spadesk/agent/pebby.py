@@ -1,4 +1,4 @@
-"""What the booking agent is told: who it is, who it is talking to, and its rules.
+"""Pebby, the front AI agent: what it is told, name and phone first, and its tools.
 
 The instructions must stay exactly the same for the whole conversation.
 Claude keeps its earlier reasoning ("thinking") in the conversation, and
@@ -9,7 +9,7 @@ customer message instead, as a short note of its own (`time_note`), which
 is never changed once sent.
 
 The rules that must never be broken are not only written here: the graph
-enforces them (rules.py lists them: identify.py asks for the details first, yes.py waits for
+enforces them (rules.py lists them: flow.py's identify step asks for the details first, yes.py waits for
 the customer's yes, the tools only reach this customer's bookings). The
 prompt tells the model how to work well within them.
 
@@ -192,7 +192,7 @@ def about_bookings(name: str, phone: str, spoken: bool) -> str:
 
 log = logging.getLogger("spadesk.agent")
 
-# Requests the graph runs itself (nodes._hold): they may end in a question for the customer's yes.
+# Requests the graph runs itself (flow._hold): they may end in a question for the customer's yes.
 HELD = {"booking"}
 # Tool -> the permission it needs. Every tool must be listed: one that is not is never offered.
 NEEDS = {"search_guide": "search_guide", "booking": "book", "record_feedback": "contact_staff",
@@ -215,7 +215,10 @@ def booking_parameters() -> dict[str, Any]:
     the time are the customer's own words; code works out the date and times."""
     schedule = read_schedule(get_knowledge())
     return {"type": "object", "required": ["intent"], "properties": {
-        "intent": {"type": "string", "enum": ["new", "change", "cancel", "my_bookings", "availability"]},
+        "intent": {"type": "string", "enum": ["new", "change", "cancel", "my_bookings", "availability"],
+                   "description": "new: they want to book. availability: they only ask when someone or "
+                                  "something is free, without asking to book. change, cancel: one of their "
+                                  "bookings. my_bookings: they ask what they have booked."},
         "services": {"type": "array", "items": {"type": "string", "enum": list(schedule.services)},
                      "description": "Every service, by its exact name; for a package, every service it includes."},
         "package": {"type": "string", "description": "The package's name, if they asked for one."},
@@ -230,7 +233,8 @@ def booking_parameters() -> dict[str, Any]:
                                                        "they have not said one."},
         "therapist": {"type": "string", "enum": list(schedule.therapists)},
         "references": {"type": "array", "items": {"type": "string"},
-                       "description": "The bookings to change (one) or cancel (one or more), e.g. ['BK-63715A']."}}}
+                       "description": "The references of the bookings to change (one) or cancel (one or "
+                                      "more), if you know them; the customer's words pick out which."}}}
 
 
 def _beyond_one_booking(request: BookingRequest, args: dict[str, Any]) -> str:
@@ -255,7 +259,8 @@ def booking(args: dict[str, Any], name: str, phone: str, words: str) -> dict[str
     """The booking tool: what is missing, the details to read back, or booking (code)'s answer.
     Anything for the staff (beyond one booking, part of a package) is written down for them."""
     desk = get_appointments()
-    upcoming = desk.upcoming(phone) if args.get("references") else []  # theirs only: no one else's can be named
+    # Theirs only: no one else's booking can be named.
+    upcoming = desk.upcoming(phone) if args.get("intent") in ("change", "cancel") else []
     request, missing, unnamed = collect(args, words, desk.now().date(), upcoming)
     to = "Pebby" if missing else "The yes" if request.intent in ("new", "change") else "Booking"
     worked_out = brief(request.model_dump(exclude_defaults=True, exclude={"intent"}))

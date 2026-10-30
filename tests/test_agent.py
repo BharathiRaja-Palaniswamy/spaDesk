@@ -1,4 +1,4 @@
-"""Tests for the booking agent (spadesk/agent/): the rules the graph enforces,
+"""Tests for Pebby (spadesk/agent/): the rules the graph enforces,
 whatever the model says.
 
 The model is a stand-in that plays back prepared messages (tests/standins.py),

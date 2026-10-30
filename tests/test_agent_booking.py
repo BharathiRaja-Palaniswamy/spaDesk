@@ -80,6 +80,13 @@ def test_availability_gives_times_not_a_plan(desk):
     assert result.status == "options" and result.options[0].startswith("Prenatal Massage on Friday 30 October: 10:00")
 
 
+def test_availability_keeps_to_the_time_they_asked_for(desk):
+    # "after 3pm" lists times from 15:00, the same window a booking keeps to.
+    result = handle(request(intent="availability", services=["Prenatal Massage"], day="2026-10-30", after="15:00"),
+                    ASHA, desk)
+    assert result.options[0].startswith("Prenatal Massage on Friday 30 October: 15:00")
+
+
 def test_their_bookings_and_a_cancellation_to_approve(desk):
     mine = desk.book("Prenatal Massage", "Priya Nair", datetime(2026, 10, 30, 15, 0), "Asha", ASHA)
     desk.book("Prenatal Massage", "Priya Nair", datetime(2026, 10, 30, 16, 0), "Ben", "408 555 0102")
@@ -143,3 +150,17 @@ def test_the_booking_eval_cases_match_the_document_and_its_layers_grade_as_meant
     assert summary([grade(case, good, None, 1), graded]) == [
         "routing      1/2  (50%)", "extraction   1/2  (50%)", "downstream   1/2  (50%)",
         "wrong path   1/2  (50%)", "all layers   1/2"]
+
+
+def test_the_booking_eval_checks_what_must_not_happen():
+    # The downstream checks for the cases that must not go through: the staff
+    # handed it, one feedback card, and nothing said that is not theirs to hear.
+    case = {"turns": ["..."], "downstream": {"handed_off": True, "cards": 1, "answer_lacks": ["Deep Tissue"]}}
+
+    class Turn:
+        confirming, answer = False, "Sorry, I can only show your own bookings."
+    assert grade(case, [], Turn(), handed=1, cards=1) == {"downstream": []}
+    Turn.answer = "Jordan has a Deep Tissue Massage on Monday."
+    assert grade(case, [], Turn(), handed=0, cards=2) == {"downstream": [
+        "the reply mentions 'Deep Tissue'", "not handed to the staff, expected the opposite",
+        "2 feedback cards filed, expected 1"]}

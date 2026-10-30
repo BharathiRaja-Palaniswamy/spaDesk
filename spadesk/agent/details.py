@@ -144,17 +144,19 @@ def _booking_words(booking: Booking) -> set[str]:
 
 
 def named_bookings(references: list[str], words: str, upcoming: list[Booking]) -> tuple[list[str], list[str]]:
-    """(the bookings the customer named, the ones they did not), of the `references`
-    Pebby chose: picked out among their `upcoming` bookings ("the massage", "the 6pm
-    one", "monday's massage", a package's name), or all of them when they said so
-    ("both", "all") or have only one. So a model cannot cancel the wrong one."""
+    """(the bookings the customer named, the `references` Pebby chose that they did not).
+    A booking is named by the customer's own words, picked out among their `upcoming`
+    bookings ("the massage", "the 6pm one", "monday's massage", a package's name), or
+    all of them when they said so ("both", "all") or have only one. Pebby's references
+    are only a hint: a model can neither cancel the wrong booking nor block the right
+    one with a reference it made up."""
     said = _words(words)
     if EVERYTHING & said or len(upcoming) == 1:
         named = {b.id for b in upcoming}
     else:
         named = set(picked_out({b.id: _booking_words(b) for b in upcoming}, said,
                                {b.id: _words(b.package) - {"package"} for b in upcoming if b.package}))
-    return [r for r in references if r in named], [r for r in references if r not in named]
+    return [b.id for b in upcoming if b.id in named], [r for r in references if r not in named]
 
 
 def collect(args: dict[str, Any], words: str, today: date,
@@ -163,10 +165,11 @@ def collect(args: dict[str, Any], words: str, today: date,
     to ask for it), and the services Pebby chose that the customer did not name
     (to offer as choices). `words`: what the customer wrote (customer_words).
     `upcoming`: the customer's bookings, for a change or a cancellation."""
-    references, _ = named_bookings(args.get("references", []), words, list(upcoming))
-    unnamed_bookings = len(references) < len(args.get("references", []))
-    changing = next((b for b in upcoming if b.id == references[0]), None) \
-        if args["intent"] == "change" and references else None
+    references = named_bookings(args.get("references", []), words, list(upcoming))[0] \
+        if args["intent"] in ("change", "cancel") else []
+    one = args["intent"] != "change" or len(references) == 1  # a change is of one booking: else, which?
+    changing = next(b for b in upcoming if b.id == references[0]) if args["intent"] == "change" and \
+        references and one else None
     day_said = args.get("day_said", "") if _said(args.get("day_said", ""), words) else ""
     time_said = args.get("time_said", "") if _said(args.get("time_said", ""), words) else ""
     day = day_from(day_said, today) if day_said else None
@@ -193,7 +196,7 @@ def collect(args: dict[str, Any], words: str, today: date,
         references=references, add_ons=add_ons)
     # Services the customer did not name are dropped; only when none they named is left is it missing.
     have = {"services": bool(request.services), "day": day is not None, "time": times is not None,
-            "references": bool(references) and not unnamed_bookings}
+            "references": bool(references) and one}
     return request, [need for need in NEEDS[request.intent] if not have[need]], unnamed
 
 

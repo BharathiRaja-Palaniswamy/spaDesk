@@ -1,4 +1,4 @@
-"""The booking agent as a LangGraph graph.
+"""One turn of Pebby's conversation, as a LangGraph graph.
 
                  +--> identify --(details complete and a question waiting)--> agent
                  |        +--(otherwise: ask, or thank them)--> END
@@ -70,7 +70,7 @@ from .yes import cancel_question, details_question, is_yes, plan_question
 
 @lru_cache  # one graph, and so one memory, for the whole server
 def get_graph() -> CompiledStateGraph:
-    """The booking agent, ready to run, with its memory."""
+    """Pebby's graph, ready to run, with its memory."""
     graph = StateGraph(AgentState)
     for step in (identify, agent, tools, decide, give_up):
         graph.add_node(step.__name__, step)

@@ -93,6 +93,15 @@ def test_only_the_signed_in_owner_sees_and_closes_cards(lines, monkeypatch):
     assert owner.post(f"/api/feedback/{card}/close", json={}).status_code == 404
 
 
+def test_brief_feedback_always_asks_its_question(lines, monkeypatch):
+    # The agent meant to ask, but its reply asked nothing: the question is added.
+    brief = Reading(sentiment="negative", topic="other", summary="Unhappy.", complaint=True,
+                    reply="We're sorry to hear about your experience.", needs_more=True)
+    use_standin(monkeypatch, [reads(brief)])
+    said = give_feedback("Asha", "4085550101", "bad service")
+    assert said["asked_for_more"] and said["reply_to_customer"].endswith("and what happened?")
+
+
 def test_brief_feedback_gets_one_question_and_the_answer_updates_the_same_card(lines, monkeypatch):
     # As asked: "Your glowing facial spa is worst" says neither which visit nor what happened.
     brief = Reading(sentiment="negative", topic="treatment", summary="Unhappy with a facial.", complaint=True,

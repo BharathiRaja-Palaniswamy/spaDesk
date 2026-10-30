@@ -1,5 +1,5 @@
 /**
- * @file The chat's connection to Pebby, the booking agent. `askAssistant`
+ * @file The chat's connection to Pebby, the front AI agent. `askAssistant`
  * sends the customer's message to POST /api/assistant (see
  * spadesk/agent/routes.py), which runs one turn of the conversation on the
  * server and returns Pebby's reply.

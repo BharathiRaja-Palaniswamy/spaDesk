@@ -223,7 +223,8 @@ def _availability(request: BookingRequest, day: date, desk: Appointments) -> Boo
     """The free times on `day` of each service asked about, as options."""
     options = []
     for name in request.services:
-        slots = desk.free_slots(name, day, _therapists(request, desk).get(name))
+        slots = _free(desk, name, day, _therapists(request, desk).get(name), _clock(request.after),
+                      _clock(request.before), None)  # the same window a booking uses
         times = [f"{s.start:%H:%M} with {s.therapist}" for s in slots[:6]]
         options.append(f"{name} on {day:%A %d %B}: {', '.join(times) or 'no free times'}")
     return BookingResult(status="options", options=options)

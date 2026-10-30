@@ -57,6 +57,9 @@ happened), set needs_more, and end the reply with one polite question asking for
 NO_MORE = "\n\nThey have already answered your question: do not ask anything; thank them."
 # What the customer hears when the model cannot be reached: the card is still filed.
 THANKS = "Thank you for telling us. I've passed this on to our team."
+# The question added when the agent means to ask for more but its reply asks nothing:
+# the customer must be able to see what to answer.
+MORE = "Could you tell us which service and day it was, and what happened?"
 
 
 class Reading(BaseModel):
@@ -95,6 +98,8 @@ def give_feedback(name: str, phone: str, words: str, card_id: str = "") -> dict[
                                                        "phone": phone, **card}
     append(get_settings().feedback_path, event)  # filed straight away, even while a question is open
     reply = reading.reply.strip() if reading and reading.reply.strip() else THANKS
+    if asks and "?" not in reply:
+        reply = f"{reply} {MORE}"
     note("Feedback agent", "Customer", reply, {k: v for k, v in event.items() if k != "event"})
     # `reply_to_customer` ends Pebby's turn with these words (flow.py tools).
     return {"card": card["id"], "complaint": bool(reading and reading.complaint), "asked_for_more": asks,

@@ -17,7 +17,7 @@ Routes:
   GET  /api/booking/options   what can be booked         (routes in booking/routes.py)
   GET  /api/booking/free      the free times for a service on a day
   POST /api/bookings          book one of them
-  POST /api/assistant         the customer chat: the booking agent (route in agent/routes.py)
+  POST /api/assistant         the customer chat: Pebby (route in agent/routes.py)
   POST /v1/chat/completions   the phone line: the same agent, called by ElevenLabs (voice/routes.py)
   POST /api/chat              the question-and-answer assistant, kept for the evals (assistant/customer.py)
   GET  /manage                the owner's manage page (routes in reports/routes.py)
