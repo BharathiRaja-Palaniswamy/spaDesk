@@ -50,6 +50,7 @@ from ..agent import executor as approved
 from ..booking.actions import guarded
 from ..booking.appointments import digits
 from ..models import run_requests, structured
+from ..privacy import remember
 from .booking import BookingRequest, Plan, describe, handle
 from .debug import brief, note, outcome
 from .details import customer_words
@@ -155,6 +156,7 @@ def identify(state: AgentState) -> dict:
     # in what they wrote is not taken, and is asked for again.
     read = details.name.strip() if _said(details.name, said) else ""
     name = state.get("name") or read
+    remember(name)  # masked in traces from now on (privacy.py)
     # A number they give wins; on a call, the number calling is used until they do.
     given = details.phone.strip() if valid_phone(details.phone) and digits(details.phone) in digits(said) else ""
     phone = given or state.get("phone") or caller

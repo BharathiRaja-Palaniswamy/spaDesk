@@ -62,17 +62,21 @@ The tests do not need an API key and do not call Claude.
 
 ## 6. Run the evals
 
-The evals ask the real model the questions in `evals/cases.json` and grade
-the answers, with the whole document and with RAG. They need the API key and
-cost a few dollars per full run.
+The evals play every case in `evals/golden.json` on the real models (Qwen on
+Nebius; the judge on Claude) and grade each one against its label, layer by
+layer. They need the API keys and cost credits on every run.
 
 ```sh
-.venv/bin/python -m evals.retrieval   # retrieval only: free, a few seconds
-.venv/bin/python -m evals.run --label rerank   # every case, both modes: about 15 minutes
+.venv/bin/python -m evals.retrieval                     # retrieval only: free, a few seconds
+.venv/bin/python -m evals.run --label try-1             # every case, printed here: about 25 minutes
+.venv/bin/python -m evals.run --only H05 E03            # a few cases, by id
+.venv/bin/python -m evals.datasets --send               # copy golden.json into LangSmith datasets
+.venv/bin/python -m evals.experiment --name baseline-v1 # the same cases as LangSmith experiments
+.venv/bin/python -m evals.annotation setup              # the review rubric and queues, once
 ```
 
-`--label` names the run in LangSmith (tag `run:<label>`), so two runs can be
-compared there. Set `SPADESK_RERANKER=none` to measure without reranking.
+`--label` names a run in LangSmith (tag `run:<label>`). Set
+`SPADESK_RERANKER=none` to measure without reranking.
 
 The results so far, and what changed between runs, are in
 [docs/eval-report.md](docs/eval-report.md).
@@ -103,7 +107,7 @@ files, so after changing `.env`, stop the server and start it again.
 | `SPADESK_OPENSOURCE_HIGH`, `SPADESK_OPENSOURCE_LOW` | Qwen3 235B, Qwen3 30B (Nebius) | The two models of the `opensource` set. Needs `NEBIUS_API_KEY`. |
 | `LANGSMITH_TRACING` | off | Set to `true` to record each assistant question in LangSmith. |
 | `LANGSMITH_API_KEY` | none | Your LangSmith key. Needed only when tracing is on. |
-| `LANGSMITH_PROJECT` | `default` | The LangSmith project the traces are filed under, e.g. `spadesk`. |
+| `LANGSMITH_PROJECT` | `default` | The LangSmith project the traces are filed under: `spadesk-local` on a laptop, `spadesk-prod` in production. The evals use `spadesk-evals`. Names, phone numbers and emails are masked in every trace. |
 | `SPADESK_TIMEZONE` | `America/Los_Angeles` | The spa's time zone, so the assistant knows the current time there. |
 | `SPADESK_DATA` | `data/business_doc.md` | The business document. |
 | `SPADESK_REPORT_DATA` | `data/spadesk_bookings.json` | The bookings file the dashboard reads. |

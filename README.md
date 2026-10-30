@@ -272,15 +272,21 @@ spadesk/
         charts/                column and bar list charts, and their helpers
         sections/              one file per dashboard card
         chat/                  the assistant window and the call to the server
-evals/                         questions asked to the real model and graded (python -m evals.run)
-  cases.json                   each question and what a good reply must contain
-  checks.py                    one function per kind of check
+evals/                         cases played on the real models and graded (python -m evals.run)
+  golden.json                  every case, for Pebby and both chats, with its label (what must happen)
+  golden.py                    reads the cases, by target and split
+  pebby.py                     plays a Pebby conversation; routing, extraction and outcome checks
+  chats.py                     asks a guide or owner question through the app's own route
+  checks.py                    the answer checks every target shares
   judge.py                     a second model call that grades an answer against written criteria
   figures.py                   owner figures read from the bookings data at run time, so they never go stale
-  validate.py                  stops a run when a case no longer matches the document or the data
-  run.py                       asks each case with RAG off and on, times it, prints each result
-  observe.py                   traces each question to its own LangSmith project, tagged by case and mode
-  summary.py                   compares the two modes: pass rate, latency, cases that differ
+  validate.py                  stops a run when a case no longer matches the guide, schedule or data
+  run.py                       plays every case, prints each result and the scores by layer and split
+  observe.py                   traces each case to the spadesk-evals LangSmith project
+  summary.py                   pass rates per layer and split, time and tokens
+  datasets.py                  copies golden.json into LangSmith datasets, one per target
+  experiment.py                runs the cases as a LangSmith experiment, one score per layer
+  annotation.py                the review rubric and queues, and what goes in them
   retrieval.py                 retrieval alone, no model calls: is the chunk holding each answer in the top k?
 tests/                         one test file per area
 ```

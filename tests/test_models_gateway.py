@@ -196,3 +196,15 @@ def test_every_call_is_labelled_with_its_job_and_model(models, monkeypatch):
     labels = {"profile": "cheap-router", "tier": "low", "model_set": "claude", "provider": "good", "model": "x",
               "fallback": False}
     assert labels.items() <= run.extra["metadata"].items()
+
+
+def test_every_model_call_has_a_time_limit(monkeypatch):
+    # A provider that stops answering must not keep a request waiting forever.
+    from spadesk.models import providers
+    from spadesk.models.profiles import ModelSpec
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key-not-a-real-one")
+    monkeypatch.setenv("NEBIUS_API_KEY", "test-key-not-a-real-one")
+    claude, open_model = providers.build(ModelSpec("anthropic", "claude-opus-5-5")), \
+        providers.build(ModelSpec("nebius", "Qwen/x"))
+    assert claude.default_request_timeout == open_model.request_timeout == providers.TIMEOUT
+    assert claude.max_retries == open_model.max_retries == providers.RETRIES

@@ -10,7 +10,7 @@ is the in-memory one (or Pinecone's free plan), so a run costs nothing and takes
 tool for trying retrieval changes (top-k, reranking, chunk headers) before
 a paid eval run. Facts are looked for in a chunk's own text, never its header.
 
-Each case is scored two ways, from what it already lists in cases.json:
+Each rag_qa case in golden.json is scored two ways, from what its label lists:
 
   section  (from `cites`)     a top-k chunk is labelled with each expected section
   fact     (from `evidence`,  a top-k chunk's text contains each expected text
@@ -41,8 +41,6 @@ the chunk do not look alike to the embedder.
 """
 
 import argparse
-import json
-from pathlib import Path
 
 from langsmith import tracing_context
 
@@ -55,9 +53,8 @@ from spadesk.rag.rerankers import get_reranker
 from spadesk.rag.retriever import rerank
 from spadesk.rag.stores import get_store
 
+from . import golden
 from .validate import stale_cases
-
-CASES = Path(__file__).parent / "cases.json"
 # Large enough to rank every chunk of the document, so a missed section's
 # rank can still be shown.
 EVERY_CHUNK = 1000
@@ -122,7 +119,7 @@ def main() -> None:
                         help="which pipeline to score: the hand-built one (spadesk/rag/) or LangChain (spadesk/lc/)")
     engine = parser.parse_args().engine
     ranked_chunks = ENGINES[engine]
-    cases = json.loads(CASES.read_text())
+    cases = golden.cases("rag_qa")
     if stale := stale_cases(cases):
         raise SystemExit("Update these cases first:\n  " + "\n  ".join(stale))
     settings = get_settings()
@@ -132,11 +129,12 @@ def main() -> None:
     print(f"Engine: {engine} | reranker: {settings.reranker} (candidates: {settings.rerank_candidates})\n")
     print(f"{'':32} {'section':8} {'fact':8}")
     for case in cases:
-        cites = case["expect"].get("cites", [])
-        facts = case.get("evidence") or case["expect"].get("mentions", [])
+        answer = case["expected"].get("answer", {})
+        cites = answer.get("cites", [])
+        facts = case.get("evidence") or answer.get("mentions", [])
         if not (cites or facts):
             continue  # nothing to retrieve: judge-only or not-covered cases
-        ranked = ranked_chunks(case["question"])
+        ranked = ranked_chunks(case["turns"][0])
         columns, details = [], []
         for kind, expected, rank_of in (("section", cites, section_rank), ("fact", facts, fact_rank)):
             if not expected:

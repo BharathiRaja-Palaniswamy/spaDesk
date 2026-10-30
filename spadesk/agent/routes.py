@@ -39,6 +39,7 @@ from ..assistant.replies import ReplyItem
 from ..config import get_settings
 from ..models import ModelError
 from ..rag.errors import ModelUnavailable
+from ..tracing import current_run_id
 from . import hand_over, respond
 from .feedback import cards, close
 from .rules import CHAT_TURN_LIMIT
@@ -62,6 +63,7 @@ class Reply(BaseModel):
     items: list[ReplyItem]
     suggestions: list[str]
     confirming: bool  # the customer is being asked to confirm a booking or cancellation
+    trace_id: str | None = None  # this turn's trace, for its 👍 / 👎 (ratings.py); none when tracing is off
     debug: list[dict] | None = None  # debug mode only: the steps between the agents
 
 
@@ -88,7 +90,7 @@ def assistant(body: Message) -> Reply:
     if turn is None:  # replaced by a newer message whose reply did not come in time: still answered
         turn = hand_over(body.thread, "A message was replaced and its reply did not come in time.", body.message)
     return Reply(answer=turn.answer, items=turn.items, suggestions=turn.suggestions, confirming=turn.confirming,
-                 debug=turn.debug if get_settings().debug else None)
+                 trace_id=current_run_id(), debug=turn.debug if get_settings().debug else None)
 
 
 owner = APIRouter(prefix="/api/feedback", dependencies=[Depends(require("feedback"))])

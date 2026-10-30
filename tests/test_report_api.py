@@ -117,7 +117,7 @@ def test_chat_returns_a_structured_reply(client, monkeypatch):
                             "sections": ["Cancellation Policy"],
                             "suggestions": ["One?", "Two?", "Three?"],  # at most three are passed on
                             "rag": False, "chunks": 0,  # answered from the whole document
-                            "reports": []}  # and without asking for report figures
+                            "reports": [], "trace_id": None}  # and without asking for report figures
 
     sent = FakeAnthropic.last_request
     assert sent["messages"] == [{"role": "user", "content": "What is our cancellation policy?"}]

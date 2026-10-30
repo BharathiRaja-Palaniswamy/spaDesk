@@ -1,5 +1,5 @@
 """Expected report figures, worked out when the eval runs instead of written
-into cases.json.
+into golden.json.
 
 The bookings data is generated and changes (scripts/generate_bookings.py), so
 a figure typed into a case, such as "22,614", would go stale. A case says
@@ -35,7 +35,7 @@ def _customer_types(report: Report) -> list[Any]:
     return [counts["New"], counts["Returning"]]
 
 
-# A figure's name in cases.json -> how to read it from a report. Each returns
+# A figure's name in golden.json -> how to read it from a report. Each returns
 # a list, because some figures are more than one value (a name and an amount).
 FIGURES: dict[str, Callable[[Report], list[Any]]] = {
     "revenue": lambda report: [report["summary"]["revenue"]],

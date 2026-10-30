@@ -24,9 +24,48 @@ Without them `@traceable` does nothing and the app runs as before.
 
 This file holds the small functions that shape what a step records, so
 LangSmith can show it well. They are passed to `@traceable`.
+
+And `setup`, run once when the app starts: every trace, from any step, goes
+through one LangSmith client, which masks personal details before sending
+(privacy.py) and labels the trace with the code's commit, so a trace can be
+traced back to the code that made it. Which project the traces go to is a
+setting (LANGSMITH_PROJECT): spadesk-local on a laptop, spadesk-prod in
+production, spadesk-evals for the evals (evals/observe.py).
 """
 
+import os
+import subprocess
 from typing import Any
+
+import langsmith
+from langsmith.anonymizer import create_anonymizer
+
+from .privacy import mask
+
+
+def _commit() -> str:
+    """The code's git commit, or SPADESK_COMMIT where there is no git (some hosts)."""
+    try:
+        found = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=5)
+        return found.stdout.strip() or os.getenv("SPADESK_COMMIT", "unknown")
+    except (OSError, subprocess.SubprocessError):
+        return os.getenv("SPADESK_COMMIT", "unknown")
+
+
+def current_run_id() -> str | None:
+    """The id of the step running now (a route's top step), for the page to rate
+    the reply it made (ratings.py); None when tracing is off."""
+    run = langsmith.get_current_run_tree()
+    return str(run.id) if run else None
+
+
+def setup() -> None:
+    """Send every trace through one client that masks personal details, with the
+    commit in each trace's metadata. Nothing is sent when tracing is off."""
+    if os.getenv("LANGSMITH_TRACING", "").lower() != "true":
+        return
+    langsmith.configure(client=langsmith.Client(anonymizer=create_anonymizer(mask)),
+                        metadata={"commit": _commit()})
 
 
 def retrieved_documents(matches: list) -> dict[str, Any]:

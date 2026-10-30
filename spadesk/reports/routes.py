@@ -43,6 +43,7 @@ from ..config import get_settings
 from ..lc.owner import answer as graph_answer
 from ..models import ModelError
 from ..rag.errors import ModelUnavailable
+from ..tracing import current_run_id
 from .dataset import Dataset, load
 from .report import build_report
 from .tools import MAX_TOOL_ROUNDS, TOOL_NAME, report_label, report_tool, run_report
@@ -147,6 +148,7 @@ class ChatAnswer(ChatReply):
     rag: bool  # True when the answer was made from retrieved chunks
     chunks: int  # how many chunks were retrieved; 0 without RAG
     reports: list[str]  # the reports the model asked for, e.g. "2026-09-01 to 2026-09-30"
+    trace_id: str | None = None  # this answer's trace, for its 👍 / 👎 (ratings.py); none when tracing is off
 
 
 # The owner assistant's own instructions. The rules for using the profile, the
@@ -224,4 +226,4 @@ def chat(body: ChatQuestion) -> ChatAnswer:
     reply.sections = checked_sections(reply.sections, headings)
     # The schema cannot limit how many suggestions come back, so the limit is applied here.
     reply.suggestions = reply.suggestions[:MAX_SUGGESTIONS]
-    return ChatAnswer(**reply.model_dump(), rag=body.rag, chunks=chunks, reports=reports)
+    return ChatAnswer(**reply.model_dump(), rag=body.rag, chunks=chunks, reports=reports, trace_id=current_run_id())

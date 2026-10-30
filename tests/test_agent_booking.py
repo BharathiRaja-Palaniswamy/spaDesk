@@ -8,14 +8,12 @@ a fixed clock (Thursday 22 October 2026, 2:10 PM).
 Run with:  .venv/bin/python -m pytest tests/test_agent_booking.py
 """
 
-import json
 from datetime import datetime
 
 import pytest
 from standin_calendar import standin_desk
 from standins import use_standin
 
-from evals.booking import CASES, grade, stale, summary
 from spadesk.agent import booking
 from spadesk.agent.booking import (
     BookingRequest,
@@ -124,43 +122,3 @@ def test_a_change_names_the_booking_it_replaces(desk):
                             after="15:00"), ASHA, desk)
     assert result.status == "plan_ready" and result.replaces["reference"] == old.id
     assert result.replaces["service"] == "Prenatal Massage"  # what is cancelled, to say so in the question
-
-
-# ---- with notes: the model thinks, with the code tools ---------------------------------------
-
-def test_the_booking_eval_cases_match_the_document_and_its_layers_grade_as_meant():
-    # evals/booking.py spends real tokens; its cases and grading are checked here for free.
-    assert stale(json.loads(CASES.read_text())) == []
-    case = {"turns": ["a prenatal massage after 3pm"],
-            "routing": {"tool": "booking", "intent": ["new"], "not_tools": ["hand_off"]},
-            "extraction": {"services": ["Prenatal Massage"], "time_said_has": "3", "no_day_said": True,
-                           "only_named_services": True},
-            "downstream": {"booked": 1}}
-    good = [{"name": "booking", "args": {"intent": "new", "services": ["Prenatal Massage"], "time_said": "after 3pm"}}]
-    assert grade(case, good, None, booked=1) == {"routing": [], "extraction": [], "downstream": []}
-    wrong = [{"name": "hand_off", "args": {"reason": "?"}},
-             {"name": "booking", "args": {"intent": "availability", "services": ["Swedish Massage"],
-                                          "day_said": "today"}}]
-    graded = grade(case, wrong, None, booked=0)
-    assert graded["routing"] == ["used hand_off", "intent 'availability', expected one of ['new']"]
-    assert graded["extraction"] == ["chose ['Swedish Massage'] for them", "day_said 'today', but the customer said none",
-                                    "services ['Swedish Massage'], expected ['Prenatal Massage']",
-                                    "time_said None, expected it to mention '3'"]
-    assert graded["downstream"] == ["0 bookings made, expected 1"]
-    assert summary([grade(case, good, None, 1), graded]) == [
-        "routing      1/2  (50%)", "extraction   1/2  (50%)", "downstream   1/2  (50%)",
-        "wrong path   1/2  (50%)", "all layers   1/2"]
-
-
-def test_the_booking_eval_checks_what_must_not_happen():
-    # The downstream checks for the cases that must not go through: the staff
-    # handed it, one feedback card, and nothing said that is not theirs to hear.
-    case = {"turns": ["..."], "downstream": {"handed_off": True, "cards": 1, "answer_lacks": ["Deep Tissue"]}}
-
-    class Turn:
-        confirming, answer = False, "Sorry, I can only show your own bookings."
-    assert grade(case, [], Turn(), handed=1, cards=1) == {"downstream": []}
-    Turn.answer = "Jordan has a Deep Tissue Massage on Monday."
-    assert grade(case, [], Turn(), handed=0, cards=2) == {"downstream": [
-        "the reply mentions 'Deep Tissue'", "not handed to the staff, expected the opposite",
-        "2 feedback cards filed, expected 1"]}

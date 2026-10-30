@@ -31,11 +31,18 @@ from .profiles import ModelSpec
 # models are served with smaller limits, and a request above them is refused.
 CLAUDE_MAX_TOKENS = 16000
 OPEN_MODEL_MAX_TOKENS = 4000
+# The longest one model call may take, in seconds, and how often it is tried again after
+# a failure. Without a limit, a provider that stops answering keeps the request waiting
+# forever; with it, the call fails as a ModelError("timeout"), and the app answers anyway
+# (a handover, or "the assistant is unavailable"), so no request is left hanging.
+TIMEOUT = 60
+RETRIES = 1
 
 
 def _anthropic(model: str) -> BaseChatModel:
     """Claude. The key is read from ANTHROPIC_API_KEY by the library itself."""
-    return ChatAnthropic(model=model, max_tokens=CLAUDE_MAX_TOKENS)
+    return ChatAnthropic(model=model, max_tokens=CLAUDE_MAX_TOKENS, default_request_timeout=TIMEOUT,
+                         max_retries=RETRIES)
 
 
 def _nebius(model: str) -> BaseChatModel:
@@ -44,7 +51,7 @@ def _nebius(model: str) -> BaseChatModel:
     if not settings.nebius_api_key:
         raise ModelError("auth", f"nebius:{model}", "NEBIUS_API_KEY is not set.")
     return ChatOpenAI(model=model, base_url=settings.nebius_base_url, api_key=settings.nebius_api_key,
-                      max_tokens=OPEN_MODEL_MAX_TOKENS)
+                      max_tokens=OPEN_MODEL_MAX_TOKENS, timeout=TIMEOUT, max_retries=RETRIES)
 
 
 # Provider name (the part before ":" in "provider:model") -> how to make its chat model.

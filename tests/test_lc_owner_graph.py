@@ -109,7 +109,7 @@ def test_the_route_answers_through_the_graph(graph_engine):
                      "items": [{"name": "Revenue", "detail": "$7,530"}],
                      "insights": ["Facials were the second-highest earning category."],
                      "sections": [], "suggestions": ["One?", "Two?", "Three?"],
-                     "rag": False, "chunks": 0, "reports": ["2026-09-01 to 2026-09-30, Facials"]}
+                     "rag": False, "chunks": 0, "reports": ["2026-09-01 to 2026-09-30, Facials"], "trace_id": None}
 
 
 def test_the_route_reports_when_the_graph_has_no_answer(monkeypatch):
