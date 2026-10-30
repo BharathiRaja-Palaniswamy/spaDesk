@@ -912,5 +912,51 @@
         "Prenatal"
       ]
     }
+  },
+  {
+    "id": "name-and-number-in-the-first-message",
+    "turns": [
+      "raja 9289381938"
+    ],
+    "routing": {
+      "not_tools": [
+        "booking",
+        "hand_off",
+        "record_feedback"
+      ]
+    },
+    "downstream": {
+      "confirming": false,
+      "answer_has": [
+        "raja"
+      ],
+      "answer_lacks": [
+        "your name",
+        "phone number"
+      ]
+    }
+  },
+  {
+    "id": "number-then-name-in-the-first-message",
+    "turns": [
+      "9289381938 priya"
+    ],
+    "routing": {
+      "not_tools": [
+        "booking",
+        "hand_off",
+        "record_feedback"
+      ]
+    },
+    "downstream": {
+      "confirming": false,
+      "answer_has": [
+        "priya"
+      ],
+      "answer_lacks": [
+        "your name",
+        "phone number"
+      ]
+    }
   }
 ]

@@ -97,7 +97,8 @@ def _run(thread: str, number: int, message: str, channel: str, caller: str) -> T
         try:
             state = graph.invoke(
                 {"messages": [HumanMessage(time_note()), HumanMessage(message)], "channel": channel,
-                 "caller": caller, "rounds": 0, "asked": [], "repeats": 0, "say": "", "reply": None,
+                 "caller": caller, "rounds": 0, "asked": [], "repeats": 0, "say": "", "suggestions": [],
+                 "reply": None,
                  "confirming": False, "acted": False},
                 config=config)
         except Exception:
@@ -116,7 +117,7 @@ def _run(thread: str, number: int, message: str, channel: str, caller: str) -> T
     if state["confirming"]:
         return Turn(state["say"], suggestions=CHOICES[state["pending"]["kind"]], confirming=True)
     if state["say"]:
-        return Turn(state["say"])
+        return Turn(state["say"], suggestions=state.get("suggestions", []))
     reply = state["reply"]
     return Turn(answer_text(reply), reply.items, reply.suggestions[:MAX_SUGGESTIONS])
 

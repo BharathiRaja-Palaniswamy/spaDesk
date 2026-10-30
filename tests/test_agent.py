@@ -31,8 +31,9 @@ from spadesk.agent import yes as confirm
 from spadesk.agent.details import customer_words
 from spadesk.agent.feedback import Reading
 from spadesk.agent.flow import MAX_TOOL_ROUNDS, get_graph
-from spadesk.agent.pebby import AgentReply, Details
+from spadesk.agent.pebby import STARTERS, AgentReply, Details
 from spadesk.agent.staff import HANDOVER
+from spadesk.assistant.replies import MAX_SUGGESTIONS
 from spadesk.app import app
 from spadesk.booking.errors import CalendarUnavailable
 from spadesk.models import ModelError
@@ -125,6 +126,23 @@ def test_the_name_reader_is_told_the_question_the_message_answers(desk, monkeypa
     assert respond("thread-q", "9282838292").answer == "Thank you! And your name, please?"
     respond("thread-q", "poiqwe")
     assert sent[-1][0].content.endswith("The message answers this question: Thank you! And your name, please?")
+
+
+def test_the_first_message_is_read_as_the_answer_to_the_greeting(desk, monkeypatch):
+    # As seen live: "raja 9289381938" was not read as a name, because the greeting that asked for
+    # it is shown by the browser, so the reader was never told what the message answers.
+    sent = chat(monkeypatch, details("raja", "9289381938"))
+    turn = respond("thread-first", "raja 9289381938")
+    assert sent[0][0].content.endswith(
+        "The message answers this question: Before we start, may I have your name and phone number?")
+    # Both given, nothing asked yet: a few things to tap come with "How can I help?".
+    assert turn.answer == "Thank you, raja! How can I help you today?"
+    assert turn.suggestions == STARTERS and len(STARTERS) <= MAX_SUGGESTIONS
+
+
+def test_no_starters_while_details_are_still_missing(desk, monkeypatch):
+    chat(monkeypatch, details(phone="9289381938"))
+    assert respond("thread-half", "9289381938").suggestions == []
 
 
 def test_a_greeting_is_answered_warmly_before_the_details_are_asked_for(desk, monkeypatch):

@@ -55,6 +55,7 @@ from .debug import brief, note, outcome
 from .details import customer_words
 from .pebby import (
     HELD,
+    STARTERS,
     AgentReply,
     about_bookings,
     agent_tools,
@@ -107,6 +108,7 @@ class AgentState(TypedDict, total=False):
     requests: list[dict]  # the model's latest tool requests: {"name", "args", "id"}
     reply: BaseModel | None  # the model's reply this turn, once it gives one
     say: str  # a reply written by the graph itself this turn (asking for details or for a yes)
+    suggestions: list[str]  # replies to tap offered with `say` this turn (the starters, after the details)
     confirming: bool  # this turn ends by asking the customer to confirm
     acted: bool  # this turn made or cancelled a booking (the customer said yes)
 
@@ -140,6 +142,11 @@ def identify(state: AgentState) -> dict:
     they want); otherwise, if the number has upcoming bookings, ask whether
     this is about one of them or something new; otherwise thank them."""
     last = next((m.text for m in reversed(state["messages"]) if isinstance(m, AIMessage)), "")
+    # On the website the greeting (static/home/js/chat/welcome.js) has already asked for the name
+    # and number before the first message, but only the browser showed it; so the reader is told,
+    # or "raja 9289381938" is not read as a name. A call opens without that question.
+    if not last and state.get("channel") != "voice":
+        last = ask_for("", "")[1]
     details = read_details(_latest(state).text, last)  # with the question it answers
     note("Identify", "Pebby", f"read name {details.name or '-'} · phone {details.phone or '-'}"
          + (f' · asked "{details.asked}"' if details.asked else ""), details.model_dump())
@@ -163,7 +170,9 @@ def identify(state: AgentState) -> dict:
     # still missing (code's).
     opening, question = ask_for(name, phone, caller)
     say = f"{details.reply.strip() or opening} {question}".strip()
-    return {**known, "held": held, "say": say, "messages": [AIMessage(say)]}
+    # Both given and nothing asked yet: "How can I help?" comes with a few things to tap.
+    offered = STARTERS if name and phone else []
+    return {**known, "held": held, "say": say, "suggestions": offered, "messages": [AIMessage(say)]}
 
 
 def after_identify(state: AgentState) -> str:

@@ -158,6 +158,12 @@ def valid_phone(phone: str) -> bool:
     return len(digits(phone)) >= 7
 
 
+# Offered to tap once the customer has given their details and not yet said what they want:
+# one of each thing Pebby does, as many as any reply's suggestions (MAX_SUGGESTIONS). Page
+# wording, the same for any business.
+STARTERS = ["What services do you offer?", "I'd like to book an appointment", "What are your opening hours?"]
+
+
 def ask_for(name: str, phone: str, caller: str = "") -> tuple[str, str]:
     """(an opening, the question) for what is still missing, given what is known
     so far; the opening gives way to the reader's own warm reply when there is
