@@ -75,10 +75,11 @@ def test_with_rag_the_prompt_holds_only_the_retrieved_chunks(run, tmp_path, monk
     assert state["chunks"] == 3 and state["messages"][0].content.count("<excerpt>\n") == 3
 
 
-def test_the_graph_stops_when_the_model_keeps_asking(run):
-    state = run(*[asks_for_report(f"call-{n}") for n in range(MAX_TOOL_ROUNDS + 1)])
+def test_when_the_model_keeps_asking_it_must_answer_once_the_rounds_are_used(run):
+    # As seen in the evals: report after report until the rounds ran out, then "could not answer" (503).
+    state = run(*[asks_for_report(f"call-{n}") for n in range(MAX_TOOL_ROUNDS)], answers())
     assert state["rounds"] == MAX_TOOL_ROUNDS
-    assert state["reply"] is None and state["requests"]  # it ended still asking: no answer
+    assert state["reply"] == ANSWER  # answered with the reports it had
 
 
 def test_an_unknown_tool_gets_an_error_result(run):
@@ -109,11 +110,11 @@ def test_the_route_answers_through_the_graph(graph_engine):
                      "items": [{"name": "Revenue", "detail": "$7,530"}],
                      "insights": ["Facials were the second-highest earning category."],
                      "sections": [], "suggestions": ["One?", "Two?", "Three?"],
-                     "rag": False, "chunks": 0, "reports": ["2026-09-01 to 2026-09-30, Facials"], "trace_id": None}
+                     "rag": False, "chunks": 0, "reports": ["2026-09-01 to 2026-09-30, Facials"]}
 
 
 def test_the_route_reports_when_the_graph_has_no_answer(monkeypatch):
     monkeypatch.setenv("SPADESK_RAG_ENGINE", "langchain")
-    use_standin(monkeypatch, [AIMessage(content="Not JSON")])
+    use_standin(monkeypatch, [AIMessage(content="Not JSON"), AIMessage(content="Still not JSON")])  # asked twice
     reply = signed_in(app).post("/api/report/chat", json={"question": "Hello"})
     assert reply.status_code == 503

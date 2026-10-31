@@ -186,3 +186,20 @@ def test_a_yes_to_pebbys_question_makes_its_words_the_customers_but_not_a_list()
     # Something other than a yes does not make the question theirs.
     words = customer_words([HumanMessage("a facial"), asked, HumanMessage("not sure")])
     assert collect({"intent": "new", "services": ["Signature Radiance Facial"]}, words, SUNDAY)[0].services == []
+
+
+@pytest.mark.parametrize("day_said, time_said, clock, day", [
+    ("Friday", "morning", time(15, 40), date(2026, 11, 6)),   # as seen live: said on a Friday afternoon
+    ("Friday", "morning", time(9, 0), date(2026, 10, 30)),    # still morning: today
+    ("Friday", "afternoon", time(15, 40), date(2026, 10, 30)),  # the afternoon is not over
+    ("today", "morning", time(15, 40), date(2026, 10, 30)),   # today itself, as they said: no free times, and
+                                                              # the nearest are offered (booking.py)
+    ("Friday", "after 3pm", time(21, 25), date(2026, 11, 6)),  # as seen in the evals: after closing (19:00)
+    ("Friday", "after 3pm", time(16, 0), date(2026, 10, 30)),  # before closing: today
+])
+def test_a_weekday_whose_times_are_over_today_means_next_week(day_said, time_said, clock, day):
+    friday = date(2026, 10, 30)
+    words = f"a swedish massage {day_said} {time_said}"
+    request, _, _ = collect({"intent": "availability", "services": ["Swedish Massage"], "day_said": day_said,
+                             "time_said": time_said}, words, friday, clock=clock, closes=time(19))
+    assert request.day == day.isoformat()

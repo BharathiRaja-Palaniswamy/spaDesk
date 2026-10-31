@@ -152,6 +152,23 @@ def test_a_greeting_is_answered_warmly_before_the_details_are_asked_for(desk, mo
         "Hi! I'm doing well, thank you for asking. Before we start, may I have your name and phone number?")
 
 
+@pytest.mark.parametrize("said, reply", [
+    # As seen live (eval and Replit): only the details given, and the reader added a sentence anyway.
+    ("Asha Rao, 408 555 0101", "Thank you, Asha. We'll be in touch shortly."),
+    ("rj 5769797969", "Thank you, rj. Your phone number has been recorded as 5769797969. How can I assist you today?"),
+    ("raja 17181818819", "Thank you, Raja! I'll assist you shortly.")])
+def test_only_the_details_get_codes_thanks_not_the_readers_sentence(desk, monkeypatch, said, reply):
+    name = said.split(",")[0].split()[0] if "," not in said else "Asha Rao"
+    chat(monkeypatch, details(name=name, phone="".join(c for c in said if c.isdigit()), reply=reply))
+    assert respond(f"thread-only-{name}", said).answer == f"Thank you, {name}! How can I help you today?"
+
+
+def test_the_readers_warm_word_never_asks_its_own_question(desk, monkeypatch):
+    # As seen on Replit: "hi" got the details asked for twice, the reader's way and code's.
+    chat(monkeypatch, details(reply="Hello! Could you please share your name and phone number so I can assist you?"))
+    assert respond("thread-hi", "hi").answer == "Hello! Before we start, may I have your name and phone number?"
+
+
 def test_a_name_or_number_the_customer_did_not_write_is_not_taken(desk, monkeypatch):
     # As seen live: "what day is today?" was read as the name "answer", which went on the booking.
     chat(monkeypatch, details(name="answer"), details(phone="4085550101"))
@@ -192,7 +209,9 @@ def test_a_booking_is_made_only_after_the_customer_says_yes(desk, monkeypatch):
     assert desk.day_bookings(FRIDAY) == []  # nothing yet
     assert len(sent) == 1  # a complete request: booking (code) answered in code, with no model call
 
-    assert respond("thread-book", "Yes, book it").answer == "You're booked!"
+    # What was done is code's to say, with the reference the customer needs to change or cancel it.
+    assert respond("thread-book", "Yes, book it").answer.startswith(
+        "You're booked: Prenatal Massage with Priya Nair on Friday 30 October at 15:00, reference BK-")
     [booking] = desk.day_bookings(FRIDAY)
     # Booked under the details the customer gave, not anything a model wrote.
     assert (booking.name, booking.phone, booking.therapist) == ("Asha Rao", "(408) 555-0101", "Priya Nair")
@@ -206,7 +225,8 @@ def test_one_yes_books_a_whole_plan(desk, monkeypatch):
     assert turn.answer == ("Shall I book these for Asha Rao ((408) 555-0101)? 1. Prenatal Massage (60 minutes) "
                            "with Priya Nair on Friday 30 October at 15:00. 2. Signature Radiance Facial "
                            "(60 minutes) with Sofia Martinez on Friday 30 October at 16:00.")
-    assert respond("thread-two-items", "yes").answer == "All booked!"
+    booked = respond("thread-two-items", "yes").answer
+    assert booked.startswith("You're booked: Prenatal Massage") and "; Signature Radiance Facial with Sofia" in booked
     assert [b.service for b in desk.day_bookings(FRIDAY)] == ["Prenatal Massage", "Signature Radiance Facial"]
 
 
@@ -234,17 +254,18 @@ def test_a_time_taken_before_the_yes_books_nothing_and_pebby_is_told_to_ask_agai
 
 def test_after_the_yes_pebby_is_told_it_is_booked_not_asked_again(desk, monkeypatch):
     # As seen live: the customer's "Yes, book it" was passed on after the booking, and
-    # Pebby took it as a new request and offered the next time. Now it goes inside the result.
+    # Pebby took it as a new request and offered the next time. Now code says what was
+    # booked and the turn ends: the model is not called after the yes at all.
     identified(monkeypatch, "thread-once")
-    sent = chat(monkeypatch, books(), books(call_id="call-2"), says("You're booked at 3pm!"))
+    sent = chat(monkeypatch, books())
     to_plan("thread-once", SAYS)
+    calls = len(sent)
     turn = respond("thread-once", "Yes, book it")
-    assert not turn.confirming and turn.answer == "You're booked at 3pm!"
-    after_yes = sent[-2]  # the model call straight after the yes
-    assert not isinstance(after_yes[-1], HumanMessage)
-    assert json.loads(after_yes[-1].content)["customer_said"] == "Yes, book it"
-    # Asking for the same booking again in that turn is refused, so nothing is offered twice.
-    assert json.loads(sent[-1][-1].content)["error"] == nodes.REPEATED
+    assert not turn.confirming and turn.answer.startswith("You're booked: Prenatal Massage")  # code's words
+    assert len(sent) == calls  # no model call after the yes
+    # The yes is kept inside the request's result, never as a new message the model could act on.
+    result = [m for m in memory("thread-once")["messages"] if isinstance(m, ToolMessage)][-1]
+    assert json.loads(result.content)["customer_said"] == "Yes, book it"
     assert len(desk.day_bookings(FRIDAY)) == 1
 
 
@@ -357,7 +378,8 @@ def test_a_change_to_another_service_at_the_same_day_and_time(desk, monkeypatch)
     assert plan.answer == (f"I'll cancel your current booking (Swedish Massage with Daniel Ruiz on Monday 26 October "
                            f"at 17:00, {old.id}) and book Deep Tissue Massage (60 minutes) with Daniel Ruiz on Monday "
                            "26 October at 17:00 instead, for Asha Rao. Shall I go ahead?")
-    assert respond("thread-swap", "yes").answer == "Changed!"
+    changed = respond("thread-swap", "yes").answer
+    assert changed.startswith("You're booked: Deep Tissue Massage") and f"booking, {old.id}, is cancelled" in changed
     [booking] = desk.day_bookings(monday.date())
     assert (booking.service, booking.therapist, f"{booking.start:%H:%M}") == ("Deep Tissue Massage", "Daniel Ruiz",
                                                                            "17:00")
@@ -384,7 +406,8 @@ def test_an_add_on_is_added_to_an_existing_booking_keeping_everything_else(desk,
     assert details.answer == ("Just to check before I look for times: Prenatal Massage plus scalp massage on Friday "
                               f"30 October, from 15:00, instead of your booking {old.id}. Is that right?")
     respond("thread-add", "Yes, that's right")
-    assert respond("thread-add", "yes").answer == "Added!"
+    added = respond("thread-add", "yes").answer
+    assert added.startswith("You're booked: Prenatal Massage") and f"booking, {old.id}, is cancelled" in added
     [booking] = desk.day_bookings(FRIDAY)  # the same slot, now with the add-on; the old booking cancelled
     assert (f"{booking.start:%H:%M}", booking.service, booking.add_ons) == ("15:00", "Prenatal Massage",
                                                                           ("Scalp massage",))
@@ -444,7 +467,8 @@ def test_changing_a_booking_books_the_new_time_then_cancels_the_old(desk, monkey
         f"I'll cancel your current booking (Prenatal Massage with Priya Nair on Friday 30 October at 11:00, {old.id}) "
         "and book Prenatal Massage (60 minutes) with Priya Nair on Friday 30 October at 15:00 instead, for Asha Rao. "
         "Shall I go ahead?")
-    assert respond("thread-move", "yes").answer == "Moved!"
+    moved = respond("thread-move", "yes").answer
+    assert moved.startswith("You're booked: Prenatal Massage") and f"booking, {old.id}, is cancelled" in moved
     assert [f"{b.start:%H:%M}" for b in desk.day_bookings(FRIDAY)] == ["15:00"]
 
 
@@ -454,7 +478,8 @@ def test_cancelling_also_waits_for_a_yes(desk, monkeypatch):
     chat(monkeypatch, books({"intent": "cancel", "references": [booking.id]}), says("Cancelled."))
     turn = respond("thread-cancel", "Cancel my Friday massage")
     assert turn.confirming and booking.id in turn.answer and turn.suggestions == ["Yes, cancel it", "No, keep it"]
-    assert respond("thread-cancel", "yes").answer == "Cancelled."
+    assert respond("thread-cancel", "yes").answer.startswith(
+        f"Cancelled: Prenatal Massage with Priya Nair on Friday 30 October at 15:00, reference {booking.id}")
     assert desk.day_bookings(datetime(2026, 10, 30).date()) == []
 
 
@@ -468,7 +493,8 @@ def test_several_bookings_are_cancelled_with_one_yes(desk, monkeypatch):
     assert turn.answer == (f"Shall I cancel these 2 bookings? 1. Prenatal Massage with Priya Nair on Friday 30 "
                            f"October at 15:00 (reference {one.id}). 2. Signature Radiance Facial with Sofia Martinez "
                            f"on Friday 30 October at 16:00 (reference {two.id}).")
-    assert respond("thread-cancel-two", "yes").answer == "Both cancelled."
+    both = respond("thread-cancel-two", "yes").answer
+    assert both.startswith("Cancelled: ") and one.id in both and two.id in both
     assert desk.day_bookings(FRIDAY) == []
 
 
@@ -817,7 +843,7 @@ def test_a_turn_waiting_behind_a_newer_one_never_runs_but_gets_its_reply(desk, m
 
 def test_a_replaced_turn_that_booked_is_remembered_so_it_is_not_booked_twice(desk, monkeypatch):
     identified(monkeypatch, "thread-yes")
-    chat(monkeypatch, books(), says("Booked!"), says("All set, you're booked."))
+    chat(monkeypatch, books(), says("All set, you're booked."))  # the yes's "booked" is code's, not the model's
     assert to_plan("thread-yes", SAYS).confirming
     monkeypatch.setattr(agent, "WAIT_FOR_NEWER", 0.05)
     with interrupted(nodes, "is_yes", "thread-yes"):
@@ -826,3 +852,11 @@ def test_a_replaced_turn_that_booked_is_remembered_so_it_is_not_booked_twice(des
     turn = respond("thread-yes", "Yes, book it please")
     assert not turn.confirming and turn.answer == "All set, you're booked."
     assert len(desk.day_bookings(FRIDAY)) == 1
+
+
+def test_the_read_back_says_the_time_once():
+    # As seen on Replit: "this Friday morning (Friday 30 October), in the morning".
+    from spadesk.agent.yes import details_question
+    question = details_question({"services": ["Swedish Massage"], "day": "2026-10-30", "before": "12:00",
+                                 "therapist": "Priya Nair"}, {"day": "this Friday morning", "time": "morning"})
+    assert question.count("morning") == 1 and "Friday 30 October" in question

@@ -122,3 +122,21 @@ def test_a_change_names_the_booking_it_replaces(desk):
                             after="15:00"), ASHA, desk)
     assert result.status == "plan_ready" and result.replaces["reference"] == old.id
     assert result.replaces["service"] == "Prenatal Massage"  # what is cancelled, to say so in the question
+
+
+def test_when_the_times_asked_for_are_taken_the_nearest_ones_are_offered(desk):
+    # As seen live: "Friday morning", asked on a Friday afternoon, got "no free times" and nothing else.
+    result = handle(request(intent="availability", services=["Swedish Massage"], day="2026-10-22", before="12:00"),
+                    ASHA, desk)  # the clock: Thursday 22 October, 14:10, so this morning is over
+    assert result.options[0] == "Swedish Massage on Thursday 22 October: no free times before 12:00"
+    assert result.options[1].startswith("Swedish Massage on Thursday 22 October at other times: 15:00 with ")
+    assert result.options[2].startswith("Swedish Massage on other days, before 12:00: Friday 2026-10-23")
+
+
+def test_the_days_offered_instead_keep_to_the_times_and_therapist_asked_for(desk):
+    # As seen live: "not Friday morning" offered Saturday, and the model promised "Saturday morning" unchecked.
+    asked = request(services=["Swedish Massage"], day="2026-10-22", before="12:00", therapist="Priya Nair")
+    result = handle(asked, ASHA, desk)
+    assert result.status == "not_possible"
+    days = [option.split()[0] for option in result.options]
+    assert days and set(days) <= {"Friday", "Saturday", "Sunday"}  # the days Priya works, with a morning time free

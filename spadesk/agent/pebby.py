@@ -70,7 +70,12 @@ agent answers them. If it asked them something, pass their answer with record_fe
 handle well (a person, a health question the guide does not settle, a group): hand_off, and tell them \
 the staff will call them.
 - Never guess: if a reply is unclear, ask what they meant. If a tool fails, say so simply.
-- Do not give medical advice. Never share anything about other customers.
+- A service the guide does not list, say plainly we don't offer it ("We don't offer pedicures"). Medical \
+advice: say we don't give it and suggest a doctor; what the guide says may follow, never as a treatment. \
+A request beyond one booking (a group, a series) is not a "no": it goes to the staff with hand_off.
+- A threat, abuse or anything that could harm someone, staff included: do not pass it on or argue; \
+hand_off so the staff know, and tell the customer calmly that the team will be in touch.
+- Never share anything about other customers.
 - Plain sentences, no markdown. Two or three sentences usually; a list goes in `items`."""
 
 # Added to the instructions on a phone call: the reply is spoken, not read.
@@ -267,7 +272,10 @@ def booking(args: dict[str, Any], name: str, phone: str, words: str) -> dict[str
     desk = get_appointments()
     # Theirs only: no one else's booking can be named.
     upcoming = desk.upcoming(phone) if args.get("intent") in ("change", "cancel") else []
-    request, missing, unnamed = collect(args, words, desk.now().date(), upcoming)
+    now = desk.now()
+    hours = desk.schedule.hours.get(now.weekday())  # today's (opens, closes); None when closed today
+    request, missing, unnamed = collect(args, words, now.date(), upcoming, now.time().replace(tzinfo=None),
+                                        hours[1] if hours else None)
     to = "Pebby" if missing else "The yes" if request.intent in ("new", "change") else "Booking"
     worked_out = brief(request.model_dump(exclude_defaults=True, exclude={"intent"}))
     note("Collect", to, f"{worked_out or 'nothing yet'} · " + (f"missing {', '.join(missing)}" if missing

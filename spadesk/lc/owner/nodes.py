@@ -38,8 +38,10 @@ def prepare(state: OwnerState, instructions: str) -> dict:
 def agent(state: OwnerState, profile: str, shape: type[BaseModel], offered: list[Tool]) -> dict:
     """One model call, through the gateway, with the whole conversation so far.
     It ends in the reply (in `shape`) or in requests for the tools offered;
-    the gateway sorts out which, whatever provider answered."""
-    answer = structured(profile, state["messages"], shape, offered)
+    the gateway sorts out which, whatever provider answered. Once the tool
+    rounds are used up, it must answer with what it has: the owner always gets
+    a reply, never "the assistant could not answer"."""
+    answer = structured(profile, state["messages"], shape, offered, answer_now=state["rounds"] >= MAX_TOOL_ROUNDS)
     return {"messages": [answer.message], "requests": answer.tool_calls, "reply": answer.reply}
 
 

@@ -149,7 +149,7 @@ def test_the_reply_is_read_from_the_answer_call(plays):
     assert result.reply == Shape(answer="We open at 9.", covered=True) and result.tool_calls == []
 
 
-def test_plain_sentences_are_taken_as_the_reply(plays):
+def test_plain_sentences_are_taken_as_the_reply(plays, monkeypatch):
     # Not required to call a tool, a model may simply answer in text.
     class Reply(BaseModel):
         answer: str
@@ -157,8 +157,10 @@ def test_plain_sentences_are_taken_as_the_reply(plays):
     plays("open-like:m", {"open-like": AIMessage(content="We open at 9 on Sundays.")})
     result = structured("chat-default", "Open Sunday?", Reply, [OPENING])
     assert result.reply == Reply(answer="We open at 9 on Sundays.", items=[])
-    # A shape plain sentences cannot fill (a required yes/no) is still a bad reply.
-    plays("open-like:m", {"open-like": AIMessage(content="We open at 9.")})
+    # A shape plain sentences cannot fill (a required yes/no) is asked for again, and is a bad reply
+    # when the second answer does not fit either.
+    unfit = AIMessage(content="We open at 9.")
+    monkeypatch.setitem(providers.PROVIDERS, "open-like", lambda model: StandIn(messages=iter([unfit, unfit])))
     with pytest.raises(ModelError):
         structured("chat-default", "Open Sunday?", Shape, [OPENING])
 
@@ -198,3 +200,14 @@ def test_a_reply_in_the_wrong_shape_without_a_fallback_is_a_bad_output_error(pla
     with pytest.raises(ModelError) as raised:
         structured("chat-default", "When?", Shape)
     assert raised.value.kind == "bad_output"
+
+
+def test_a_reply_missing_a_field_is_asked_for_again_with_the_shape_enforced(monkeypatch):
+    # As seen with Qwen: the answer tool's call left out "covered", and the owner saw "unavailable".
+    missing = AIMessage(content="", tool_calls=[request(ANSWER, {"answer": "We open at 9."})])
+    fitted = AIMessage(content='{"answer": "We open at 9.", "covered": true}')
+    monkeypatch.setitem(providers.PROVIDERS, "open-like", lambda model: StandIn(messages=iter([missing, fitted])))
+    monkeypatch.setenv("SPADESK_CLAUDE_HIGH", "open-like:m")
+    monkeypatch.setenv("SPADESK_MODEL_FALLBACK", "")
+    result = structured("chat-default", "When do you open?", Shape, [OPENING])
+    assert result.reply == Shape(answer="We open at 9.", covered=True) and result.tool_calls == []

@@ -24,8 +24,13 @@ the shape, or plain sentences, which become the shape's text (_from_text). A
 call some models write as text, "<tool_call>{...}</tool_call>", is read as the
 call it is.
 
+A reply given through the "answer" tool is checked by our code, not by the
+provider, so a model can leave a field out. Such a reply is asked for once
+more by the second rule, with the shape enforced: the model has already
+chosen to answer, so it calls nothing then.
+
 The caller gets the reply, or the model's requests for other tools. A reply
-that does not fit the shape raises ModelError("bad_output"), which the
+that still does not fit the shape raises ModelError("bad_output"), which the
 gateway treats like any failure: it tries the fallback model.
 """
 
@@ -115,7 +120,10 @@ def ask(model: BaseChatModel, messages: LanguageModelInput, schema: type[BaseMod
     if tools and not answer_now:
         offered = [tool.description_for_model() for tool in tools]
         message = model.bind_tools([*offered, _answer_tool(schema)], tool_choice="auto").invoke(messages, config=config)
-        return message, *_read(message, schema, name)
+        try:
+            return message, *_read(message, schema, name)
+        except ModelError:
+            pass  # it answered, but not in the shape (a field left out): asked once more below, the shape enforced
     # No tool may be called: the provider makes the reply fit the shape. The conversation may still
     # hold earlier tool calls and their results; the model reads them, and calls nothing.
     out = model.with_structured_output(schema, method="json_schema", include_raw=True).invoke(messages, config=config)

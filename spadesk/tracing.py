@@ -52,13 +52,6 @@ def _commit() -> str:
         return os.getenv("SPADESK_COMMIT", "unknown")
 
 
-def current_run_id() -> str | None:
-    """The id of the step running now (a route's top step), for the page to rate
-    the reply it made (ratings.py); None when tracing is off."""
-    run = langsmith.get_current_run_tree()
-    return str(run.id) if run else None
-
-
 def setup() -> None:
     """Send every trace through one client that masks personal details, with the
     commit in each trace's metadata. Nothing is sent when tracing is off."""

@@ -149,20 +149,26 @@ def fit_plan(services: Sequence[str], day: date, desk: Appointments, after: time
 
 
 
-def days_that_fit(services: Sequence[str], desk: Appointments) -> list[str]:
+def days_that_fit(services: Sequence[str], desk: Appointments, after: time | None = None, before: time | None = None,
+                  therapists: dict[str, str] | None = None, skip: date | None = None) -> list[str]:
     """The next days (from today, at most MAX_DAYS within LOOK_AHEAD_DAYS) on which
-    every one of `services` has a free time, as "Wednesday 2026-10-28". A day when
-    no one who offers one of them works is skipped without reading the calendar,
-    so a search costs few calendar reads. Each service having a free time does
-    not promise they fit one after another: fit_plan settles that for the day
-    the customer picks."""
+    every one of `services` has a free time, as "Wednesday 2026-10-28": within the
+    times the customer asked for (`after`, `before`) and with the therapist they
+    chose, so a day offered is one that has what they want. `skip`: a day already
+    looked at. A day when no one who offers one of them works is skipped without
+    reading the calendar, so a search costs few calendar reads. Each service having
+    a free time does not promise they fit one after another: fit_plan settles that
+    for the day the customer picks."""
+    therapists = therapists or {}
     working = {name: {day for t in desk.schedule.therapists_for(name) for day in t.days} for name in services}
     today, days = desk.now().date(), []
     for offset in range(LOOK_AHEAD_DAYS):
         day = today + timedelta(days=offset)
         if day.weekday() not in desk.schedule.hours or any(day.weekday() not in working[n] for n in services):
             continue
-        if all(desk.free_slots(name, day) for name in services):
+        if day == skip:
+            continue
+        if all(_free(desk, name, day, therapists.get(name), after, before, None) for name in services):
             days.append(f"{day:%A} {day.isoformat()}")
             if len(days) == MAX_DAYS:
                 break
@@ -214,19 +220,43 @@ def _therapists(request: BookingRequest, desk: Appointments) -> dict[str, str]:
     return {name: request.therapist for name in request.services if name in offers}
 
 
-def _days(services: list[str], desk: Appointments) -> list[str]:
-    """The next days on which every service has a free time."""
-    return days_that_fit(services, desk)
+def _days(services: list[str], desk: Appointments, request: "BookingRequest | None" = None,
+          skip: date | None = None) -> list[str]:
+    """The next days on which every service has a free time: within the request's
+    times and with its therapist, when there is a request."""
+    if request is None:
+        return days_that_fit(services, desk)
+    return days_that_fit(services, desk, _clock(request.after), _clock(request.before), _therapists(request, desk), skip)
+
+
+def _window(request: "BookingRequest") -> str:
+    """The times asked for, as said back: "before 12:00", "from 15:00", "15:00 to 17:00"; "" for any time."""
+    if request.after and request.before:
+        return f"{request.after} to {request.before}"
+    return f"from {request.after}" if request.after else f"before {request.before}" if request.before else ""
+
+
+def _times(slots: list[Slot]) -> str:
+    return ", ".join(f"{s.start:%H:%M} with {s.therapist}" for s in slots[:6])
 
 
 def _availability(request: BookingRequest, day: date, desk: Appointments) -> BookingResult:
-    """The free times on `day` of each service asked about, as options."""
-    options = []
+    """The free times on `day` of each service asked about, as options. When the times
+    asked for have none, what is nearest is offered instead, so the customer always has
+    something to book: the same day's other times, then the next days that have times
+    within what they asked for."""
+    options, window = [], _window(request)
     for name in request.services:
-        slots = _free(desk, name, day, _therapists(request, desk).get(name), _clock(request.after),
-                      _clock(request.before), None)  # the same window a booking uses
-        times = [f"{s.start:%H:%M} with {s.therapist}" for s in slots[:6]]
-        options.append(f"{name} on {day:%A %d %B}: {', '.join(times) or 'no free times'}")
+        therapist = _therapists(request, desk).get(name)
+        slots = _free(desk, name, day, therapist, _clock(request.after), _clock(request.before), None)
+        if slots:  # the same window a booking uses
+            options.append(f"{name} on {day:%A %d %B}: {_times(slots)}")
+            continue
+        options.append(f"{name} on {day:%A %d %B}: no free times" + (f" {window}" if window else ""))
+        if window and (other := _free(desk, name, day, therapist, None, None, None)):
+            options.append(f"{name} on {day:%A %d %B} at other times: {_times(other)}")
+        if later := _days([name], desk, request, skip=day):
+            options.append(f"{name} on other days" + (f", {window}" if window else "") + f": {', '.join(later)}")
     return BookingResult(status="options", options=options)
 
 
@@ -253,7 +283,7 @@ def _plan(request: BookingRequest, desk: Appointments, replaces: Booking | None)
         fitted = fitted.model_copy(update={"package": request.package, "add_ons": request.add_ons})
         return BookingResult(status="plan_ready", plan=fitted, replaces=confirmation(replaces) if replaces else None)
     return BookingResult(status="not_possible", reason=f"{fitted[0]} {_open(day, desk)}",
-                         options=_days(request.services, desk))
+                         options=_days(request.services, desk, request, skip=day))
 
 
 def handle(request: BookingRequest, phone: str, desk: Appointments | None = None) -> BookingResult:

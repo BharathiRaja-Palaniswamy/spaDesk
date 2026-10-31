@@ -67,7 +67,7 @@ from .pebby import (
 )
 from .rules import MAX_REPEATS, MAX_TOOL_ROUNDS, PEBBY_MODEL
 from .staff import HANDOVER, record_handoff
-from .yes import cancel_question, details_question, is_yes, plan_question
+from .yes import cancel_question, details_question, done_message, is_yes, plan_question
 
 
 @lru_cache  # one graph, and so one memory, for the whole server
@@ -136,6 +136,23 @@ def _said(name: str, message: str) -> bool:
     return bool(name.strip()) and set(re.findall(r"\w+", name.lower())) <= words
 
 
+# Words that only give the details ("my name is Asha, you can reach me on ..."): saying them asks
+# for no warm word back. A greeting, thanks or a question about how Pebby is says something more.
+DETAILS_WORDS = {"my", "name", "names", "is", "im", "i", "am", "this", "it", "its", "here", "phone", "number", "no",
+                 "and", "the", "call", "me", "you", "can", "reach", "on", "at", "s", "m", "mobile", "cell"}
+
+
+def _warm_word(reply: str, said: str, name: str) -> str:
+    """The reader's warm sentences back to what the customer said, or "" when they said
+    nothing beyond their name and number. Never a question, nor a number: the questions
+    are code's (ask_for), and their details are not read back to them here."""
+    words = set(re.findall(r"[a-z]+", said.lower())) - set(re.findall(r"[a-z]+", name.lower())) - DETAILS_WORDS
+    if not words:
+        return ""
+    sentences = re.findall(r"[^.!?]+[.!?]*", reply)
+    return " ".join(part.strip() for part in sentences if not part.strip().endswith("?") and not re.search(r"\d", part))
+
+
 def identify(state: AgentState) -> dict:
     """Read the name and phone number from the customer's message, and ask
     for whatever is still missing. Once both are known: what they asked
@@ -171,7 +188,7 @@ def identify(state: AgentState) -> dict:
     # A warm word back to what they said (the reader's, in place of code's opening), then what is
     # still missing (code's).
     opening, question = ask_for(name, phone, caller)
-    say = f"{details.reply.strip() or opening} {question}".strip()
+    say = f"{_warm_word(details.reply, said, name) or opening} {question}".strip()
     # Both given and nothing asked yet: "How can I help?" comes with a few things to tap.
     offered = STARTERS if name and phone else []
     return {**known, "held": held, "say": say, "suggestions": offered, "messages": [AIMessage(say)]}
@@ -358,8 +375,14 @@ def decide(state: AgentState) -> dict:
         note("Executor" if pending["kind"] == "plan" else "Approved" if pending["kind"] == "cancel"
              else "Booking", "Pebby", outcome(result), result)
         told = {"customer_said_yes_to": pending["question"], "customer_said": said.text, "result": result}
-        return {**update, "pending": None, "acted": pending["kind"] != "details", "messages": [
-            *removed, ToolMessage(json.dumps(told), tool_call_id=pending["id"])]}
+        update |= {"pending": None, "acted": pending["kind"] != "details"}
+        # What was done is told by code, as the question was (rules.py, 3): the references and
+        # times exactly as booked. What was not done goes to Pebby to explain.
+        if pending["kind"] != "details" and (say := done_message(result, state.get("channel") == "voice")):
+            note("The yes", "Customer", say, result)
+            return {**update, "say": say, "messages": [
+                *removed, ToolMessage(json.dumps(told), tool_call_id=pending["id"]), AIMessage(say)]}
+        return {**update, "messages": [*removed, ToolMessage(json.dumps(told), tool_call_id=pending["id"])]}
     told = {"not_done": f"The customer was asked {pending['question']!r} and did not say yes, so "
                            "nothing was changed. Their reply follows."}
     return {**update, "pending": None, "acted": False, "messages": [
@@ -368,8 +391,9 @@ def decide(state: AgentState) -> dict:
 
 
 def after_decide(state: AgentState) -> str:
-    """The turn ends when a plan now waits for the customer's yes; otherwise the agent answers."""
-    return END if state.get("confirming") else "agent"
+    """The turn ends when a plan now waits for the customer's yes, or when what was done has
+    been told (code's words); otherwise the agent answers."""
+    return END if state.get("confirming") or state.get("say") else "agent"
 
 
 # ---- too many rounds -----------------------------------------------------------------

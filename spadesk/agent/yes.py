@@ -74,7 +74,7 @@ def details_question(request: dict[str, Any], said: dict[str, str], spoken: bool
         names = {d.lower() for d in calendar.day_name} | {m.lower()[:3] for m in calendar.month_name if m}
         return words if first in names or first[:3] in names else words[:1].lower() + words[1:]
     their_day, their_time = lower(said.get("day", "").strip()), lower(said.get("time", "").strip())
-    if their_time == their_day:  # "same day and time" said once, for both
+    if their_time and their_time.lower() in their_day.lower():  # said once, in the day: "this Friday morning"
         their_time = ""
     # "tomorrow (Monday 26 October)"; "on Friday 30 October" when their words are in the date already
     if "same" in f"{their_day} {their_time}" and request.get("after"):  # "same time": say which it is
@@ -140,3 +140,27 @@ def cancel_question(bookings: list[dict[str, Any]], spoken: bool = False) -> str
         return f"Shall I cancel {one(bookings[0], False)}?"
     listed = " ".join(f"{n}. {one(b, False).removeprefix('your ')}." for n, b in enumerate(bookings, 1))
     return f"Shall I cancel these {len(bookings)} bookings? {listed}"
+
+
+def done_message(result: dict[str, Any], spoken: bool = False) -> str:
+    """What to tell the customer once their yes is carried out: each booking made,
+    with its reference (theirs to change or cancel it later), and each one cancelled.
+    "" when something was not done: then Pebby explains, from the result. Written
+    by code, as the questions are, so no reference or time can be left out or changed."""
+    if result.get("not_booked") or result.get("not_cancelled") or result.get("error"):
+        return ""
+    def said(reference: str) -> str:  # on a call, letter by letter
+        return " ".join(reference) if spoken else reference
+    def one(booking: dict[str, Any]) -> str:
+        start = datetime.fromisoformat(booking["start"])
+        return f"{booking['service']} with {booking['therapist']} on {when(start, spoken)}, reference {said(booking['reference'])}"
+    parts = []
+    if booked := result.get("booked"):
+        parts.append("You're booked: " + "; ".join(one(b) for b in booked) + ".")
+        if replaced := result.get("cancelled"):  # a change: the booking it replaces
+            parts.append(f"Your previous booking, {said(replaced)}, is cancelled.")
+    elif cancelled := result.get("cancelled"):
+        parts.append("Cancelled: " + "; ".join(one(b) for b in cancelled) + ".")
+    if not parts:
+        return ""
+    return " ".join(parts) + (" We look forward to seeing you!" if booked else " Is there anything else I can help with?")

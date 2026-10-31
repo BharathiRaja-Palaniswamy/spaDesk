@@ -11,7 +11,6 @@ import { askAssistant } from "./assistant.js";
 import { showReply, sourceLine } from "./reply.js";
 import { suggestionChips } from "./suggestions.js";
 import { introduction, STARTER_QUESTIONS } from "./welcome.js";
-import { ratingButtons } from "/static/shared/rating.js";
 
 /**
  * Wires up the chat button, panel and form that are in index.html.
@@ -88,7 +87,6 @@ export function initChat() {
       // list in the bubble, the sources under it, then the follow-up questions.
       showReply(bubble, reply);
       if (reply.sections.length || reply.reports.length) messages.append(sourceLine(reply.sections, reply.reports));
-      messages.append(ratingButtons(reply.trace_id, "owner")); // 👍 / 👎, saved on its trace
       addSuggestions(reply.suggestions);
     } catch {
       bubble.textContent = "Sorry, something went wrong. Please try again.";

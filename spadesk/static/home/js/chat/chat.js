@@ -9,7 +9,6 @@ import { $, el } from "../dom.js";
 import { askAssistant } from "./assistant.js";
 import { debugPanel, showReply, suggestionChips } from "./reply.js";
 import { greeting } from "./welcome.js";
-import { ratingButtons } from "/static/shared/rating.js";
 
 /**
  * Wires up the chat that is in index.html and greets the visitor.
@@ -69,7 +68,6 @@ export function initChat(business) {
       // list in the bubble, then the replies to tap (a yes and a no when
       // Pebby is asking the customer to confirm a booking).
       showReply(bubble, reply);
-      messages.append(ratingButtons(reply.trace_id, "customer")); // 👍 / 👎, saved on its trace
       if (reply.debug) messages.append(debugPanel(reply.debug)); // debug mode only (SPADESK_DEBUG)
       addSuggestions(reply.suggestions);
     } catch {

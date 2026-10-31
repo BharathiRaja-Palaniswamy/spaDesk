@@ -1,15 +1,13 @@
-"""Tests for masking personal details in traces (spadesk/privacy.py) and for
-the 👍 / 👎 route (spadesk/ratings.py). Nothing is sent to LangSmith.
+"""Tests for masking personal details in traces (spadesk/privacy.py).
+Nothing is sent to LangSmith.
 
 Run with:  .venv/bin/python -m pytest tests/test_privacy.py
 """
 
 import pytest
-from fastapi.testclient import TestClient
 from langsmith.anonymizer import create_anonymizer
 
-from spadesk import privacy, ratings
-from spadesk.app import app
+from spadesk import privacy
 
 
 @pytest.fixture(autouse=True)
@@ -45,27 +43,3 @@ def test_the_staff_are_never_masked():
 def test_every_text_in_a_trace_is_masked():
     traced = create_anonymizer(privacy.mask)({"message": "call me on 408 555 0101", "items": ["a@b.co"], "n": 3})
     assert traced == {"message": "call me on [phone]", "items": ["[email]"], "n": 3}
-
-
-def test_a_rating_is_saved_on_the_replys_trace(monkeypatch):
-    saved = []
-
-    class LangSmith:
-        def create_feedback(self, run_id, key, **fields):
-            saved.append((str(run_id), key, fields["score"]))
-    monkeypatch.setattr(ratings, "get_cached_client", LangSmith)
-    trace = "8f2b5a52-6d1e-4b8e-9a7e-2f7c1d3b4a10"
-    reply = TestClient(app).post("/api/rating", json={"trace_id": trace, "score": 0, "chat": "customer"})
-    assert reply.json() == {"saved": True} and saved == [(trace, "user_rating", 0)]
-
-
-def test_a_rating_that_cannot_be_saved_does_not_break_the_chat(monkeypatch):
-    class Down:
-        def create_feedback(self, *args, **kwargs):
-            raise ConnectionError("LangSmith unreachable")
-    monkeypatch.setattr(ratings, "get_cached_client", Down)
-    reply = TestClient(app).post("/api/rating", json={"trace_id": "8f2b5a52-6d1e-4b8e-9a7e-2f7c1d3b4a10",
-                                                      "score": 1, "chat": "owner"})
-    assert reply.status_code == 200 and reply.json() == {"saved": False}
-    assert TestClient(app).post("/api/rating", json={"trace_id": "not-a-run", "score": 1,
-                                                     "chat": "owner"}).status_code == 422

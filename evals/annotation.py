@@ -20,9 +20,9 @@ Two queues:
 
   eval-failures  the failed cases of an experiment: is the failure the model's,
                  or is the label or a check wrong? (a reviewed label becomes v2)
-  prod-review    production traces: every 👎 (ratings.py), every handoff to the
-                 staff, every error, and a steady 1 in 10 of the rest, chosen by
-                 the run's id so the same trace is always in or out
+  prod-review    production traces: every handoff to the staff, every error,
+                 and a steady 1 in 10 of the rest, chosen by the run's id so the
+                 same trace is always in or out
 
 A score in a queue never changes golden.json by itself: `promote` turns a
 reviewed production conversation into a draft case, which is checked, edited
@@ -55,7 +55,7 @@ INSTRUCTIONS = ("Read the whole conversation, then score the last reply on each 
                 "would: would you be happy if a customer got this reply? Say why in notes for any low score.")
 QUEUES = {
     "eval-failures": "Failed eval cases: is the failure the model's, or is the label or a check wrong?",
-    "prod-review": "Production traces: every thumbs down, handoff and error, and 1 in 10 of the rest.",
+    "prod-review": "Production traces: every handoff and error, and 1 in 10 of the rest.",
 }
 
 
@@ -105,7 +105,6 @@ def production(client: Client, days: int) -> None:
     since = datetime.now(timezone.utc) - timedelta(days=days)
     roots = dict(project_name=PROD_PROJECT, is_root=True, start_time=since)
     flagged = {
-        "thumbs down": client.list_runs(**roots, filter='and(eq(feedback_key, "user_rating"), eq(feedback_score, 0))'),
         "handoff": client.list_runs(**roots, tree_filter='or(eq(name, "hand_off"), eq(name, "give_up"))'),
         "error": client.list_runs(**roots, error=True),
     }

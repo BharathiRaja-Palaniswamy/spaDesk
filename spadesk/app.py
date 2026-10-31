@@ -42,7 +42,6 @@ from .models.profiles import get_profile
 from .models.providers import NAMES
 from .reports.routes import page_router as manage_page
 from .reports.routes import router as report_router
-from .ratings import router as ratings
 from .tracing import setup as setup_tracing
 from .voice.routes import router as phone_line
 
@@ -59,7 +58,6 @@ app.include_router(feedback_cards)
 app.include_router(owner_sign_in)
 app.include_router(phone_line)
 app.include_router(booking)
-app.include_router(ratings)
 
 
 # ---- Routes ----------------------------------------------------------------

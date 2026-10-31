@@ -159,12 +159,15 @@ def named_bookings(references: list[str], words: str, upcoming: list[Booking]) -
     return [b.id for b in upcoming if b.id in named], [r for r in references if r not in named]
 
 
-def collect(args: dict[str, Any], words: str, today: date,
-            upcoming: list[Booking] = ()) -> tuple[BookingRequest, list[str], list[str]]:
+def collect(args: dict[str, Any], words: str, today: date, upcoming: list[Booking] = (),
+            clock: time | None = None, closes: time | None = None) -> tuple[BookingRequest, list[str], list[str]]:
     """The BookingRequest for Pebby's `args`, what is still missing (in the order
     to ask for it), and the services Pebby chose that the customer did not name
     (to offer as choices). `words`: what the customer wrote (customer_words).
-    `upcoming`: the customer's bookings, for a change or a cancellation."""
+    `upcoming`: the customer's bookings, for a change or a cancellation. `clock`:
+    the time now, and `closes`: when the spa closes today, so a weekday named
+    today whose times can no longer happen today means next week's ("Friday
+    morning" said on a Friday afternoon, "Friday after 3pm" said after closing)."""
     references = named_bookings(args.get("references", []), words, list(upcoming))[0] \
         if args["intent"] in ("change", "cancel") else []
     one = args["intent"] != "change" or len(references) == 1  # a change is of one booking: else, which?
@@ -183,6 +186,9 @@ def collect(args: dict[str, Any], words: str, today: date,
             times = (changing.start.time().replace(tzinfo=None), None)  # from its start
         kept = [changing.service]  # theirs already: not named again
     after, before = times or (None, None)
+    ends = min((t for t in (before, closes) if t), default=None)  # the last moment their times allow today
+    if day == today and clock and ends and ends <= clock and not changing and not _today_said(day_said):
+        day += timedelta(days=7)  # they named the weekday, not today, and its times are over today
     services = args.get("services") or kept
     named, unnamed = named_services([s for s in services if s not in kept], args.get("package", ""), words)
     named = [s for s in services if s in kept or s in named]
@@ -198,6 +204,11 @@ def collect(args: dict[str, Any], words: str, today: date,
     have = {"services": bool(request.services), "day": day is not None, "time": times is not None,
             "references": bool(references) and one}
     return request, [need for need in NEEDS[request.intent] if not have[need]], unnamed
+
+
+def _today_said(words: str) -> bool:
+    """True when the words name today itself ("today", "this evening"), not a weekday."""
+    return bool(re.search(r"\b(today|tonight|this (morning|afternoon|evening))\b", words.lower()))
 
 
 DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
