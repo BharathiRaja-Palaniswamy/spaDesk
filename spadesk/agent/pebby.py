@@ -300,6 +300,13 @@ def booking(args: dict[str, Any], name: str, phone: str, words: str) -> dict[str
     return _to_staff(describe(handle(request, phone)), name, phone)
 
 
+def handoff_reason(args: dict[str, Any], words: str) -> str:
+    """Why the staff should call: the model's reason, or, when it gave none (a model can leave
+    out a required field), what the customer said. A handoff is never written without one."""
+    given = str(args.get("reason") or "").strip()
+    return given or f"No reason given by Pebby. The customer said: {words[-300:]}"
+
+
 def agent_tools(name: str, phone: str, role: Role = Role.CUSTOMER, words: str = "") -> list[Tool]:
     """The tools `role` may use, made for the customer with this name and number.
     `words`: what the customer has written so far (collect.customer_words)."""
@@ -331,7 +338,6 @@ def agent_tools(name: str, phone: str, role: Role = Role.CUSTOMER, words: str = 
              "or booking keeps failing (feedback, complaints included, goes to record_feedback). Say why, in one "
              "sentence.",
              {"type": "object", "properties": {"reason": {"type": "string"}}, "required": ["reason"]},
-             # A model can leave out `reason` although it is required: the staff must still be told.
-             lambda args: {"handed_off": True, **record_handoff(name, phone, args.get("reason", ""))}),
+             lambda args: {"handed_off": True, **record_handoff(name, phone, handoff_reason(args, words))}),
     ]
     return [tool for tool in tools if allowed(role, NEEDS.get(tool.name, ""))]

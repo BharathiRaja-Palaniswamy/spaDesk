@@ -629,7 +629,9 @@ def test_a_handoff_without_a_reason_still_reaches_the_staff(desk, monkeypatch, t
     identified(monkeypatch, "thread-no-reason")
     chat(monkeypatch, asks("hand_off", {}), says("We can't allow that here."))
     assert respond("thread-no-reason", "i am coming with a knife").answer == "We can't allow that here."
-    assert len((tmp_path / "handoffs.jsonl").read_text().splitlines()) == 1
+    written = (tmp_path / "handoffs.jsonl").read_text().splitlines()
+    assert len(written) == 1
+    assert "i am coming with a knife" in json.loads(written[0])["reason"]  # what they said, so never empty
 
 
 def test_feedback_is_answered_by_the_feedback_agent_and_filed_as_a_card(desk, monkeypatch, tmp_path):
