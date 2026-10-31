@@ -104,8 +104,11 @@ def production(client: Client, days: int) -> None:
     """The production traces of the last `days` worth a person's look, into prod-review."""
     since = datetime.now(timezone.utc) - timedelta(days=days)
     roots = dict(project_name=PROD_PROJECT, is_root=True, start_time=since)
+    # A tool is not a step of its own in the trace: it runs inside the graph's `tools` step, so a
+    # handoff is a `tools` step that mentions hand_off. give_up is a graph step, so it has its name.
+    handoff = 'or(and(eq(name, "tools"), search("hand_off")), eq(name, "give_up"))'
     flagged = {
-        "handoff": client.list_runs(**roots, tree_filter='or(eq(name, "hand_off"), eq(name, "give_up"))'),
+        "handoff": client.list_runs(**roots, tree_filter=handoff),
         "error": client.list_runs(**roots, error=True),
     }
     chosen = []
