@@ -331,6 +331,7 @@ def agent_tools(name: str, phone: str, role: Role = Role.CUSTOMER, words: str = 
              "or booking keeps failing (feedback, complaints included, goes to record_feedback). Say why, in one "
              "sentence.",
              {"type": "object", "properties": {"reason": {"type": "string"}}, "required": ["reason"]},
-             lambda args: {"handed_off": True, **record_handoff(name, phone, args["reason"])}),
+             # A model can leave out `reason` although it is required: the staff must still be told.
+             lambda args: {"handed_off": True, **record_handoff(name, phone, args.get("reason", ""))}),
     ]
     return [tool for tool in tools if allowed(role, NEEDS.get(tool.name, ""))]

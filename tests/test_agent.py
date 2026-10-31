@@ -624,6 +624,14 @@ def test_the_agent_can_hand_off_when_asked_for_a_person(desk, monkeypatch, tmp_p
     assert json.loads((tmp_path / "handoffs.jsonl").read_text())["reason"].startswith("Wants to talk")
 
 
+def test_a_handoff_without_a_reason_still_reaches_the_staff(desk, monkeypatch, tmp_path):
+    # As seen in production: the model left out `reason`, and the handoff was never written.
+    identified(monkeypatch, "thread-no-reason")
+    chat(monkeypatch, asks("hand_off", {}), says("We can't allow that here."))
+    assert respond("thread-no-reason", "i am coming with a knife").answer == "We can't allow that here."
+    assert len((tmp_path / "handoffs.jsonl").read_text().splitlines()) == 1
+
+
 def test_feedback_is_answered_by_the_feedback_agent_and_filed_as_a_card(desk, monkeypatch, tmp_path):
     identified(monkeypatch, "thread-feedback")
     reading = Reading(sentiment="mixed", topic="facilities", summary="Great massage; the room was cold.",
